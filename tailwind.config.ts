@@ -1,3 +1,4 @@
+
 import type {Config} from 'tailwindcss';
 
 export default {
@@ -10,8 +11,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['Inter', 'sans-serif'],
-        headline: ['Inter', 'sans-serif'],
+        body: ['Plus Jakarta Sans', 'sans-serif'],
+        headline: ['Fraunces', 'serif'],
         code: ['monospace'],
       },
       colors: {
@@ -67,9 +68,9 @@ export default {
         },
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        lg: '18px',
+        md: '14px',
+        sm: '10px',
       },
       keyframes: {
         'accordion-down': {
@@ -88,10 +89,15 @@ export default {
             height: '0',
           },
         },
+        'float': {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-20px)' },
+        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'float': 'float 6s ease-in-out infinite',
       },
     },
   },
