@@ -3,6 +3,66 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  /* Native-feeling tap feedback for all clickable elements */
+  a, button:not([disabled]) {
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.12s ease-out;
+  }
+  @media (hover: none) {
+    a:active, button:not([disabled]):active {
+      transform: scale(0.97);
+    }
+  }
+}
+
+/* Dark mode shadow boost — make cards stand out on dark background */
+.dark .shadow-sm {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.dark .shadow-md {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.dark .shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.dark .shadow-2xl {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+/* Font loading optimization — prevent flash */
+html {
+  font-display: swap;
+}
+body {
+  font-feature-settings: "kern" 1;
+  text-rendering: optimizeLegibility;
+}
+
+/* Print styles for PDF export */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .print\:hidden, nav, header button, .bottom-nav {
+    display: none !important;
+  }
+  .dark-hero-gradient {
+    background: linear-gradient(135deg, #1a1714 0%, #2c2620 100%) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  main, .max-w-md, .max-w-2xl, .max-w-4xl {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
 @layer base {
   :root {
     /* Warm off-white #f5f3f0 */
@@ -28,6 +88,28 @@
     --ring: 19 79% 34%;
     --radius: 18px;
   }
+
+  .dark {
+    --background: 30 10% 7%;
+    --foreground: 36 12% 95%;
+    --card: 30 10% 14%;
+    --card-foreground: 36 12% 95%;
+    --popover: 30 10% 14%;
+    --popover-foreground: 36 12% 95%;
+    --primary: 19 79% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 10% 18%;
+    --secondary-foreground: 36 12% 92%;
+    --muted: 30 10% 20%;
+    --muted-foreground: 30 12% 60%;
+    --accent: 19 50% 15%;
+    --accent-foreground: 19 79% 60%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 30 10% 22%;
+    --input: 30 10% 22%;
+    --ring: 19 79% 50%;
+  }
 }
 
 @layer base {
@@ -37,14 +119,246 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Global focus ring consistency */
+  *:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: inherit;
+  }
+}
+
+/* Reduced motion: disable all animations for motion-sensitive users */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 .dark-hero-gradient {
   background: linear-gradient(135deg, #1a1714 0%, #2c2620 100%);
 }
 
+.dark .dark-hero-gradient {
+  background: linear-gradient(135deg, #0d0b0a 0%, #1a1714 100%);
+}
+
+.dark .glass-card {
+  background: rgba(30, 26, 22, 0.8);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Dark mode: semantic color overrides for 50-level backgrounds */
+.dark .bg-emerald-50 { background-color: hsl(160, 60%, 10%); }
+.dark .bg-blue-50 { background-color: hsl(217, 50%, 12%); }
+.dark .bg-amber-50 { background-color: hsl(38, 50%, 12%); }
+.dark .bg-red-50 { background-color: hsl(0, 50%, 12%); }
+.dark .bg-orange-50 { background-color: hsl(25, 50%, 12%); }
+.dark .bg-emerald-100 { background-color: hsl(160, 50%, 15%); }
+.dark .bg-blue-100 { background-color: hsl(217, 40%, 18%); }
+.dark .bg-amber-100 { background-color: hsl(38, 40%, 15%); }
+.dark .bg-red-100 { background-color: hsl(0, 40%, 15%); }
+
+/* Horizontal scroll fade hint */
+.scroll-fade-right {
+  -webkit-mask-image: linear-gradient(to right, black 88%, transparent 100%);
+  mask-image: linear-gradient(to right, black 88%, transparent 100%);
+}
+
 .glass-card {
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Entrance animations */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slide-right {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes count-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+/* Step transition animations */
+@keyframes step-slide-left {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes step-slide-right {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-step-forward {
+  animation: step-slide-left 0.3s ease-out both;
+}
+
+.animate-step-back {
+  animation: step-slide-right 0.3s ease-out both;
+}
+
+/* Chat message enter animations */
+@keyframes msg-enter-left {
+  from { opacity: 0; transform: translateX(-8px) scale(0.97); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes msg-enter-right {
+  from { opacity: 0; transform: translateX(8px) scale(0.97); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+.animate-msg-ai {
+  animation: msg-enter-left 0.25s ease-out both;
+}
+
+.animate-msg-user {
+  animation: msg-enter-right 0.25s ease-out both;
+}
+
+/* Prism Light Strip */
+@property --strip-pos {
+  syntax: '<percentage>';
+  initial-value: -100%;
+  inherits: false;
+}
+
+@keyframes light-strip-slide {
+  0% { --strip-pos: -100%; }
+  100% { --strip-pos: 200%; }
+}
+
+.prism-strip {
+  position: relative;
+  overflow: hidden;
+}
+
+.prism-strip::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(160, 60%, 45%) 20%,
+    hsl(217, 71%, 53%) 40%,
+    hsl(38, 92%, 50%) 60%,
+    hsl(19, 79%, 50%) 80%,
+    transparent 100%
+  );
+  background-size: 50% 100%;
+  background-position: var(--strip-pos) 0;
+  animation: light-strip-slide 3.5s ease-in-out infinite;
+  z-index: 20;
+  border-radius: inherit;
+}
+
+/* Data-reactive Light Strip — color ratios driven by CSS vars */
+.prism-strip-reactive {
+  position: relative;
+  overflow: hidden;
+}
+
+.prism-strip-reactive::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(0, 72%, 51%) var(--reach-stop, 20%),
+    hsl(38, 92%, 50%) var(--amber-stop, 40%),
+    hsl(217, 71%, 53%) var(--target-stop, 60%),
+    hsl(160, 60%, 45%) var(--safety-stop, 80%),
+    transparent 100%
+  );
+  background-size: 50% 100%;
+  background-position: var(--strip-pos) 0;
+  animation: light-strip-slide 3.5s ease-in-out infinite;
+  z-index: 20;
+  border-radius: inherit;
+  transition: background 0.6s ease;
+}
+
+/* One-shot celebration strip (plays once) */
+@keyframes light-strip-once {
+  0% { --strip-pos: -100%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { --strip-pos: 200%; opacity: 0; }
+}
+
+.prism-strip-once::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(160, 60%, 45%) 20%,
+    hsl(217, 71%, 53%) 40%,
+    hsl(38, 92%, 50%) 60%,
+    hsl(19, 79%, 50%) 80%,
+    transparent 100%
+  );
+  background-size: 50% 100%;
+  background-position: var(--strip-pos) 0;
+  animation: light-strip-once 1.2s ease-out both;
+  z-index: 20;
+  border-radius: inherit;
+}
+
+/* Fallback for browsers without @property support (Samsung Internet < 14, older WebView) */
+@keyframes light-strip-slide-fallback {
+  0% { background-position: -50% 0; }
+  100% { background-position: 150% 0; }
+}
+
+@keyframes light-strip-once-fallback {
+  0% { background-position: -50% 0; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { background-position: 150% 0; opacity: 0; }
+}
+
+@supports not (font-tech(color-COLRv1)) {
+  /* Heuristic: browsers lacking @property also lack color-COLRv1 */
+  .prism-strip::before,
+  .prism-strip-reactive::before {
+    animation: light-strip-slide-fallback 3.5s linear infinite;
+  }
+  .prism-strip-once::before {
+    animation: light-strip-once-fallback 1.2s ease-out both;
+  }
 }

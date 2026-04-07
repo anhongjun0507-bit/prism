@@ -20,20 +20,22 @@ export function BottomNav() {
   if (hideNav) return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-border/50 px-4 py-2 flex justify-between items-center z-50 max-w-md mx-auto">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-border/50 px-4 py-2 flex justify-between items-center z-50 max-w-md md:max-w-2xl lg:max-w-4xl mx-auto">
       {navItems.map((item) => {
         const isActive = pathname === item.href;
         return (
           <Link
             key={item.href}
             href={item.href}
+            aria-current={isActive ? "page" : undefined}
             className={cn(
-              "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all",
-              isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+              "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all relative",
+              isActive ? "text-primary bg-primary/8" : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <item.icon className={cn("w-5 h-5", isActive && "stroke-[2.5px]")} />
-            <span className="text-[10px] font-semibold">{item.label}</span>
+            <item.icon className={cn("w-5 h-5", isActive && "stroke-[2.5px]")} aria-hidden="true" />
+            {isActive && <span className="w-1 h-1 rounded-full bg-primary absolute top-1 right-2" aria-hidden="true" />}
+            <span className="text-xs font-medium">{item.label}</span>
           </Link>
         );
       })}

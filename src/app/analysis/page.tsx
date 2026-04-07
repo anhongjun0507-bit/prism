@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,10 +19,15 @@ import { matchSchools, type Specs, type School, MAJOR_LIST } from "@/lib/matchin
 import {
   BarChart3, TrendingUp, Filter, DollarSign, ArrowLeft, Search,
   MapPin, Users, GraduationCap, Calendar, FileText, Trophy,
-  ExternalLink, X, Sparkles, BookOpen,
+  ExternalLink, X, Sparkles, BookOpen, Lock, Loader2, MessageSquare, Heart, Share2,
 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import { PLANS } from "@/lib/plans";
+import { UpgradeCTA } from "@/components/UpgradeCTA";
+import { SchoolLogo, CampusPhoto } from "@/components/SchoolLogo";
+import Link from "next/link";
 
-/* ───── constants ───���─ */
+/* ───── constants ───── */
 const CAT_STYLE: Record<string, { bg: string; ring: string; dot: string }> = {
   Safety:      { bg: "bg-emerald-50 text-emerald-700", ring: "ring-emerald-200", dot: "bg-emerald-500" },
   Target:      { bg: "bg-blue-50 text-blue-700",       ring: "ring-blue-200",    dot: "bg-blue-500" },
@@ -39,8 +44,120 @@ function probGradient(prob: number) {
   return "from-red-500 to-red-400";
 }
 
+/* ═══════════════ STORY CACHE (sessionStorage) ═══════════════ */
+const STORY_CACHE_PREFIX = "prism_story_";
+
+function getStoryCacheKey(schoolName: string, specs: Specs): string {
+  return `${STORY_CACHE_PREFIX}${schoolName}_${specs.gpaUW || specs.gpaW}_${specs.sat}_${specs.major}`;
+}
+
+function getCachedStory(key: string): string | null {
+  try { return sessionStorage.getItem(key); } catch { return null; }
+}
+
+function setCachedStory(key: string, story: string) {
+  try { sessionStorage.setItem(key, story); } catch {}
+}
+
 /* ═══════════════ SCHOOL DETAIL MODAL ═══════════════ */
-function SchoolModal({ school, open, onClose }: { school: School | null; open: boolean; onClose: () => void }) {
+interface AdmissionDetail {
+  aiProbability: number;
+  confidence: string;
+  verdict: string;
+  reasoning: string;
+  matchPoints: string[];
+  challenges: string[];
+  improvementTips: string[];
+  essayAdvice: string;
+  internationalStudentNote: string;
+}
+
+function SchoolModal({ school, open, onClose, specs }: { school: School | null; open: boolean; onClose: () => void; specs: Specs }) {
+  const { profile } = useAuth();
+  const isFreeUser = (profile?.plan || "free") === "free";
+  const [story, setStory] = useState<string>("");
+  const [storyLoading, setStoryLoading] = useState(false);
+  const [storyError, setStoryError] = useState(false);
+  const [aiDetail, setAiDetail] = useState<AdmissionDetail | null>(null);
+  const [aiDetailLoading, setAiDetailLoading] = useState(false);
+
+  const specsKey = `${specs.gpaUW || specs.gpaW}_${specs.sat}_${specs.major}`;
+
+  // Load AI admission detail
+  useEffect(() => {
+    if (!school || !open) { setAiDetail(null); return; }
+
+    const cacheKey = `prism_admission_${school.n}_${specsKey}`;
+    try {
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        setAiDetail(JSON.parse(cached));
+        return;
+      }
+    } catch {}
+
+    setAiDetailLoading(true);
+    fetch("/api/admission-detail", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        school: {
+          name: school.n, rank: school.rk, prob: school.prob,
+          cat: school.cat, satRange: `${school.sat[0]}-${school.sat[1]}`,
+          gpa: school.gpa, acceptRate: school.r,
+        },
+        profile: {
+          grade: profile?.grade, gpa: specs.gpaUW || specs.gpaW,
+          sat: specs.sat, toefl: specs.toefl, major: specs.major,
+        },
+      }),
+    })
+      .then(r => r.json())
+      .then(d => {
+        if (d.detail) {
+          setAiDetail(d.detail);
+          try { sessionStorage.setItem(cacheKey, JSON.stringify(d.detail)); } catch {}
+        }
+      })
+      .catch(() => {})
+      .finally(() => setAiDetailLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [school?.n, open, specsKey]);
+
+  useEffect(() => {
+    if (!school || !open) { setStory(""); return; }
+
+    const cacheKey = getStoryCacheKey(school.n, specs);
+    const cached = getCachedStory(cacheKey);
+    if (cached) { setStory(cached); return; }
+
+    setStoryLoading(true);
+    setStoryError(false);
+    fetch("/api/story", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        school: {
+          name: school.n, rank: school.rk, prob: school.prob,
+          cat: school.cat, satRange: `${school.sat[0]}-${school.sat[1]}`,
+          gpa: school.gpa, acceptRate: school.r,
+        },
+        specs: {
+          gpa: specs.gpaUW || specs.gpaW, sat: specs.sat,
+          toefl: specs.toefl, major: specs.major, ecTier: specs.ecTier,
+        },
+      }),
+    })
+      .then(r => r.json())
+      .then(d => {
+        const text = d.story || "";
+        if (text) setCachedStory(cacheKey, text);
+        setStory(text);
+      })
+      .catch(() => setStoryError(true))
+      .finally(() => setStoryLoading(false));
+  }, [school?.n, open, specsKey]);
+
   if (!school) return null;
   const style = CAT_STYLE[school.cat || "Reach"];
   const majorEntries = Object.entries(school.mr || {}).sort((a, b) => a[1] - b[1]);
@@ -48,19 +165,23 @@ function SchoolModal({ school, open, onClose }: { school: School | null; open: b
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-md p-0 rounded-2xl overflow-hidden max-h-[92vh] flex flex-col border-none">
-        {/* Hero header */}
-        <div className="relative p-6 pb-8" style={{ backgroundColor: school.c }}>
-          <button onClick={onClose} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/20 flex items-center justify-center text-white hover:bg-black/30 transition">
+        {/* Hero header with campus photo */}
+        <CampusPhoto schoolName={school.n} color={school.c} className="p-6 pb-8">
+          <button onClick={onClose} className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/20 flex items-center justify-center text-white hover:bg-black/30 transition">
             <X className="w-4 h-4" />
           </button>
           <DialogHeader className="text-white">
-            <div className="flex items-center gap-2 mb-2">
-              <Badge className="bg-white/20 text-white border-none text-[10px]">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <SchoolLogo domain={school.d} color={school.c} name={school.n} size="sm" className="border-white/20" />
+              <Badge className="bg-white/20 text-white border-none text-xs">
                 #{school.rk} US News
               </Badge>
               {school.tg.map((t) => (
-                <Badge key={t} className="bg-white/10 text-white/80 border-none text-[10px]">{t}</Badge>
+                <Badge key={t} className="bg-white/10 text-white/80 border-none text-xs">{t}</Badge>
               ))}
+              {(school as any).est && (
+                <Badge className="bg-amber-500/30 text-amber-100 border-amber-300/30 text-xs">추정치</Badge>
+              )}
             </div>
             <DialogTitle className="text-2xl font-headline font-bold text-white">{school.n}</DialogTitle>
             <DialogDescription className="text-white/70 text-sm flex items-center gap-1.5 mt-1">
@@ -90,22 +211,22 @@ function SchoolModal({ school, open, onClose }: { school: School | null; open: b
                 <p className="text-xs text-muted-foreground mt-1">
                   예상 범위: {school.lo}% ~ {school.hi}%
                 </p>
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   공식 합격률: {school.r}%
                 </p>
               </div>
             </div>
           </div>
-        </div>
+        </CampusPhoto>
 
         {/* Scrollable body */}
         <ScrollArea className="flex-1 pt-14">
           <Tabs defaultValue="overview" className="px-6 pb-6">
-            <TabsList className="w-full bg-muted/50 rounded-xl h-10 p-1">
-              <TabsTrigger value="overview" className="flex-1 rounded-lg text-xs">개요</TabsTrigger>
-              <TabsTrigger value="cost" className="flex-1 rounded-lg text-xs">학비</TabsTrigger>
-              <TabsTrigger value="essays" className="flex-1 rounded-lg text-xs">에세이</TabsTrigger>
-              <TabsTrigger value="majors" className="flex-1 rounded-lg text-xs">전공</TabsTrigger>
+            <TabsList className="w-full bg-muted/50 rounded-xl h-11 p-1">
+              <TabsTrigger value="overview" className="flex-1 rounded-lg text-sm">개요</TabsTrigger>
+              <TabsTrigger value="cost" className="flex-1 rounded-lg text-sm">학비</TabsTrigger>
+              <TabsTrigger value="essays" className="flex-1 rounded-lg text-sm">에세이</TabsTrigger>
+              <TabsTrigger value="majors" className="flex-1 rounded-lg text-sm">전공</TabsTrigger>
             </TabsList>
 
             {/* ── 개요 Tab ── */}
@@ -115,7 +236,7 @@ function SchoolModal({ school, open, onClose }: { school: School | null; open: b
                 <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">내 점수 분석</h4>
                 <div className="grid grid-cols-2 gap-2.5">
                   <ScoreCard label="학업 지수" value={`${(school.academicIdx || 0) > 0 ? "+" : ""}${school.academicIdx || 0}`} sub="GPA+SAT 기반" />
-                  <ScoreCard label="비교과 점���" value={`${school.ecPts || 0}`} sub="EC 활동 기반" />
+                  <ScoreCard label="비교과 점수" value={`${school.ecPts || 0}`} sub="EC 활동 기반" />
                 </div>
               </div>
 
@@ -143,13 +264,13 @@ function SchoolModal({ school, open, onClose }: { school: School | null; open: b
                 <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">지원 마감</h4>
                 <div className="flex gap-2.5">
                   {school.ea && (
-                    <div className="flex-1 bg-primary/5 rounded-xl p-3 border border-primary/10">
-                      <p className="text-[10px] text-muted-foreground">조기 (EA/ED)</p>
+                    <div className="flex-1 bg-primary/5 rounded-xl p-4 border border-primary/10">
+                      <p className="text-xs text-muted-foreground">조기 (EA/ED)</p>
                       <p className="text-sm font-bold text-primary">{school.ea}</p>
                     </div>
                   )}
-                  <div className="flex-1 bg-accent/50 rounded-xl p-3">
-                    <p className="text-[10px] text-muted-foreground">정시 (RD)</p>
+                  <div className="flex-1 bg-accent/50 rounded-xl p-4">
+                    <p className="text-xs text-muted-foreground">정시 (RD)</p>
                     <p className="text-sm font-bold">{school.rd}</p>
                   </div>
                 </div>
@@ -160,17 +281,167 @@ function SchoolModal({ school, open, onClose }: { school: School | null; open: b
                 <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">지원 요건</h4>
                 <div className="flex flex-wrap gap-1.5">
                   {school.reqs.map((r, i) => (
-                    <Badge key={i} variant="outline" className="text-[10px] rounded-lg">{r}</Badge>
+                    <Badge key={i} variant="outline" className="text-xs rounded-lg">{r}</Badge>
                   ))}
                 </div>
               </div>
 
+              {/* AI Detailed Admission Analysis */}
+              {aiDetailLoading && (
+                <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  <span className="text-xs text-muted-foreground">AI 합격 분석 중...</span>
+                </div>
+              )}
+              {aiDetail && !isFreeUser && (
+                <div className="space-y-3">
+                  {/* AI Probability Card */}
+                  <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-primary flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5" /> AI 정밀 분석
+                      </p>
+                      <Badge variant="secondary" className="text-[10px]">신뢰도 {aiDetail.confidence}</Badge>
+                    </div>
+                    <div className="flex items-baseline gap-2 mb-2">
+                      <span className="text-3xl font-bold font-headline text-primary">{aiDetail.aiProbability}%</span>
+                      <span className="text-sm text-muted-foreground">— {aiDetail.verdict}</span>
+                    </div>
+                    <p className="text-xs text-foreground/80 leading-relaxed">{aiDetail.reasoning}</p>
+                  </div>
+
+                  {/* Match Points */}
+                  {aiDetail.matchPoints?.length > 0 && (
+                    <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4">
+                      <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2 flex items-center gap-1.5">
+                        ✓ 강점
+                      </p>
+                      <ul className="space-y-1">
+                        {aiDetail.matchPoints.map((p, i) => (
+                          <li key={i} className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed">• {p}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Challenges */}
+                  {aiDetail.challenges?.length > 0 && (
+                    <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+                      <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-1.5">
+                        ⚠ 도전 요소
+                      </p>
+                      <ul className="space-y-1">
+                        {aiDetail.challenges.map((c, i) => (
+                          <li key={i} className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">• {c}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Improvement Tips */}
+                  {aiDetail.improvementTips?.length > 0 && (
+                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                      <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 mb-2 flex items-center gap-1.5">
+                        💡 개선 방법
+                      </p>
+                      <ul className="space-y-1">
+                        {aiDetail.improvementTips.map((t, i) => (
+                          <li key={i} className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">• {t}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Essay & International Notes */}
+                  {aiDetail.essayAdvice && (
+                    <div className="bg-muted/30 rounded-xl p-3">
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">에세이 조언</p>
+                      <p className="text-xs text-foreground/80 leading-relaxed">{aiDetail.essayAdvice}</p>
+                    </div>
+                  )}
+                  {aiDetail.internationalStudentNote && (
+                    <div className="bg-muted/30 rounded-xl p-3">
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">국제학생 참고</p>
+                      <p className="text-xs text-foreground/80 leading-relaxed">{aiDetail.internationalStudentNote}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Free user upsell for AI detail */}
+              {aiDetail && isFreeUser && (
+                <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-4 text-center">
+                  <Sparkles className="w-6 h-6 text-primary mx-auto mb-2" />
+                  <p className="text-sm font-bold mb-1">AI 정밀 합격 분석</p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    AI가 당신의 스펙을 분석해 더 정확한 합격 확률, 강점, 약점, 개선 방법을 제시합니다
+                  </p>
+                  <button onClick={() => window.location.href = "/pricing"} className="text-xs font-semibold text-primary bg-primary/10 rounded-full px-4 py-1.5 hover:bg-primary/20 transition-colors">
+                    프리미엄으로 보기
+                  </button>
+                </div>
+              )}
+
+              {/* Admission Story (existing) */}
+              <div className="bg-primary/5 border border-primary/10 rounded-xl p-4">
+                <p className="text-xs font-semibold text-primary flex items-center gap-1.5 mb-2">
+                  <MessageSquare className="w-3.5 h-3.5" /> AI 입학 사정관 한 줄 평
+                </p>
+                {storyLoading ? (
+                  <div className="flex items-center gap-2 py-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    <span className="text-xs text-muted-foreground">프로필 기반 분석 생성 중...</span>
+                  </div>
+                ) : storyError ? (
+                  <p className="text-xs text-muted-foreground">분석을 불러올 수 없습니다.</p>
+                ) : story ? (
+                  isFreeUser && school.n !== profile?.dreamSchool ? (
+                    <div className="space-y-2">
+                      <p className="text-sm leading-relaxed text-foreground">{story.split(/[.!?]/)[0]}.</p>
+                      <div className="relative max-h-[60px] overflow-hidden">
+                        <p className="text-sm leading-relaxed text-foreground blur-[5px] select-none" aria-hidden>
+                          {story.split(/[.!?]/).slice(1).join(".")}
+                        </p>
+                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-white/40 to-white rounded-lg">
+                          <button onClick={() => window.location.href = "/pricing"} className="text-xs font-semibold text-primary bg-primary/10 rounded-full px-3 py-1.5 hover:bg-primary/20 transition-colors">
+                            프리미엄으로 전체 보기
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm leading-relaxed text-foreground">{story}</p>
+                  )
+                ) : (
+                  <p className="text-xs text-muted-foreground">스펙을 입력하면 맞춤 분석이 제공됩니다.</p>
+                )}
+              </div>
+
               {/* Tip */}
-              <div className="bg-amber-50 border border-amber-100 rounded-xl p-3.5">
+              <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
                 <p className="text-xs font-semibold text-amber-800 flex items-center gap-1.5 mb-1">
                   <Sparkles className="w-3.5 h-3.5" /> 입시 팁
                 </p>
                 <p className="text-xs text-amber-700 leading-relaxed">{school.tp}</p>
+              </div>
+
+              {/* Estimated data warning */}
+              {(school as any).est && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3">
+                  <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 mb-1">⚠ 추정 데이터</p>
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed">
+                    이 학교의 SAT/GPA/합격률은 공개 데이터를 바탕으로 한 추정치입니다.
+                    실제 지원 전 학교 공식 웹사이트에서 정보를 확인하세요.
+                  </p>
+                </div>
+              )}
+
+              {/* Disclaimer */}
+              <div className="bg-muted/30 rounded-xl p-3">
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  ⓘ 본 합격 확률은 통계적 추정치이며 실제 합격을 보장하지 않습니다.
+                  최종 합격은 에세이, 추천서, 면접, 비교과 활동 등 다양한 요소에 따라 결정됩니다.
+                </p>
               </div>
             </TabsContent>
 
@@ -193,7 +464,7 @@ function SchoolModal({ school, open, onClose }: { school: School | null; open: b
                       { label: "부분 보조 (30%)", factor: 0.7 },
                       { label: "대폭 보조 (55%)", factor: 0.45 },
                     ].map(({ label, factor }) => (
-                      <div key={label} className="flex items-center justify-between bg-accent/30 rounded-xl p-3.5">
+                      <div key={label} className="flex items-center justify-between bg-accent/30 rounded-xl p-4">
                         <span className="text-xs text-muted-foreground">{label}</span>
                         <span className="text-sm font-bold">${Math.round(school.tuition! * factor).toLocaleString()}/년</span>
                       </div>
@@ -203,7 +474,7 @@ function SchoolModal({ school, open, onClose }: { school: School | null; open: b
                   <div className="bg-accent/30 rounded-xl p-4 text-center">
                     <p className="text-xs text-muted-foreground mb-1">4년 총 예상 비용</p>
                     <p className="text-2xl font-bold">${(school.tuition * 4).toLocaleString()}</p>
-                    <p className="text-[10px] text-muted-foreground mt-1">생활비 별도 (약 $15,000~$20,000/년)</p>
+                    <p className="text-xs text-muted-foreground mt-1">생활비 별도 (약 $15,000~$20,000/년)</p>
                   </div>
                 </>
               )}
@@ -250,7 +521,7 @@ function SchoolModal({ school, open, onClose }: { school: School | null; open: b
               {majorEntries.length > 0 ? (
                 <div className="space-y-2">
                   {majorEntries.map(([major, rank]) => (
-                    <div key={major} className="flex items-center gap-3 bg-accent/30 rounded-xl p-3.5">
+                    <div key={major} className="flex items-center gap-3 bg-accent/30 rounded-xl p-4">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
                         rank <= 3 ? "bg-amber-100 text-amber-700" :
                         rank <= 10 ? "bg-blue-100 text-blue-700" :
@@ -260,7 +531,7 @@ function SchoolModal({ school, open, onClose }: { school: School | null; open: b
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-semibold">{major}</p>
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           {rank <= 3 ? "전미 최상위" : rank <= 10 ? "전미 Top 10" : rank <= 25 ? "우수" : "경쟁력 있음"}
                         </p>
                       </div>
@@ -306,45 +577,84 @@ function SchoolModal({ school, open, onClose }: { school: School | null; open: b
 /* ───── small helper components ───── */
 function ScoreCard({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
-    <div className="bg-accent/30 rounded-xl p-3.5">
-      <p className="text-[10px] text-muted-foreground">{label}</p>
+    <div className="bg-accent/30 rounded-xl p-4">
+      <p className="text-xs text-muted-foreground">{label}</p>
       <p className="text-xl font-bold mt-0.5">{value}<span className="text-xs font-normal text-muted-foreground ml-1">점</span></p>
-      <p className="text-[10px] text-muted-foreground">{sub}</p>
+      <p className="text-xs text-muted-foreground">{sub}</p>
     </div>
   );
 }
 
 function StatChip({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="bg-accent/30 rounded-xl p-3 text-center">
+    <div className="bg-accent/30 rounded-xl p-4 text-center">
       <div className="flex justify-center text-muted-foreground mb-1">{icon}</div>
       <p className="text-xs font-bold">{value}</p>
-      <p className="text-[10px] text-muted-foreground">{label}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
     </div>
   );
 }
 
 /* ═══════════════ MAIN PAGE ═══════════════ */
 export default function AnalysisPage() {
-  const [step, setStep] = useState<"form" | "result">("form");
+  const { profile, toggleFavorite, isFavorite } = useAuth();
+  const currentPlan = profile?.plan || "free";
+  const schoolLimit = PLANS[currentPlan].limits.analysisSchools;
+  const isFree = currentPlan === "free";
+
+  const [step, setStep] = useState<"form" | "analyzing" | "result">("form");
+  const [formStep, setFormStep] = useState(1);
+  const [analyzeProgress, setAnalyzeProgress] = useState(0);
+  const [analyzeMsg, setAnalyzeMsg] = useState("");
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
   const [filterCat, setFilterCat] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"rank" | "prob">("rank");
   const [specs, setSpecs] = useState<Specs>({
-    gpaUW: "", gpaW: "", sat: "", act: "",
-    toefl: "", ielts: "", apCount: "", apAvg: "",
+    gpaUW: profile?.gpa || "", gpaW: "", sat: profile?.sat || "", act: "",
+    toefl: profile?.toefl || "", ielts: "", apCount: "", apAvg: "",
     satSubj: "", classRank: "", ecTier: 2,
-    awardTier: 1, essayQ: 3, recQ: 3,
+    awardTier: 2, essayQ: 3, recQ: 3,
     interviewQ: 3, legacy: false, firstGen: false,
     earlyApp: "", needAid: false, gender: "",
-    intl: true, major: "Computer Science",
+    intl: true, major: profile?.major || "Computer Science",
   });
+
+  const startAnalysis = useCallback(() => {
+    setStep("analyzing");
+    setAnalyzeProgress(0);
+    setAnalyzeMsg("학생 프로필 분석 중...");
+    const msgs = [
+      { at: 400, msg: "200개 대학 데이터 비교 중...", pct: 35 },
+      { at: 900, msg: "합격 확률 계산 중...", pct: 65 },
+      { at: 1400, msg: "결과 생성 완료!", pct: 100 },
+    ];
+    msgs.forEach(({ at, msg, pct }) =>
+      setTimeout(() => { setAnalyzeMsg(msg); setAnalyzeProgress(pct); }, at)
+    );
+    setTimeout(() => setStep("result"), 1800);
+  }, []);
 
   const results = useMemo(() => {
     if (step !== "result") return [];
     return matchSchools(specs);
   }, [specs, step]);
+
+  // Strategic free preview: 1 Reach + 1 Hard Target + 2 Target + 1 Safety for max curiosity
+  const freePreviewIds = useMemo(() => {
+    if (!isFree || !results.length) return new Set<string>();
+    const byCategory: Record<string, typeof results> = { Reach: [], "Hard Target": [], Target: [], Safety: [] };
+    results.forEach(s => { if (s.cat && byCategory[s.cat]) byCategory[s.cat].push(s); });
+    const picks: string[] = [];
+    if (byCategory.Reach[0]) picks.push(byCategory.Reach[0].n);
+    if (byCategory["Hard Target"][0]) picks.push(byCategory["Hard Target"][0].n);
+    byCategory.Target.slice(0, 2).forEach(s => picks.push(s.n));
+    if (byCategory.Safety[0]) picks.push(byCategory.Safety[0].n);
+    if (picks.length < schoolLimit) {
+      results.forEach(s => { if (picks.length < schoolLimit && !picks.includes(s.n)) picks.push(s.n); });
+    }
+    return new Set(picks);
+  }, [isFree, results, schoolLimit]);
 
   const filtered = useMemo(() => {
     let list = results;
@@ -371,20 +681,59 @@ export default function AnalysisPage() {
     setSpecs((prev) => ({ ...prev, [key]: value }));
   };
 
+  /* ── ANALYZING VIEW ── */
+  if (step === "analyzing") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="max-w-xs w-full text-center space-y-6 animate-scale-in">
+          <div className="w-20 h-20 rounded-2xl dark-hero-gradient flex items-center justify-center mx-auto shadow-xl">
+            <BarChart3 className="w-10 h-10 text-white animate-pulse" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="font-headline text-xl font-bold">{analyzeMsg}</h2>
+            <p className="text-sm text-muted-foreground">200개 대학을 분석하고 있어요</p>
+          </div>
+          <div className="space-y-2">
+            <Progress value={analyzeProgress} className="h-2" />
+            <p className="text-xs text-muted-foreground">{analyzeProgress}%</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   /* ── RESULT VIEW ── */
   if (step === "result") {
     return (
       <div className="min-h-screen bg-background pb-24">
         <header className="p-6 space-y-4">
-          <Button variant="ghost" size="sm" onClick={() => setStep("form")} className="text-primary -ml-2 gap-1">
-            <ArrowLeft className="w-4 h-4" /> 다시 입력
-          </Button>
+          <div className="flex items-center justify-between">
+            <Button variant="ghost" size="sm" onClick={() => setStep("form")} className="text-primary -ml-2 gap-1">
+              <ArrowLeft className="w-4 h-4" /> 다시 입력
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const text = `PRISM에서 분석한 내 합격 확률 결과:\n평균 합격 확률 ${stats.avgProb}%\nReach ${results.filter(s=>s.cat==="Reach").length}개, Target ${results.filter(s=>s.cat==="Target"||s.cat==="Hard Target").length}개, Safety ${results.filter(s=>s.cat==="Safety").length}개\n\n나도 분석받기 → ${typeof window !== "undefined" ? window.location.origin : ""}`;
+                if (navigator.share) {
+                  navigator.share({ title: "PRISM 합격 확률 분석", text }).catch(() => {});
+                } else if (navigator.clipboard) {
+                  navigator.clipboard.writeText(text);
+                  alert("결과가 클립보드에 복사되었습니다!");
+                }
+              }}
+              className="text-primary gap-1"
+            >
+              <Share2 className="w-4 h-4" /> 공유
+            </Button>
+          </div>
 
           {/* Summary Card */}
-          <Card className="dark-hero-gradient text-white border-none p-6 relative overflow-hidden">
+          <Card className="dark-hero-gradient text-white border-none p-6 relative overflow-hidden prism-strip">
             <div className="absolute top-[-20%] right-[-10%] w-32 h-32 bg-primary/20 rounded-full blur-[60px]" />
             <div className="relative z-10">
-              <p className="text-xs text-white/50 mb-3">
+              <p className="text-xs text-white/70 mb-3">
                 {results.length}개 대학 분석 완료
               </p>
               <div className="grid grid-cols-4 gap-3 text-center mb-4">
@@ -396,25 +745,39 @@ export default function AnalysisPage() {
                       className={`rounded-xl p-2.5 transition-all ${filterCat === cat ? "bg-white/20 ring-1 ring-white/30" : "bg-white/5"}`}>
                       <div className={`w-2 h-2 rounded-full ${dotColor} mx-auto mb-1`} />
                       <p className="text-xl font-bold">{count}</p>
-                      <p className="text-[9px] text-white/50">{cat}</p>
+                      <p className="text-xs text-white/70">{cat}</p>
                     </button>
                   );
                 })}
               </div>
               <div className="pt-3 border-t border-white/10 flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] text-white/40">평균 합격 확률</p>
+                  <p className="text-xs text-white/70">평균 합격 확률</p>
                   <p className="text-2xl font-bold font-headline">{stats.avgProb}%</p>
                 </div>
                 {stats.top && (
                   <div className="text-right">
-                    <p className="text-[10px] text-white/40">최고 확률 대학</p>
+                    <p className="text-xs text-white/70">최고 확률 대학</p>
                     <p className="text-sm font-semibold">{stats.top.n} ({stats.top.prob}%)</p>
                   </div>
                 )}
               </div>
             </div>
           </Card>
+
+          {/* What-If CTA */}
+          <Link href="/what-if">
+            <Card className="p-3.5 bg-primary/5 border border-primary/20 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <Sparkles className="w-4.5 h-4.5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-bold text-foreground">What-If 시뮬레이터</p>
+                <p className="text-xs text-muted-foreground">점수를 바꾸면 확률이 어떻게 변할까?</p>
+              </div>
+              <ExternalLink className="w-3.5 h-3.5 text-primary" />
+            </Card>
+          </Link>
 
           {/* Search + Sort */}
           <div className="flex gap-2">
@@ -453,36 +816,41 @@ export default function AnalysisPage() {
         </header>
 
         {/* School list */}
-        <div className="px-6 space-y-2.5">
+        <div className="px-6 space-y-2.5 md:grid md:grid-cols-2 md:gap-3">
           {filtered.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
               <Search className="w-8 h-8 mx-auto mb-2 opacity-30" />
               <p className="text-sm">검색 결과가 없습니다.</p>
             </div>
           )}
-          {filtered.map((school) => {
+          {filtered.map((school, index) => {
             const style = CAT_STYLE[school.cat || "Reach"];
+            const isLocked = isFree && !freePreviewIds.has(school.n);
             return (
               <button
                 key={school.n}
-                className="w-full text-left"
-                onClick={() => setSelectedSchool(school)}
+                className="w-full text-left animate-fade-up"
+                style={{ animationDelay: `${Math.min(index * 50, 300)}ms` }}
+                onClick={() => !isLocked && setSelectedSchool(school)}
               >
-                <Card className={`bg-white border-none shadow-sm hover:shadow-md transition-all p-0 overflow-hidden group`}>
-                  <div className="flex items-center gap-3 p-4">
-                    {/* Rank badge */}
-                    <div
-                      className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-sm"
-                      style={{ backgroundColor: school.c }}
-                    >
-                      #{school.rk}
+                <Card className={`bg-white border-none shadow-sm hover:shadow-md transition-all p-0 overflow-hidden group relative ${isLocked ? "pointer-events-none" : ""}`}>
+                  {isLocked && (
+                    <div className="absolute inset-0 z-10 bg-gradient-to-b from-white/40 via-white/80 to-white flex items-center justify-center">
+                      <div className="flex items-center gap-1.5 bg-white/90 rounded-full px-3 py-1.5 shadow-sm">
+                        <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-xs font-semibold text-muted-foreground">잠김</span>
+                      </div>
                     </div>
+                  )}
+                  <div className="flex items-center gap-3 p-4">
+                    {/* School logo */}
+                    <SchoolLogo domain={school.d} color={school.c} name={school.n} rank={school.rk} size="md" />
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <p className="font-bold text-sm truncate">{school.n}</p>
-                        <Badge className={`${style.bg} border-none text-[9px] shrink-0 px-1.5`}>{school.cat}</Badge>
+                        <Badge className={`${style.bg} border-none text-xs shrink-0 px-1.5`}>{school.cat}</Badge>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -495,12 +863,20 @@ export default function AnalysisPage() {
                           {school.prob}%
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground">
+                      <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
                         <span>SAT {school.sat[0]}–{school.sat[1]}</span>
                         <span>GPA {school.gpa}</span>
                         {school.tuition && <span>${(school.tuition / 1000).toFixed(0)}k</span>}
                       </div>
                     </div>
+
+                    {/* Favorite */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleFavorite(school.n); }}
+                      className="shrink-0 p-1"
+                    >
+                      <Heart className={`w-4 h-4 ${isFavorite(school.n) ? "fill-red-500 text-red-500" : "text-muted-foreground/30"}`} />
+                    </button>
 
                     {/* Arrow hint */}
                     <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-primary transition-colors shrink-0" />
@@ -509,114 +885,239 @@ export default function AnalysisPage() {
               </button>
             );
           })}
+
+          {/* Upgrade CTA after locked items */}
+          {isFree && filtered.length > freePreviewIds.size && (
+            <div className="mt-4 space-y-3">
+              <UpgradeCTA
+                title={`나머지 ${filtered.length - freePreviewIds.size}개 대학 결과 보기`}
+                description="숨겨진 대학 중에 나에게 딱 맞는 학교가 있을 수 있어요."
+                planLabel="베이직 시작하기 — 7일 무료 체험"
+              />
+            </div>
+          )}
+
+          {/* Prediction disclaimer */}
+          <div className="mt-6 px-2">
+            <p className="text-xs text-muted-foreground/70 leading-relaxed text-center">
+              합격 예측은 각 대학의 공개 합격률, SAT/GPA 범위, 지원자 통계를 기반으로 산출됩니다.
+              실제 합격 여부는 에세이, 추천서, 과외활동 등 다양한 요소에 따라 달라질 수 있습니다.
+            </p>
+          </div>
         </div>
 
         {/* Detail Modal */}
-        <SchoolModal school={selectedSchool} open={!!selectedSchool} onClose={() => setSelectedSchool(null)} />
+        <SchoolModal school={selectedSchool} open={!!selectedSchool} onClose={() => setSelectedSchool(null)} specs={specs} />
 
         <BottomNav />
       </div>
     );
   }
 
-  /* ── FORM VIEW ── */
+  /* ── FORM VIEW (4-Step Wizard) ── */
+  const formStepLabels = ["학업 성적", "AP 과목", "비교과", "기타"];
+
   return (
     <div className="min-h-screen bg-background pb-24">
-      <header className="p-6">
+      <header className="p-6 pb-4">
         <h1 className="font-headline text-2xl font-bold flex items-center gap-2">
           <BarChart3 className="w-6 h-6 text-primary" /> 합격 확률 분석
         </h1>
         <p className="text-sm text-muted-foreground mt-1">내 스펙을 입력하면 200개 대학의 합격 확률을 분석합니다.</p>
+
+        {/* Progress bar */}
+        <div className="mt-4 space-y-2">
+          <div className="flex justify-between">
+            {formStepLabels.map((label, i) => (
+              <button
+                key={label}
+                onClick={() => setFormStep(i + 1)}
+                className={`text-xs font-semibold transition-colors ${
+                  formStep === i + 1 ? "text-primary" : formStep > i + 1 ? "text-emerald-500" : "text-muted-foreground"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <Progress value={(formStep / 4) * 100} className="h-1.5" />
+          <p className="text-xs text-muted-foreground">Step {formStep} / 4</p>
+        </div>
       </header>
 
+      {/* Blurred preview hint (only on step 1) */}
+      {formStep === 1 && (
+      <div className="px-6 mb-4">
+        <div className="relative rounded-2xl overflow-hidden">
+          <div className="blur-[6px] pointer-events-none space-y-2 p-1">
+            {[
+              { name: "Stanford University", prob: 32, color: "#8C1515" },
+              { name: "MIT", prob: 28, color: "#A31F34" },
+              { name: "UC Berkeley", prob: 54, color: "#003262" },
+            ].map((s) => (
+              <Card key={s.name} className="bg-white border-none shadow-sm p-4 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg text-white text-xs font-bold flex items-center justify-center" style={{ backgroundColor: s.color }}>
+                  #1
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold">{s.name}</p>
+                  <Progress value={s.prob} className="h-1.5 mt-1" />
+                </div>
+                <span className="text-xs font-bold">{s.prob}%</span>
+              </Card>
+            ))}
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center bg-white/30">
+            <div className="text-center">
+              <Sparkles className="w-8 h-8 text-primary mx-auto mb-2" />
+              <p className="text-sm font-bold">스펙을 입력하면</p>
+              <p className="text-sm font-bold text-primary">200개 대학의 합격 확률을 분석해드려요</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      )}
+
       <div className="px-6 space-y-5">
-        {/* Academic */}
-        <Card className="bg-white border-none shadow-sm p-5 space-y-4">
-          <h3 className="font-bold text-sm flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-primary" /> 학업 성적
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label="GPA (Unweighted)" placeholder="4.0" type="number" step="0.01"
-              value={specs.gpaUW} onChange={(v) => updateSpec("gpaUW", v)} />
-            <FormField label="GPA (Weighted)" placeholder="4.5" type="number" step="0.01"
-              value={specs.gpaW} onChange={(v) => updateSpec("gpaW", v)} />
-            <FormField label="SAT" placeholder="1500" type="number"
-              value={specs.sat} onChange={(v) => updateSpec("sat", v)} />
-            <FormField label="ACT" placeholder="34" type="number"
-              value={specs.act} onChange={(v) => updateSpec("act", v)} />
-            <FormField label="TOEFL" placeholder="110" type="number"
-              value={specs.toefl} onChange={(v) => updateSpec("toefl", v)} />
+        {/* Step 1: 학업 성적 */}
+        {formStep === 1 && (
+          <Card className="bg-white border-none shadow-sm p-5 space-y-4">
+            <h3 className="font-bold text-sm flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" /> 학업 성적
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="GPA (Unweighted)" placeholder="4.0" type="number" step="0.01"
+                value={specs.gpaUW} onChange={(v) => updateSpec("gpaUW", v)} />
+              <FormField label="GPA (Weighted)" placeholder="4.5" type="number" step="0.01"
+                value={specs.gpaW} onChange={(v) => updateSpec("gpaW", v)} />
+              <FormField label="SAT" placeholder="1500" type="number"
+                value={specs.sat} onChange={(v) => updateSpec("sat", v)} />
+              <FormField label="ACT" placeholder="34" type="number"
+                value={specs.act} onChange={(v) => updateSpec("act", v)} />
+              <FormField label="TOEFL" placeholder="110" type="number"
+                value={specs.toefl} onChange={(v) => updateSpec("toefl", v)} />
+              <FormField label="IELTS" placeholder="7.5" type="number" step="0.5"
+                value={specs.ielts} onChange={(v) => updateSpec("ielts", v)} />
+            </div>
             <FormField label="Class Rank (%)" placeholder="5" type="number"
               value={specs.classRank} onChange={(v) => updateSpec("classRank", v)} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label="AP 과목 수" placeholder="8" type="number"
-              value={specs.apCount} onChange={(v) => updateSpec("apCount", v)} />
-            <FormField label="AP 평균 점수" placeholder="4.5" type="number" step="0.1"
-              value={specs.apAvg} onChange={(v) => updateSpec("apAvg", v)} />
-          </div>
-        </Card>
+          </Card>
+        )}
 
-        {/* EC & Awards */}
-        <Card className="bg-white border-none shadow-sm p-5 space-y-4">
-          <h3 className="font-bold text-sm flex items-center gap-2">
-            <Filter className="w-4 h-4 text-primary" /> 비교과 & 수상
-          </h3>
-          <div className="space-y-3">
-            <TierSelector label="비교과 활동 수준" options={[
-              { value: 1, label: "최상" }, { value: 2, label: "우수" },
-              { value: 3, label: "보통" }, { value: 4, label: "기본" },
-            ]} selected={specs.ecTier} onSelect={(v) => updateSpec("ecTier", v)} />
-            <TierSelector label="수상 실적" options={[
-              { value: 0, label: "없음" }, { value: 1, label: "교내" },
-              { value: 2, label: "지역" }, { value: 3, label: "전국" }, { value: 4, label: "국제" },
-            ]} selected={specs.awardTier} onSelect={(v) => updateSpec("awardTier", v)} />
-          </div>
-        </Card>
-
-        {/* Application Info */}
-        <Card className="bg-white border-none shadow-sm p-5 space-y-4">
-          <h3 className="font-bold text-sm flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-primary" /> 지원 정보
-          </h3>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">지망 전공</Label>
-              <select value={specs.major} onChange={(e) => updateSpec("major", e.target.value)}
-                className="w-full h-11 rounded-xl border px-3 text-sm bg-white">
-                {MAJOR_LIST.map((m) => <option key={m} value={m}>{m}</option>)}
-              </select>
+        {/* Step 2: AP 과목 */}
+        {formStep === 2 && (
+          <Card className="bg-white border-none shadow-sm p-5 space-y-4">
+            <h3 className="font-bold text-sm flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-primary" /> AP 과목
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="AP 과목 수" placeholder="8" type="number"
+                value={specs.apCount} onChange={(v) => updateSpec("apCount", v)} />
+              <FormField label="AP 평균 점수 (1-5)" placeholder="4.5" type="number" step="0.1"
+                value={specs.apAvg} onChange={(v) => updateSpec("apAvg", v)} />
             </div>
-            <TierSelector label="조기 지원" options={[
-              { value: "", label: "없음" }, { value: "EA", label: "EA" }, { value: "ED", label: "ED" },
-            ]} selected={specs.earlyApp} onSelect={(v) => updateSpec("earlyApp", v)} />
-            <ToggleRow label="국제 학생 (유학생)" checked={specs.intl} onChange={(v) => updateSpec("intl", v)} />
-            <ToggleRow label="재정 보조 필요" checked={specs.needAid} onChange={(v) => updateSpec("needAid", v)} />
-            <ToggleRow label="레거시 (동문 자녀)" checked={specs.legacy} onChange={(v) => updateSpec("legacy", v)} />
-            <ToggleRow label="First-Generation" checked={specs.firstGen} onChange={(v) => updateSpec("firstGen", v)} />
-          </div>
-        </Card>
+            <div className="bg-accent/30 rounded-xl p-4">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                AP 과목 수와 평균 점수를 입력해주세요. 과목이 많고 점수가 높을수록 학업 역량이 높게 평가됩니다.
+              </p>
+            </div>
+          </Card>
+        )}
 
-        {/* Quality */}
-        <Card className="bg-white border-none shadow-sm p-5 space-y-4">
-          <h3 className="font-bold text-sm">에세이 & 추천서 품질</h3>
-          <div className="space-y-3">
-            <TierSelector label="에세이 품질" options={[1,2,3,4,5].map(v => ({ value: v, label: `${v}` }))}
-              selected={specs.essayQ} onSelect={(v) => updateSpec("essayQ", v)} />
-            <TierSelector label="추천서 품질" options={[1,2,3,4,5].map(v => ({ value: v, label: `${v}` }))}
-              selected={specs.recQ} onSelect={(v) => updateSpec("recQ", v)} />
-            <TierSelector label="��터뷰 품질" options={[1,2,3,4,5].map(v => ({ value: v, label: `${v}` }))}
+        {/* Step 3: 비교과 */}
+        {formStep === 3 && (
+          <Card className="bg-white border-none shadow-sm p-5 space-y-4">
+            <h3 className="font-bold text-sm flex items-center gap-2">
+              <Filter className="w-4 h-4 text-primary" /> 비교과 활동 & 수상
+            </h3>
+            <div className="space-y-3">
+              <TierSelector label="비교과 활동 수준" options={[
+                { value: 1, label: "최상" }, { value: 2, label: "우수" },
+                { value: 3, label: "보통" }, { value: 4, label: "기본" },
+              ]} selected={specs.ecTier} onSelect={(v) => updateSpec("ecTier", v)} />
+              <div className="bg-accent/30 rounded-xl p-4 text-xs text-muted-foreground space-y-1">
+                <p><strong>최상:</strong> 전국/국제 대회 입상, 스타트업, 연구 논문</p>
+                <p><strong>우수:</strong> 리더십, 지역 대회 입상, 인턴십</p>
+                <p><strong>보통:</strong> 클럽 활동, 봉사활동</p>
+                <p><strong>기본:</strong> 최소한의 활동</p>
+              </div>
+              <TierSelector label="수상 실적" options={[
+                { value: 0, label: "없음" }, { value: 1, label: "교내" },
+                { value: 2, label: "지역" }, { value: 3, label: "전국" }, { value: 4, label: "국제" },
+              ]} selected={specs.awardTier} onSelect={(v) => updateSpec("awardTier", v)} />
+            </div>
+          </Card>
+        )}
+
+        {/* Step 4: 기타 */}
+        {formStep === 4 && (
+          <div className="space-y-5">
+            <Card className="bg-white border-none shadow-sm p-5 space-y-4">
+              <h3 className="font-bold text-sm flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" /> 에세이 & 추천서
+              </h3>
+              <div className="space-y-3">
+                <TierSelector label="에세이 품질 (1-5)" options={[1,2,3,4,5].map(v => ({ value: v, label: `${v}` }))}
+                  selected={specs.essayQ} onSelect={(v) => updateSpec("essayQ", v)} />
+                <TierSelector label="추천서 품질 (1-5)" options={[1,2,3,4,5].map(v => ({ value: v, label: `${v}` }))}
+                  selected={specs.recQ} onSelect={(v) => updateSpec("recQ", v)} />
+            <TierSelector label="인터뷰 품질" options={[1,2,3,4,5].map(v => ({ value: v, label: `${v}` }))}
               selected={specs.interviewQ} onSelect={(v) => updateSpec("interviewQ", v)} />
-          </div>
-        </Card>
+              </div>
+            </Card>
 
-        <Button
-          onClick={() => setStep("result")}
-          disabled={!specs.gpaUW && !specs.gpaW}
-          className="w-full h-14 rounded-2xl text-lg font-bold sticky bottom-24 shadow-xl"
-        >
-          {results.length > 0 ? "다시 분석하기" : "분석 결과 보기"}
-        </Button>
+            <Card className="bg-white border-none shadow-sm p-5 space-y-4">
+              <h3 className="font-bold text-sm flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-primary" /> 지원 정보
+              </h3>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">지망 전공</Label>
+                  <select value={specs.major} onChange={(e) => updateSpec("major", e.target.value)}
+                    className="w-full h-11 rounded-xl border px-3 text-sm bg-white">
+                    {MAJOR_LIST.map((m) => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <TierSelector label="조기 지원" options={[
+                  { value: "", label: "없음" }, { value: "EA", label: "EA" }, { value: "ED", label: "ED" },
+                ]} selected={specs.earlyApp} onSelect={(v) => updateSpec("earlyApp", v)} />
+                <ToggleRow label="국제 학생 (유학생)" checked={specs.intl} onChange={(v) => updateSpec("intl", v)} />
+                <ToggleRow label="재정 보조 필요" checked={specs.needAid} onChange={(v) => updateSpec("needAid", v)} />
+                <ToggleRow label="레거시 (동문 자녀)" checked={specs.legacy} onChange={(v) => updateSpec("legacy", v)} />
+                <ToggleRow label="First-Generation" checked={specs.firstGen} onChange={(v) => updateSpec("firstGen", v)} />
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Navigation */}
+        <div className="flex gap-3 pt-2">
+          {formStep > 1 && (
+            <Button
+              variant="outline"
+              onClick={() => setFormStep((s) => s - 1)}
+              className="h-14 flex-1 rounded-2xl text-base font-bold"
+            >
+              ← 이전
+            </Button>
+          )}
+          {formStep < 4 ? (
+            <Button
+              onClick={() => setFormStep((s) => s + 1)}
+              className="h-14 flex-1 rounded-2xl text-base font-bold"
+            >
+              다음 →
+            </Button>
+          ) : (
+            <Button
+              onClick={() => { startAnalysis(); setFormStep(1); }}
+              disabled={!specs.gpaUW && !specs.gpaW}
+              className="h-14 flex-1 rounded-2xl text-lg font-bold shadow-xl"
+            >
+              합격 확률 분석하기
+            </Button>
+          )}
+        </div>
       </div>
       <BottomNav />
     </div>
