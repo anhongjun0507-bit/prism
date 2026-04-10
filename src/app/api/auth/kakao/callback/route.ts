@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { initializeApp, getApps } from "firebase-admin/app";
-import { getAuth as getAdminAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+import * as admin from "firebase-admin";
 
 function getAdmin() {
-  if (getApps().length === 0) {
-    initializeApp({
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      }),
     });
   }
-  return { auth: getAdminAuth(), db: getFirestore() };
+  return { auth: admin.auth(), db: admin.firestore() };
 }
 
 export async function GET(req: NextRequest) {
