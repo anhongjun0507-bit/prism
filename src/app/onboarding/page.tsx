@@ -11,11 +11,12 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
-import { UNI_LIST, MAJOR_LIST } from "@/lib/constants";
+import { UNI_LIST, MAJOR_LIST, majorMatchesQuery } from "@/lib/constants";
+import { schoolMatchesQuery } from "@/lib/school";
 import { matchSchools, type Specs } from "@/lib/matching";
 import { CheckCircle2, ChevronRight, ChevronUp, Sparkles } from "lucide-react";
 
-const grades = ["9학년", "10학년", "11학년", "12학년"];
+const grades = ["9학년", "10학년", "11학년", "12학년", "졸업생/Gap Year", "홈스쿨/기타"];
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -26,6 +27,7 @@ export default function OnboardingPage() {
   const [majorSearch, setMajorSearch] = useState("");
   const [uniHighlight, setUniHighlight] = useState(-1);
   const [majorHighlight, setMajorHighlight] = useState(-1);
+  const [customMajor, setCustomMajor] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     dreamSchool: "",
@@ -64,11 +66,11 @@ export default function OnboardingPage() {
   const progress = (step / 3) * 100;
 
   const filteredUnis = uniSearch.length > 0
-    ? UNI_LIST.filter((u) => u.toLowerCase().includes(uniSearch.toLowerCase())).slice(0, 6)
+    ? UNI_LIST.filter((u) => schoolMatchesQuery({ n: u }, uniSearch)).slice(0, 6)
     : [];
 
   const filteredMajors = majorSearch.length > 0
-    ? MAJOR_LIST.filter((m) => m.toLowerCase().includes(majorSearch.toLowerCase())).slice(0, 6)
+    ? MAJOR_LIST.filter((m) => majorMatchesQuery(m, majorSearch)).slice(0, 8)
     : [];
 
   // Preview schools when academic info is provided
@@ -279,8 +281,15 @@ export default function OnboardingPage() {
                     role="option"
                     aria-selected={idx === majorHighlight}
                     onClick={() => {
-                      setFormData({ ...formData, major: m });
-                      setMajorSearch("");
+                      if (m === "Other (직접 입력)") {
+                        setCustomMajor(true);
+                        setFormData({ ...formData, major: "" });
+                        setMajorSearch("");
+                      } else {
+                        setCustomMajor(false);
+                        setFormData({ ...formData, major: m });
+                        setMajorSearch("");
+                      }
                       setMajorHighlight(-1);
                     }}
                     className={cn(
@@ -292,6 +301,15 @@ export default function OnboardingPage() {
                   </button>
                 ))}
               </div>
+            )}
+            {customMajor && (
+              <Input
+                placeholder="전공명을 직접 입력하세요 (예: Biostatistics)"
+                className="h-11 rounded-xl border-2 mt-2"
+                autoFocus
+                value={formData.major}
+                onChange={(e) => setFormData({ ...formData, major: e.target.value })}
+              />
             )}
           </div>
         </div>

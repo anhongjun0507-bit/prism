@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 3. 강점과 약점을 균형 있게 다루되, 강점을 먼저 말하세요.
 4. 실질적인 개선 제안을 포함하세요. "SAT를 올리세요" 대신 "SAT를 1400까지 올리면 Target 학교 수가 눈에 띄게 늘어날 수 있어요."
 5. 학생의 관심 전공과 목표 학교에 연결해서 분석하세요.
-6. 학년을 고려하세요 — 11학년은 개선할 시간이 있지만, 12학년은 현재 스펙으로 전략을 짜야 해요.
+6. 학년을 고려하세요 — 11학년은 개선할 시간이 있지만, 12학년은 현재 스펙으로 전략을 짜야 해요. 졸업생/Gap Year는 재지원 전략, 홈스쿨/기타는 비전형 학력 어필 전략을 제안하세요.
 7. 한국 국제학생 특성을 반영하세요 — TOEFL의 중요성, 아시안 지원자 풀에서의 경쟁, 과외활동 차별화 등.
 
 절대 하지 말 것:
@@ -112,8 +112,18 @@ export async function POST(req: NextRequest) {
 - TOEFL: ${profile.toefl || "미입력"}
 - 지망 전공: ${profile.major || "미입력"}
 - 목표 대학: ${profile.dreamSchool || "미입력"}
+${profile.highSchool ? `- 고등학교: ${profile.highSchool}` : ""}
+${profile.schoolType ? `- 학교 유형: ${profile.schoolType}` : ""}
+${profile.clubs ? `- 동아리/클럽: ${profile.clubs}` : ""}
+${profile.leadership ? `- 리더십: ${profile.leadership}` : ""}
+${profile.research ? `- 연구 경험: ${profile.research}` : ""}
+${profile.internship ? `- 인턴/알바: ${profile.internship}` : ""}
+${profile.athletics ? `- 운동/예술: ${profile.athletics}` : ""}
+${profile.specialTalent ? `- 특기: ${profile.specialTalent}` : ""}
 
-이 학생의 스펙을 입학사정관 관점에서 분석하고, 목표 대학 합격을 위한 맞춤 피드백을 제공해주세요.`;
+이 학생의 스펙을 입학사정관 관점에서 분석하고, 목표 대학 합격을 위한 맞춤 피드백을 제공해주세요.
+${profile.research ? "연구 경험이 있으므로 Research 매치 학교에 대한 분석도 포함해주세요." : ""}
+${profile.internship ? "실무 경험이 있으므로 이를 어떻게 강조할 수 있는지도 언급해주세요." : ""}`;
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",

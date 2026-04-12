@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,11 +15,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
-import { matchSchools, type Specs, type School, MAJOR_LIST } from "@/lib/matching";
+import { matchSchools, type Specs, type School } from "@/lib/matching";
+import { schoolMatchesQuery } from "@/lib/school";
+import { MAJOR_LIST } from "@/lib/constants";
 import {
   BarChart3, TrendingUp, Filter, DollarSign, ArrowLeft, Search,
   MapPin, Users, GraduationCap, Calendar, FileText, Trophy,
   ExternalLink, X, Sparkles, BookOpen, Lock, Loader2, MessageSquare, Heart, Share2, Target,
+  ChevronDown, School, Briefcase,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { PLANS } from "@/lib/plans";
@@ -708,7 +711,7 @@ function StatChip({ icon, label, value }: { icon: React.ReactNode; label: string
 
 /* ═══════════════ MAIN PAGE ═══════════════ */
 export default function AnalysisPage() {
-  const { profile, toggleFavorite, isFavorite } = useAuth();
+  const { profile, toggleFavorite, isFavorite, saveProfile } = useAuth();
   const currentPlan = profile?.plan || "free";
   const schoolLimit = PLANS[currentPlan].limits.analysisSchools;
   const isFree = currentPlan === "free";
@@ -721,7 +724,10 @@ export default function AnalysisPage() {
   const [filterCat, setFilterCat] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"rank" | "prob">("rank");
-  const [specs, setSpecs] = useState<Specs>({
+  const [specsSaveStatus, setSpecsSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+
+  // Load saved specs from profile, or use defaults
+  const defaultSpecs: Specs = {
     gpaUW: profile?.gpa || "", gpaW: "", sat: profile?.sat || "", act: "",
     toefl: profile?.toefl || "", ielts: "", apCount: "", apAvg: "",
     satSubj: "", classRank: "", ecTier: 2,
@@ -729,7 +735,55 @@ export default function AnalysisPage() {
     interviewQ: 3, legacy: false, firstGen: false,
     earlyApp: "", needAid: false, gender: "",
     intl: true, major: profile?.major || "Computer Science",
+    highSchool: "", schoolType: "",
+    clubs: "", leadership: "", volunteering: "",
+    research: "", internship: "", athletics: "",
+    specialTalent: "",
+  };
+
+  const [specs, setSpecs] = useState<Specs>(() => {
+    // Try loading saved specs from localStorage
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("prism_saved_specs") : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return { ...defaultSpecs, ...parsed };
+      }
+    } catch {}
+    return defaultSpecs;
   });
+  const [showDetailedEC, setShowDetailedEC] = useState(false);
+  const specsSaveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Auto-save specs (debounced 3s)
+  useEffect(() => {
+    if (specsSaveTimer.current) clearTimeout(specsSaveTimer.current);
+    setSpecsSaveStatus("saving");
+    specsSaveTimer.current = setTimeout(() => {
+      try { localStorage.setItem("prism_saved_specs", JSON.stringify(specs)); } catch {}
+      // Also save key fields to profile for cross-feature use
+      if (profile && (specs.gpaUW || specs.sat)) {
+        const profileUpdate: Record<string, any> = { specLastUpdated: new Date().toISOString() };
+        if (specs.gpaUW) profileUpdate.gpa = specs.gpaUW;
+        if (specs.sat) profileUpdate.sat = specs.sat;
+        if (specs.toefl) profileUpdate.toefl = specs.toefl;
+        if (specs.highSchool) profileUpdate.highSchool = specs.highSchool;
+        if (specs.schoolType) profileUpdate.schoolType = specs.schoolType;
+        if (specs.clubs) profileUpdate.clubs = specs.clubs;
+        if (specs.leadership) profileUpdate.leadership = specs.leadership;
+        if (specs.research) profileUpdate.research = specs.research;
+        if (specs.internship) profileUpdate.internship = specs.internship;
+        if (specs.athletics) profileUpdate.athletics = specs.athletics;
+        if (specs.specialTalent) profileUpdate.specialTalent = specs.specialTalent;
+        saveProfile(profileUpdate).catch(() => {});
+      }
+      setSpecsSaveStatus("saved");
+    }, 3000);
+    return () => { if (specsSaveTimer.current) clearTimeout(specsSaveTimer.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [specs]);
+
+  const specLastUpdated = profile?.specLastUpdated ? new Date(profile.specLastUpdated).toLocaleDateString("ko-KR") : null;
 
   const startAnalysis = useCallback(() => {
     setStep("analyzing");
@@ -751,26 +805,28 @@ export default function AnalysisPage() {
     return matchSchools(specs);
   }, [specs, step]);
 
-  // Strategic free preview: 1 Reach + 1 Hard Target + 2 Target + 1 Safety for max curiosity
+  // Strategic free preview: balanced 10 schools (Reach 2-3, Hard Target 2, Target 3-4, Safety 2-3)
   const freePreviewIds = useMemo(() => {
     if (!isFree || !results.length) return new Set<string>();
     const byCategory: Record<string, typeof results> = { Reach: [], "Hard Target": [], Target: [], Safety: [] };
     results.forEach(s => { if (s.cat && byCategory[s.cat]) byCategory[s.cat].push(s); });
     const picks: string[] = [];
-    if (byCategory.Reach[0]) picks.push(byCategory.Reach[0].n);
-    if (byCategory["Hard Target"][0]) picks.push(byCategory["Hard Target"][0].n);
-    byCategory.Target.slice(0, 2).forEach(s => picks.push(s.n));
-    if (byCategory.Safety[0]) picks.push(byCategory.Safety[0].n);
+    // Balanced distribution: Reach 2~3, Hard Target 2, Target 3~4, Safety 2~3
+    byCategory.Reach.slice(0, 3).forEach(s => picks.push(s.n));
+    byCategory["Hard Target"].slice(0, 2).forEach(s => picks.push(s.n));
+    byCategory.Target.slice(0, 3).forEach(s => picks.push(s.n));
+    byCategory.Safety.slice(0, 2).forEach(s => picks.push(s.n));
+    // Fill remaining up to schoolLimit
     if (picks.length < schoolLimit) {
       results.forEach(s => { if (picks.length < schoolLimit && !picks.includes(s.n)) picks.push(s.n); });
     }
-    return new Set(picks);
+    return new Set(picks.slice(0, schoolLimit));
   }, [isFree, results, schoolLimit]);
 
   const filtered = useMemo(() => {
     let list = results;
     if (filterCat) list = list.filter((s) => s.cat === filterCat);
-    if (searchQuery) list = list.filter((s) => s.n.toLowerCase().includes(searchQuery.toLowerCase()));
+    if (searchQuery) list = list.filter((s) => schoolMatchesQuery(s, searchQuery));
     if (sortBy === "prob") list = [...list].sort((a, b) => (b.prob || 0) - (a.prob || 0));
     return list;
   }, [results, filterCat, searchQuery, sortBy]);
@@ -788,7 +844,7 @@ export default function AnalysisPage() {
     const rankedSafety = safetyList.filter(s => s.rk > 0).sort((a, b) => a.rk - b.rk);
 
     const focusSchools: { school: School; label: string; tag: string }[] = [];
-    if (rankedReach[0]) focusSchools.push({ school: rankedReach[0], label: "���전", tag: "bg-red-500/20 text-red-200" });
+    if (rankedReach[0]) focusSchools.push({ school: rankedReach[0], label: "도전", tag: "bg-red-500/20 text-red-200" });
     if (rankedTarget[0]) focusSchools.push({ school: rankedTarget[0], label: "균형", tag: "bg-blue-500/20 text-blue-200" });
     if (rankedSafety[0]) focusSchools.push({ school: rankedSafety[0], label: "안전", tag: "bg-emerald-500/20 text-emerald-200" });
 
@@ -1058,7 +1114,7 @@ export default function AnalysisPage() {
   }
 
   /* ── FORM VIEW (4-Step Wizard) ── */
-  const formStepLabels = ["학업 성적", "AP 과목", "비교과", "기타"];
+  const formStepLabels = ["학업 성적", "AP 과목", "비교과", "학교/활동", "지원 정보"];
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -1066,7 +1122,14 @@ export default function AnalysisPage() {
         <h1 className="font-headline text-2xl font-bold flex items-center gap-2">
           <BarChart3 className="w-6 h-6 text-primary" /> 합격 확률 분석
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">내 스펙을 입력하면 200개 대학의 합격 확률을 분석합니다.</p>
+        <div className="flex items-center justify-between mt-1">
+          <p className="text-sm text-muted-foreground">내 스펙을 입력하면 200개 대학의 합격 확률을 분석합니다.</p>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {specsSaveStatus === "saving" && <span className="text-xs text-muted-foreground animate-pulse">저장 중...</span>}
+            {specsSaveStatus === "saved" && <span className="text-xs text-emerald-600">저장됨</span>}
+            {specLastUpdated && <span className="text-xs text-muted-foreground">· {specLastUpdated}</span>}
+          </div>
+        </div>
 
         {/* Progress bar */}
         <div className="mt-4 space-y-2">
@@ -1083,8 +1146,8 @@ export default function AnalysisPage() {
               </button>
             ))}
           </div>
-          <Progress value={(formStep / 4) * 100} className="h-1.5" />
-          <p className="text-xs text-muted-foreground">Step {formStep} / 4</p>
+          <Progress value={(formStep / 5) * 100} className="h-1.5" />
+          <p className="text-xs text-muted-foreground">Step {formStep} / 5</p>
         </div>
       </header>
 
@@ -1191,31 +1254,123 @@ export default function AnalysisPage() {
 
         {/* Step 3: 비교과 */}
         {formStep === 3 && (
+          <div className="space-y-4">
+            <Card className="bg-white border-none shadow-sm p-5 space-y-4">
+              <h3 className="font-bold text-sm flex items-center gap-2">
+                <Filter className="w-4 h-4 text-primary" /> 비교과 활동 & 수상
+              </h3>
+              <div className="space-y-3">
+                <TierSelector label="비교과 활동 수준" options={[
+                  { value: 1, label: "최상" }, { value: 2, label: "우수" },
+                  { value: 3, label: "보통" }, { value: 4, label: "기본" },
+                ]} selected={specs.ecTier} onSelect={(v) => updateSpec("ecTier", v)} />
+                <div className="bg-accent/30 rounded-xl p-4 text-xs text-muted-foreground space-y-1">
+                  <p><strong>최상:</strong> 전국/국제 대회 입상, 스타트업, 연구 논문</p>
+                  <p><strong>우수:</strong> 리더십, 지역 대회 입상, 인턴십</p>
+                  <p><strong>보통:</strong> 클럽 활동, 봉사활동</p>
+                  <p><strong>기본:</strong> 최소한의 활동</p>
+                </div>
+                <TierSelector label="수상 실적" options={[
+                  { value: 0, label: "없음" }, { value: 1, label: "교내" },
+                  { value: 2, label: "지역" }, { value: 3, label: "전국" }, { value: 4, label: "국제" },
+                ]} selected={specs.awardTier} onSelect={(v) => updateSpec("awardTier", v)} />
+              </div>
+            </Card>
+
+            {/* Expandable detailed EC */}
+            <button
+              onClick={() => setShowDetailedEC(!showDetailedEC)}
+              className="w-full flex items-center justify-between bg-white rounded-2xl shadow-sm p-4 text-sm font-semibold"
+            >
+              <span className="flex items-center gap-2">
+                <Briefcase className="w-4 h-4 text-primary" />
+                활동 상세 입력 (선택)
+              </span>
+              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showDetailedEC ? "rotate-180" : ""}`} />
+            </button>
+            {showDetailedEC && (
+              <Card className="bg-white border-none shadow-sm p-5 space-y-3">
+                <p className="text-xs text-muted-foreground">상세 활동을 입력하면 AI 분석이 더 정확해져요. 모든 항목은 선택사항이에요.</p>
+                <FormField label="동아리/클럽 활동" placeholder="예: 로봇 동아리 회장, 모의유엔 2년" type="text"
+                  value={specs.clubs || ""} onChange={(v) => updateSpec("clubs", v)} />
+                <FormField label="리더십 경험" placeholder="예: 학생회장, 팀 프로젝트 리더" type="text"
+                  value={specs.leadership || ""} onChange={(v) => updateSpec("leadership", v)} />
+                <FormField label="봉사활동" placeholder="예: 지역 튜터링 200시간, 해비타트" type="text"
+                  value={specs.volunteering || ""} onChange={(v) => updateSpec("volunteering", v)} />
+                <FormField label="연구/논문 경험" placeholder="예: 생물학 연구 조교, 논문 공동저자" type="text"
+                  value={specs.research || ""} onChange={(v) => updateSpec("research", v)} />
+                <FormField label="인턴/알바 경험" placeholder="예: 스타트업 마케팅 인턴 3개월" type="text"
+                  value={specs.internship || ""} onChange={(v) => updateSpec("internship", v)} />
+                <FormField label="운동/예술 활동" placeholder="예: 주니어 축구팀, 피아노 콩쿠르" type="text"
+                  value={specs.athletics || ""} onChange={(v) => updateSpec("athletics", v)} />
+                <FormField label="특기/기타" placeholder="예: 앱 출시 경험, 유튜브 채널 운영" type="text"
+                  value={specs.specialTalent || ""} onChange={(v) => updateSpec("specialTalent", v)} />
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* Step 4: 학교 정보 */}
+        {formStep === 4 && (
           <Card className="bg-white border-none shadow-sm p-5 space-y-4">
             <h3 className="font-bold text-sm flex items-center gap-2">
-              <Filter className="w-4 h-4 text-primary" /> 비교과 활동 & 수상
+              <School className="w-4 h-4 text-primary" /> 학교 정보
             </h3>
-            <div className="space-y-3">
-              <TierSelector label="비교과 활동 수준" options={[
-                { value: 1, label: "최상" }, { value: 2, label: "우수" },
-                { value: 3, label: "보통" }, { value: 4, label: "기본" },
-              ]} selected={specs.ecTier} onSelect={(v) => updateSpec("ecTier", v)} />
-              <div className="bg-accent/30 rounded-xl p-4 text-xs text-muted-foreground space-y-1">
-                <p><strong>최상:</strong> 전국/국제 대회 입상, 스타트업, 연구 논문</p>
-                <p><strong>우수:</strong> 리더십, 지역 대회 입상, 인턴십</p>
-                <p><strong>보통:</strong> 클럽 활동, 봉사활동</p>
-                <p><strong>기본:</strong> 최소한의 활동</p>
+            <FormField label="고등학교명" placeholder="예: Seoul International School" type="text"
+              value={specs.highSchool || ""} onChange={(v) => updateSpec("highSchool", v)} />
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">학교 종류</Label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: "", label: "선택 안 함" },
+                  { value: "international", label: "국제학교" },
+                  { value: "foreign_lang", label: "외국어고" },
+                  { value: "general", label: "일반고" },
+                  { value: "special", label: "특목고/자사고" },
+                  { value: "homeschool", label: "홈스쿨" },
+                ].map((opt) => (
+                  <Button
+                    key={opt.value}
+                    variant={(specs.schoolType || "") === opt.value ? "default" : "outline"}
+                    size="sm"
+                    className="rounded-xl text-xs"
+                    onClick={() => updateSpec("schoolType", opt.value)}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
               </div>
-              <TierSelector label="수상 실적" options={[
-                { value: 0, label: "없음" }, { value: 1, label: "교내" },
-                { value: 2, label: "지역" }, { value: 3, label: "전국" }, { value: 4, label: "국제" },
-              ]} selected={specs.awardTier} onSelect={(v) => updateSpec("awardTier", v)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">성별</Label>
+              <div className="flex gap-2">
+                {[
+                  { value: "", label: "선택 안 함" },
+                  { value: "M", label: "남성" },
+                  { value: "F", label: "여성" },
+                ].map((opt) => (
+                  <Button
+                    key={opt.value}
+                    variant={specs.gender === opt.value ? "default" : "outline"}
+                    size="sm"
+                    className="rounded-xl text-xs flex-1"
+                    onClick={() => updateSpec("gender", opt.value)}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="bg-accent/30 rounded-xl p-4">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                학교 정보는 선택사항이에요. 입력하면 AI가 학교 유형에 맞는 맞춤 분석을 제공해요.
+              </p>
             </div>
           </Card>
         )}
 
-        {/* Step 4: 기타 */}
-        {formStep === 4 && (
+        {/* Step 5: 에세이 & 지원 정보 */}
+        {formStep === 5 && (
           <div className="space-y-5">
             <Card className="bg-white border-none shadow-sm p-5 space-y-4">
               <h3 className="font-bold text-sm flex items-center gap-2">
@@ -1266,7 +1421,7 @@ export default function AnalysisPage() {
               ← 이전
             </Button>
           )}
-          {formStep < 4 ? (
+          {formStep < 5 ? (
             <Button
               onClick={() => setFormStep((s) => s + 1)}
               className="h-14 flex-1 rounded-2xl text-base font-bold"

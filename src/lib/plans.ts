@@ -45,7 +45,7 @@ export const PLANS: Record<PlanType, PlanInfo> = {
       "플래너",
     ],
     limits: {
-      analysisSchools: 5,
+      analysisSchools: 10,
       aiChatPerDay: 5,
       essayOutline: false,
       essayOutlinePerMonth: 0,

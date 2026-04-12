@@ -19,15 +19,19 @@ export interface Specs {
   interviewQ: number; legacy: boolean; firstGen: boolean;
   earlyApp: string; needAid: boolean; gender: string;
   intl: boolean; major: string;
+  // Extended fields
+  highSchool?: string; schoolType?: string;
+  clubs?: string; leadership?: string; volunteering?: string;
+  research?: string; internship?: string; athletics?: string;
+  specialTalent?: string;
 }
 
 export interface AP { subject: string; score: number; }
 export interface EC { title: string; role: string; desc: string; hours: string; tier?: number; }
 
-export { MAJOR_LIST, COMP_MAJORS };
+export { COMP_MAJORS };
 
-const MAJOR_LIST=["Computer Science","Economics","Business","Engineering","Biology","Pre-Med","Mechanical Eng","Electrical Eng","Data Science","Mathematics","Physics","Chemistry","Psychology","Political Science","International Relations","Neuroscience","Architecture","Communications","Film","Philosophy","History","English"];
-const COMP_MAJORS: Record<string,number>={"Computer Science":0.85,"Engineering":0.8,"Data Science":0.82,"Business":0.75,"Pre-Med":0.78,"Electrical Eng":0.8,"Mechanical Eng":0.78,"Neuroscience":0.7,"Economics":0.65,"Biology":0.6,"Architecture":0.6,"Film":0.7};
+const COMP_MAJORS: Record<string,number>={"Computer Science":0.85,"Engineering":0.8,"Data Science":0.82,"AI / Machine Learning":0.88,"Business":0.75,"Finance":0.72,"Pre-Med":0.78,"Electrical Eng":0.8,"Mechanical Eng":0.78,"Chemical Eng":0.76,"Aerospace Eng":0.8,"Biomedical Eng":0.75,"Civil Eng":0.65,"Industrial Eng":0.7,"Neuroscience":0.7,"Economics":0.65,"Biology":0.6,"Architecture":0.6,"Film":0.7,"Nursing":0.65,"Statistics":0.72,"Cognitive Science":0.68};
 
 export function matchSchools(sp: Specs, aps: AP[] = [], ecs: EC[] = []): School[] {
   const g=parseFloat(sp.gpaUW)||parseFloat(sp.gpaW)||0;

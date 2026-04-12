@@ -15,13 +15,17 @@ export function useTheme() {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("system");
-  const [resolved, setResolved] = useState<"light" | "dark">("light");
-
-  useEffect(() => {
-    const saved = localStorage.getItem("prism_theme") as Theme | null;
-    if (saved) setThemeState(saved);
-  }, []);
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window === "undefined") return "system";
+    return (localStorage.getItem("prism_theme") as Theme) || "system";
+  });
+  const [resolved, setResolved] = useState<"light" | "dark">(() => {
+    if (typeof window === "undefined") return "light";
+    const saved = (localStorage.getItem("prism_theme") as Theme) || "system";
+    if (saved === "dark") return "dark";
+    if (saved === "light") return "light";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  });
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");

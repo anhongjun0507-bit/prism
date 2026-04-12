@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Search, X, Plus, GraduationCap } from "lucide-react";
-import { SCHOOLS } from "@/lib/school";
+import { SCHOOLS, schoolMatchesQuery } from "@/lib/school";
 import { SchoolLogo } from "@/components/SchoolLogo";
 import { useAuth } from "@/lib/auth-context";
 import { matchSchools, type Specs, type School } from "@/lib/matching";
@@ -86,7 +86,7 @@ export default function ComparePage() {
     return matchedSchools
       .filter(
         (s) =>
-          s.n.toLowerCase().includes(q) ||
+          schoolMatchesQuery(s, searchQ) ||
           (s.loc && s.loc.toLowerCase().includes(q))
       )
       .slice(0, 10);

@@ -15,7 +15,7 @@ import { PLANS } from "@/lib/plans";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useAuth, type ProfileSnapshot } from "@/lib/auth-context";
-import { SCHOOLS } from "@/lib/school";
+import { SCHOOLS, schoolMatchesQuery } from "@/lib/school";
 import { matchSchools, type Specs } from "@/lib/matching";
 import { SchoolLogo } from "@/components/SchoolLogo";
 
@@ -94,7 +94,7 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    return SCHOOLS.filter(s => s.n.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 5);
+    return SCHOOLS.filter(s => schoolMatchesQuery(s, searchQuery)).slice(0, 5);
   }, [searchQuery]);
 
   const [showResultModal, setShowResultModal] = useState(false);
@@ -210,7 +210,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Admission result banner — shown March~May */}
-        {isAdmissionSeason && profile?.grade === "12학년" && (
+        {isAdmissionSeason && (profile?.grade === "12학년" || profile?.grade === "졸업생/Gap Year") && (
           <AdmissionResultBanner onOpen={() => setShowResultModal(true)} />
         )}
 

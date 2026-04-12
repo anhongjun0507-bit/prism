@@ -23,8 +23,8 @@ import { PLANS } from "@/lib/plans";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
-import { SCHOOLS } from "@/lib/school";
-import { COMMON_APP_PROMPTS } from "@/lib/constants";
+import { SCHOOLS, schoolMatchesQuery } from "@/lib/school";
+import { COMMON_APP_PROMPTS, COMMON_APP_PROMPTS_KO } from "@/lib/constants";
 import { SchoolLogo } from "@/components/SchoolLogo";
 
 interface EssayVersion {
@@ -89,6 +89,9 @@ export default function EssaysPage() {
   const [outline, setOutline] = useState<EssayOutline | null>(null);
   const [outlineLoading, setOutlineLoading] = useState(false);
   const [showOutline, setShowOutline] = useState(false);
+  // Once an outline is generated/loaded, keep it visible even after outlineUsed increments
+  const [outlineUnlocked, setOutlineUnlocked] = useState(false);
+  const canShowOutline = canUseOutline || outlineUnlocked;
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
 
   // Persist essays to localStorage + Firestore for authenticated users
@@ -167,7 +170,7 @@ export default function EssaysPage() {
   const filteredSchools = useMemo(() => {
     if (!searchQuery) return schools.slice(0, 20);
     return schools
-      .filter((s: { n: string }) => s.n.toLowerCase().includes(searchQuery.toLowerCase()))
+      .filter((s: { n: string }) => schoolMatchesQuery(s, searchQuery))
       .slice(0, 20);
   }, [searchQuery, schools]);
 
@@ -244,7 +247,7 @@ export default function EssaysPage() {
     setView("editor");
     setSelectedSchool(null);
     setOutline(null);
-    setShowOutline(canUseOutline); // Show outline panel for premium users
+    setShowOutline(canShowOutline); // Show outline panel for premium users
   };
 
   // Generate Time-Machine outline
@@ -272,6 +275,7 @@ export default function EssaysPage() {
       if (data.outline) {
         setOutline(data.outline);
         setShowOutline(true);
+        setOutlineUnlocked(true);
         // Track free trial usage
         if (!hasPlanAccess) {
           await saveProfile({ outlineUsed: (profile?.outlineUsed || 0) + 1 });
@@ -393,7 +397,7 @@ export default function EssaysPage() {
           </div>
 
           {/* Premium upsell for Time-Machine */}
-          {!canUseOutline && (
+          {!canUseOutline && !outlineUnlocked && (
             <div className="space-y-2">
               {outlineUsed > 0 && (
                 <p className="text-xs text-center text-muted-foreground">
@@ -409,7 +413,7 @@ export default function EssaysPage() {
           )}
 
           {/* Time-Machine Essay Outline */}
-          {canUseOutline && showOutline && outline && (
+          {canShowOutline && showOutline && outline && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-bold text-primary flex items-center gap-1.5">
@@ -446,7 +450,7 @@ export default function EssaysPage() {
             </div>
           )}
 
-          {canUseOutline && showOutline && !outline && !outlineLoading && (
+          {canShowOutline && showOutline && !outline && !outlineLoading && (
             <Card className="p-4 bg-primary/5 border border-primary/10 text-center">
               <Sparkles className="w-6 h-6 text-primary mx-auto mb-2" />
               <p className="text-sm font-semibold mb-1">AI가 에세이 구조를 잡아드려요</p>
@@ -458,14 +462,14 @@ export default function EssaysPage() {
             </Card>
           )}
 
-          {canUseOutline && outlineLoading && !outline && (
+          {canShowOutline && outlineLoading && !outline && (
             <Card className="p-4 text-center">
               <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto mb-2" />
               <p className="text-xs text-muted-foreground">프로필 기반 에세이 구조 생성 중...</p>
             </Card>
           )}
 
-          {canUseOutline && !showOutline && outline && (
+          {canShowOutline && !showOutline && outline && (
             <Button variant="ghost" size="sm" onClick={() => setShowOutline(true)} className="text-xs text-primary gap-1">
               <Sparkles className="w-3 h-3" /> 타임머신 구조 다시 보기
             </Button>
@@ -606,8 +610,11 @@ export default function EssaysPage() {
                   className="bg-white border-none shadow-sm cursor-pointer hover:bg-accent/30 transition-colors"
                   onClick={() => handleCreateFromPrompt(selectedSchool, prompt)}
                 >
-                  <CardContent className="p-4">
+                  <CardContent className="p-4 space-y-1.5">
                     <p className="text-sm leading-relaxed">{prompt}</p>
+                    {selectedSchool === "Common App" && COMMON_APP_PROMPTS_KO[i] && (
+                      <p className="text-xs text-muted-foreground leading-relaxed">{COMMON_APP_PROMPTS_KO[i]}</p>
+                    )}
                   </CardContent>
                 </Card>
               ))}
