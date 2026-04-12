@@ -11,8 +11,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['Plus Jakarta Sans', 'sans-serif'],
-        headline: ['Fraunces', 'serif'],
+        sans: ['Pretendard Variable', 'Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'sans-serif'],
+        body: ['Pretendard Variable', 'Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'sans-serif'],
+        headline: ['Inter', 'Pretendard Variable', 'Pretendard', 'sans-serif'],
         code: ['monospace'],
       },
       fontSize: {
