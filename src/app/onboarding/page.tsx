@@ -83,7 +83,64 @@ export default function OnboardingPage() {
       earlyApp: "", needAid: false, gender: "",
       intl: true, major: formData.major || "Computer Science",
     };
-    return matchSchools(specs).slice(0, 3);
+    const all = matchSchools(specs);
+
+    // Pick the best-ranked school from each category for an impressive preview
+    const bestByCategory = (cat: string) => {
+      const ranked = all.filter((s) => s.cat === cat && s.rk > 0);
+      if (ranked.length > 0) return ranked.sort((a, b) => a.rk - b.rk)[0];
+      // Fallback: pick school with lowest acceptance rate in this category
+      const inCat = all.filter((s) => s.cat === cat);
+      return inCat.sort((a, b) => a.r - b.r)[0] ?? null;
+    };
+
+    const reach = bestByCategory("Reach") ?? bestByCategory("Hard Target");
+    const target = bestByCategory("Target") ?? bestByCategory("Hard Target");
+    const safety = bestByCategory("Safety");
+
+    const picks = [reach, target, safety].filter(
+      (s): s is NonNullable<typeof s> => s !== null && s !== undefined
+    );
+
+    // Deduplicate (in case same school was picked for multiple categories)
+    const seen = new Set<string>();
+    const unique = picks.filter((s) => {
+      if (seen.has(s.n)) return false;
+      seen.add(s.n);
+      return true;
+    });
+
+    if (unique.length >= 3) return unique.slice(0, 3);
+
+    // Fill remaining slots from ranked schools not already picked
+    const remaining = all.filter((s) => !seen.has(s.n) && s.rk > 0)
+      .sort((a, b) => a.rk - b.rk);
+    for (const s of remaining) {
+      if (unique.length >= 3) break;
+      unique.push(s);
+      seen.add(s.n);
+    }
+
+    // Last resort: pick schools with diverse acceptance rates
+    if (unique.length < 3) {
+      const rest = all.filter((s) => !seen.has(s.n)).sort((a, b) => a.r - b.r);
+      if (rest.length >= 3) {
+        const low = rest[0];
+        const high = rest[rest.length - 1];
+        const mid = rest[Math.floor(rest.length / 2)];
+        for (const s of [low, mid, high]) {
+          if (unique.length >= 3) break;
+          if (!seen.has(s.n)) { unique.push(s); seen.add(s.n); }
+        }
+      } else {
+        for (const s of rest) {
+          if (unique.length >= 3) break;
+          unique.push(s);
+        }
+      }
+    }
+
+    return unique.slice(0, 3);
   }, [formData.gpa, formData.sat, formData.toefl, formData.major]);
 
   const [previewOpen, setPreviewOpen] = useState(false);
