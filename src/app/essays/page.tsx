@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Save, Plus, FileText, ArrowLeft, Search, ChevronRight,
-  Sparkles, Loader2, Clock, Zap, TrendingUp, Trash2,
+  Sparkles, Loader2, Clock, Zap, TrendingUp, Trash2, GraduationCap, History, RotateCcw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
@@ -27,6 +27,13 @@ import { SCHOOLS } from "@/lib/school";
 import { COMMON_APP_PROMPTS } from "@/lib/constants";
 import { SchoolLogo } from "@/components/SchoolLogo";
 
+interface EssayVersion {
+  version: number;
+  content: string;
+  savedAt: string;
+  wordCount: number;
+}
+
 interface Essay {
   id: string;
   university: string;
@@ -34,12 +41,14 @@ interface Essay {
   content: string;
   lastSaved: string;
   wordLimit?: number;
+  versions?: EssayVersion[];
 }
 
 interface EssayOutline {
   past: { title: string; hint: string; starter: string };
   turning: { title: string; hint: string; starter: string };
   growth: { title: string; hint: string; starter: string };
+  connection?: { title: string; hint: string; starter: string };
 }
 
 function getSchoolList() {
@@ -71,6 +80,10 @@ export default function EssaysPage() {
 
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<Essay | null>(null);
+
+  // Version history
+  const [viewingVersion, setViewingVersion] = useState<EssayVersion | null>(null);
+  const [showVersions, setShowVersions] = useState(false);
 
   // Time-Machine Essay state
   const [outline, setOutline] = useState<EssayOutline | null>(null);
@@ -168,6 +181,26 @@ export default function EssaysPage() {
 
   const handleSave = () => {
     if (!activeEssay) return;
+    // Create version snapshot on manual save (if content is non-empty)
+    if (activeEssay.content.trim()) {
+      const existing = activeEssay.versions || [];
+      const lastVersion = existing[existing.length - 1];
+      // Only create new version if content actually changed from last version
+      if (!lastVersion || lastVersion.content !== activeEssay.content) {
+        const newVersion: EssayVersion = {
+          version: (lastVersion?.version || 0) + 1,
+          content: activeEssay.content,
+          savedAt: new Date().toISOString(),
+          wordCount: activeEssay.content.split(/\s+/).filter(Boolean).length,
+        };
+        const versions = [...existing, newVersion].slice(-10); // Keep max 10
+        const updated = { ...activeEssay, versions };
+        setActiveEssay(updated);
+        syncEssay(updated);
+        toast({ title: "저장 완료", description: `v${newVersion.version} 저장됨 · ${activeEssay.university}` });
+        return;
+      }
+    }
     syncEssay(activeEssay);
     toast({ title: "저장 완료", description: `${activeEssay.university} 에세이가 저장되었습니다.` });
   };
@@ -287,6 +320,11 @@ export default function EssaysPage() {
                   {!hasPlanAccess ? "무료 체험" : "AI 구조 생성"}
                 </Button>
               )}
+              {(activeEssay.versions?.length || 0) > 0 && (
+                <Button variant="ghost" size="sm" onClick={() => { setShowVersions(!showVersions); setViewingVersion(null); }} className="gap-1 rounded-xl text-xs text-muted-foreground">
+                  <History className="w-3.5 h-3.5" /> v{activeEssay.versions![activeEssay.versions!.length - 1].version}
+                </Button>
+              )}
               <Button onClick={handleSave} size="sm" className="gap-1.5 rounded-xl">
                 <Save className="w-3.5 h-3.5" /> 저장
               </Button>
@@ -295,6 +333,57 @@ export default function EssaysPage() {
         </header>
 
         <div className="px-6 space-y-4">
+          {/* Version history panel */}
+          {showVersions && activeEssay.versions && activeEssay.versions.length > 0 && (
+            <Card className="p-4 bg-white border-none shadow-sm space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
+                  <History className="w-3.5 h-3.5" /> 버전 기록
+                </h3>
+                <Button variant="ghost" size="sm" onClick={() => { setShowVersions(false); setViewingVersion(null); }} className="text-xs h-7 px-2">
+                  닫기
+                </Button>
+              </div>
+              <div className="space-y-1.5">
+                {[...activeEssay.versions].reverse().map((v) => (
+                  <button
+                    key={v.version}
+                    onClick={() => setViewingVersion(viewingVersion?.version === v.version ? null : v)}
+                    className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-left transition-colors ${
+                      viewingVersion?.version === v.version ? "bg-primary/10 ring-1 ring-primary/20" : "bg-accent/30 hover:bg-accent/50"
+                    }`}
+                  >
+                    <div>
+                      <span className="text-sm font-semibold">v{v.version}</span>
+                      <span className="text-xs text-muted-foreground ml-2">{v.wordCount}단어</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">{v.savedAt.slice(0, 10)}</span>
+                  </button>
+                ))}
+              </div>
+              {viewingVersion && (
+                <div className="space-y-2 pt-2 border-t border-border">
+                  <div className="bg-accent/30 rounded-xl p-4 max-h-48 overflow-y-auto">
+                    <p className="text-xs leading-relaxed whitespace-pre-wrap text-muted-foreground">{viewingVersion.content}</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full rounded-xl gap-1.5 text-xs"
+                    onClick={() => {
+                      handleContentChange(viewingVersion.content);
+                      setViewingVersion(null);
+                      setShowVersions(false);
+                      toast({ title: "복원 완료", description: `v${viewingVersion.version}으로 복원했어요. 저장 버튼을 눌러 확정하세요.` });
+                    }}
+                  >
+                    <RotateCcw className="w-3 h-3" /> v{viewingVersion.version}으로 복원
+                  </Button>
+                </div>
+              )}
+            </Card>
+          )}
+
           <div>
             <h2 className="font-headline text-xl font-bold">{activeEssay.university}</h2>
             <div className="mt-2 bg-primary/5 rounded-xl p-4 border border-primary/10">
@@ -330,23 +419,24 @@ export default function EssaysPage() {
                   접기
                 </Button>
               </div>
-              {[
+              {([
                 { key: "past" as const, icon: <Clock className="w-4 h-4" />, color: "bg-blue-50 border-blue-100 text-blue-700", iconBg: "bg-blue-100" },
                 { key: "turning" as const, icon: <Zap className="w-4 h-4" />, color: "bg-amber-50 border-amber-100 text-amber-700", iconBg: "bg-amber-100" },
                 { key: "growth" as const, icon: <TrendingUp className="w-4 h-4" />, color: "bg-emerald-50 border-emerald-100 text-emerald-700", iconBg: "bg-emerald-100" },
-              ].map(({ key, icon, color, iconBg }) => (
+                { key: "connection" as const, icon: <GraduationCap className="w-4 h-4" />, color: "bg-violet-50 border-violet-100 text-violet-700", iconBg: "bg-violet-100" },
+              ] as const).filter(({ key }) => outline[key]).map(({ key, icon, color, iconBg }) => (
                 <Card key={key} className={`${color} border p-4 space-y-2`}>
                   <div className="flex items-center gap-2">
                     <div className={`w-7 h-7 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
                       {icon}
                     </div>
-                    <p className="text-sm font-bold">{outline[key].title}</p>
+                    <p className="text-sm font-bold">{outline[key]!.title}</p>
                   </div>
-                  <p className="text-xs leading-relaxed">{outline[key].hint}</p>
+                  <p className="text-xs leading-relaxed">{outline[key]!.hint}</p>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => insertStarter(outline[key].starter)}
+                    onClick={() => insertStarter(outline[key]!.starter)}
                     className="text-xs h-7 px-2 gap-1 mt-1"
                   >
                     <Plus className="w-3 h-3" /> 에디터에 삽입

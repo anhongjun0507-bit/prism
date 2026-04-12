@@ -20,34 +20,44 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
     }
 
-    const prompt = `You are an expert US university admissions counselor advising a Korean international student.
+    const systemPrompt = `미국 대학별 합격 분석을 3문장으로 요약하는 전문가입니다.
 
-Student Profile:
-- GPA: ${specs.gpa || "N/A"}
-- SAT: ${specs.sat || "N/A"}
-- TOEFL: ${specs.toefl || "N/A"}
-- Major: ${specs.major || "Undecided"}
-- EC Tier: ${specs.ecTier || "N/A"} (1=best, 4=basic)
-- Admission Probability: ${school.prob}%
-- Category: ${school.cat}
+규칙:
+1. 반드시 3문장. 더도 말고 덜도 말고.
+2. 1문장: 이 학생의 합격 가능성을 한 줄로 (구체적 확률이나 범위 포함)
+3. 2문장: 가장 큰 강점 하나 (구체적 수치 포함)
+4. 3문장: 합격률을 높이기 위한 핵심 조언 하나
+5. 자연스러운 한국어 존댓말 ("~해요", "~이에요"), 번역체 금지
+6. 학교 이름을 반복하지 말고 "이 학교"로 지칭
+7. 매 학교마다 다른 내용이어야 함 (복붙 금지)
+8. 불릿 포인트나 헤더 없이 자연스러운 문장으로
 
-Target School: ${school.name}
-- US News Rank: #${school.rank}
-- SAT Range: ${school.satRange}
-- GPA Median: ${school.gpa}
-- Acceptance Rate: ${school.acceptRate}%
+좋은 예: "현재 스펙으로 합격 가능성은 약 70%예요. GPA가 합격자 상위 25%에 해당하는 게 큰 강점이에요. 에세이에서 컴퓨터 과학에 대한 열정을 구체적으로 보여주면 확률이 더 올라갈 거예요."
 
-Write a concise 3-sentence admission story in Korean:
-1. First sentence: How this student's profile matches (or doesn't match) this school's strengths
-2. Second sentence: The biggest risk or weakness in this application
-3. Third sentence: One specific, actionable recommendation to improve chances
+나쁜 예: "이 학교는 좋은 학교입니다. 학생의 성적이 우수합니다. 열심히 준비하시기 바랍니다."`;
 
-Keep it warm but honest. Use 반말 (casual speech). Do NOT use bullet points or headers — write as flowing prose.`;
+    const userPrompt = `다음 학생의 ${school.name} 합격 가능성을 3문장으로 요약해주세요.
+
+학생 정보:
+- GPA: ${specs.gpa || "미입력"}
+- SAT: ${specs.sat || "미입력"}
+- TOEFL: ${specs.toefl || "미입력"}
+- 지망 전공: ${specs.major || "미정"}
+- 비교과 등급: ${specs.ecTier || "미입력"} (1=최상, 4=기본)
+- 예측 합격 확률: ${school.prob}%
+- 카테고리: ${school.cat}
+
+대상 학교: ${school.name}
+- US News 순위: ${school.rank > 0 ? `#${school.rank}` : "Unranked"}
+- SAT 범위: ${school.satRange === "0-0" ? "정보 없음" : school.satRange}
+- GPA 중앙값: ${school.gpa === "0" || school.gpa === 0 ? "정보 없음" : school.gpa}
+- 합격률: ${school.acceptRate}%`;
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 300,
-      messages: [{ role: "user", content: prompt }],
+      max_tokens: 400,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
     });
 
     const textBlock = response.content.find((b) => b.type === "text");

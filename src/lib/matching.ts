@@ -40,7 +40,9 @@ export function matchSchools(sp: Specs, aps: AP[] = [], ecs: EC[] = []): School[
   // EC individual tier scoring (Tier1=15,Tier2=10,Tier3=5,Tier4=2)
   const ecScore=ecs.length>0?ecs.reduce((a,e)=>{const t=e.tier||4;return a+({1:15,2:10,3:5,4:2}[t]||2)},0):((sp.ecTier||1)-1)*8;
   const ecMax=Math.min(ecScore,60);
-  return (SCHOOLS as School[]).map(u=>{
+  // Filter out schools with no usable academic data (SAT 0-0 & GPA 0)
+  const validSchools = (SCHOOLS as School[]).filter(u => !(u.sat[0] === 0 && u.sat[1] === 0 && u.gpa === 0));
+  return validSchools.map(u=>{
     // Base: start from school's acceptance rate
     let base=u.r;
     // Academic Index (0-40 points)

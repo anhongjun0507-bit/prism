@@ -129,16 +129,8 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-        {/* Plan badge */}
-        {currentPlan === "free" ? (
-          <Link href="/pricing">
-            <div className="flex items-center gap-2 bg-primary/5 rounded-xl px-4 py-2.5 border border-primary/10">
-              <Crown className="w-4 h-4 text-primary" />
-              <span className="text-xs font-semibold text-primary flex-1">베이직 플랜으로 업그레이드</span>
-              <ChevronRight className="w-3.5 h-3.5 text-primary" />
-            </div>
-          </Link>
-        ) : (
+        {/* Plan badge — paid users only (free users see nudge below) */}
+        {currentPlan !== "free" && (
           <Link href="/subscription">
             <div className="flex items-center gap-2 bg-primary/5 rounded-xl px-4 py-2">
               <Crown className="w-4 h-4 text-primary" />
@@ -167,7 +159,7 @@ export default function DashboardPage() {
                   <SchoolLogo domain={s.d} color={s.c} name={s.n} size="sm" />
                   <div>
                     <p className="text-sm font-medium">{s.n}</p>
-                    <p className="text-xs text-muted-foreground">#{s.rk || "N/A"} · {s.loc}</p>
+                    <p className="text-xs text-muted-foreground">{s.rk > 0 ? `#${s.rk}` : "Unranked"} · {s.loc}</p>
                   </div>
                 </Link>
               ))}
@@ -240,19 +232,36 @@ export default function DashboardPage() {
             </Card>
           </Link>
         ) : quickResults.length > 0 && (() => {
-          const topSchool = quickResults.reduce((best, s) => {
-            const bestProb = best?.prob ?? 0;
-            return s.prob > bestProb ? s : best;
-          }, quickResults[0]);
-          return topSchool ? (
+          // Priority: 1) dream school, 2) best Reach, 3) best Hard Target, 4) best overall
+          const dreamMatch = profile?.dreamSchool
+            ? quickResults.find(s => s.n === profile.dreamSchool)
+            : null;
+          const bestReach = quickResults
+            .filter(s => s.cat === "Reach")
+            .sort((a, b) => (b.prob ?? 0) - (a.prob ?? 0))[0] || null;
+          const bestHardTarget = quickResults
+            .filter(s => s.cat === "Hard Target")
+            .sort((a, b) => (b.prob ?? 0) - (a.prob ?? 0))[0] || null;
+          const fallback = quickResults.reduce((best, s) => (s.prob ?? 0) > (best?.prob ?? 0) ? s : best, quickResults[0]);
+
+          const featured = dreamMatch || bestReach || bestHardTarget || fallback;
+          const label = dreamMatch
+            ? "내 지망 대학교"
+            : bestReach
+              ? "도전해볼 만한 대학"
+              : bestHardTarget
+                ? "도전해볼 만한 대학"
+                : "가장 확률이 높은 학교";
+
+          return featured ? (
             <Link href="/analysis">
               <Card className="p-4 border-l-4 border-l-primary bg-primary/5 border-t-0 border-r-0 border-b-0 flex items-center gap-4">
-                <SchoolLogo domain={topSchool.d} color={topSchool.c} name={topSchool.n} rank={topSchool.rk} size="md" />
+                <SchoolLogo domain={featured.d} color={featured.c} name={featured.n} rank={featured.rk} size="md" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-primary font-semibold">가장 확률이 높은 학교</p>
-                  <p className="font-bold text-sm truncate">{topSchool.n}</p>
+                  <p className="text-xs text-primary font-semibold">{label}</p>
+                  <p className="font-bold text-sm truncate">{featured.n}</p>
                 </div>
-                <span className="text-lg font-bold text-primary">{topSchool.prob}%</span>
+                <span className="text-lg font-bold text-primary">{featured.prob}%</span>
               </Card>
             </Link>
           ) : null;
@@ -313,18 +322,30 @@ export default function DashboardPage() {
             quickResults.slice(0, 5).map((school) => {
               const userGpa = parseFloat(profile?.gpa || "0");
               const userSat = parseInt(profile?.sat || "0");
-              const gpaDiff = userGpa && school.gpa ? (userGpa - school.gpa).toFixed(1) : null;
               const satMid = school.sat ? Math.round((school.sat[0] + school.sat[1]) / 2) : 0;
               const satDiff = userSat && satMid ? userSat - satMid : null;
-              const reason = school.cat === "Safety"
-                ? "평균 이상의 스펙"
-                : school.cat === "Reach"
-                  ? "높은 경쟁률"
-                  : satDiff && satDiff < -50
-                    ? `SAT ${Math.abs(satDiff)}점 부족`
-                    : gpaDiff && parseFloat(gpaDiff) < -0.2
-                      ? `GPA ${Math.abs(parseFloat(gpaDiff)).toFixed(1)} 차이`
-                      : "경쟁 가능 범위";
+              const gpaDiffNum = userGpa && school.gpa ? userGpa - school.gpa : null;
+
+              let reason = "";
+              if (school.cat === "Safety") {
+                if (satDiff && satDiff > 100) reason = `SAT가 평균보다 ${satDiff}점 높아요`;
+                else if (satDiff && satDiff > 0) reason = `SAT가 합격자 범위 상위에 해당해요`;
+                else if (gpaDiffNum && gpaDiffNum > 0.2) reason = `GPA가 합격자 평균보다 ${gpaDiffNum.toFixed(1)} 높아요`;
+                else reason = `합격률 ${school.r}%로 합격 가능성 높아요`;
+              } else if (school.cat === "Reach") {
+                if (satDiff && satDiff < -150) reason = `SAT ${Math.abs(satDiff)}점 차이, 합격률 ${school.r}%`;
+                else if (satDiff && satDiff < 0) reason = `합격률 ${school.r}%의 높은 경쟁률`;
+                else reason = `합격률 ${school.r}%로 경쟁이 치열해요`;
+              } else if (school.cat === "Hard Target") {
+                if (satDiff && satDiff < -50) reason = `SAT ${Math.abs(satDiff)}점 부족, 보완 시 가능성 있어요`;
+                else if (gpaDiffNum && gpaDiffNum < -0.2) reason = `GPA ${Math.abs(gpaDiffNum).toFixed(1)} 차이, 에세이로 보완 가능`;
+                else reason = "도전적이지만 충분히 가능성 있어요";
+              } else {
+                if (satDiff && satDiff > 50) reason = `SAT가 합격자 평균보다 ${satDiff}점 높아요`;
+                else if (satDiff && satDiff < -50) reason = `SAT ${Math.abs(satDiff)}점 차이, 다른 스펙으로 보완 가능`;
+                else if (gpaDiffNum && gpaDiffNum > 0) reason = `GPA가 합격자 평균과 비슷해요`;
+                else reason = "경쟁 가능 범위에 있어요";
+              }
               return (
               <Card key={school.n} className="p-4 bg-white dark:bg-card border-none shadow-sm flex items-center gap-4">
                 <SchoolLogo domain={school.d} color={school.c} name={school.n} rank={school.rk} size="md" />
@@ -427,6 +448,22 @@ export default function DashboardPage() {
             </div>
           </Link>
         </div>
+
+        {/* Soft upgrade nudge — free users, shown after they've used the app */}
+        {currentPlan === "free" && hasSpecs && (
+          <Link href="/pricing">
+            <Card className="p-4 bg-white border-none shadow-sm flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <Crown className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold">더 많은 대학을 분석해보세요</p>
+                <p className="text-xs text-muted-foreground">베이직 플랜으로 모든 학교의 상세 분석을 확인할 수 있어요</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+            </Card>
+          </Link>
+        )}
 
         {/* Growth hint — first snapshot exists but only 1 */}
         {snapshots.length === 1 && (

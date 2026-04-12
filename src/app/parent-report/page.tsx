@@ -198,7 +198,7 @@ export default function ParentReportPage() {
               <div key={s.n} className="flex items-center justify-between py-2 border-b last:border-0">
                 <div>
                   <p className="text-sm font-bold">{s.n}</p>
-                  <p className="text-xs text-muted-foreground">#{s.rk} · {s.cat}</p>
+                  <p className="text-xs text-muted-foreground">{s.rk > 0 ? `#${s.rk}` : "Unranked"} · {s.cat}</p>
                 </div>
                 <span className="text-sm font-bold text-primary">{s.prob}%</span>
               </div>

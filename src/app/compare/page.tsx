@@ -111,8 +111,8 @@ export default function ComparePage() {
       {
         label: "US News 순위",
         key: "rank",
-        getValue: (s) => `#${s.rk}`,
-        getRaw: (s) => s.rk,
+        getValue: (s) => s.rk > 0 ? `#${s.rk}` : "Unranked",
+        getRaw: (s) => s.rk > 0 ? s.rk : 9999,
         bestIs: "min",
       },
       {
@@ -312,7 +312,7 @@ export default function ComparePage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold truncate">{s.n}</p>
                       <p className="text-xs text-muted-foreground">
-                        #{s.rk} &middot; {s.loc || ""}
+                        {s.rk > 0 ? `#${s.rk}` : "Unranked"} &middot; {s.loc || ""}
                       </p>
                     </div>
                     {alreadySelected && (

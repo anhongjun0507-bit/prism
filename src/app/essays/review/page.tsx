@@ -13,15 +13,20 @@ import { BottomNav } from "@/components/BottomNav";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import {
   ArrowLeft, Loader2, CheckCircle2, AlertCircle, Lightbulb, Sparkles,
+  Target, MessageCircle,
 } from "lucide-react";
 
 interface ReviewResult {
   score: number;
+  summary: string;
+  firstImpression: string;
+  tone: string;
   strengths: string[];
   weaknesses: string[];
   suggestions: string[];
+  keyChange: string;
+  admissionNote: string;
   revisedOpening: string;
-  tone: string;
 }
 
 function ScoreCircle({ score }: { score: number }) {
@@ -96,7 +101,10 @@ export default function EssayReviewPage() {
           essay,
           prompt,
           university,
-          wordLimit: undefined,
+          grade: profile?.grade,
+          gpa: profile?.gpa,
+          sat: profile?.sat,
+          major: profile?.major,
         }),
       });
 
@@ -226,9 +234,17 @@ export default function EssayReviewPage() {
         {/* Results */}
         {result && (
           <div className="space-y-4 pb-4">
-            {/* Score */}
-            <Card className="p-6 bg-white dark:bg-card border-none shadow-sm rounded-2xl flex flex-col items-center">
+            {/* Score + Summary */}
+            <Card className="p-6 bg-white dark:bg-card border-none shadow-sm rounded-2xl flex flex-col items-center gap-3">
               <ScoreCircle score={result.score} />
+              {result.summary && (
+                <p className="text-sm font-semibold text-center leading-relaxed">{result.summary}</p>
+              )}
+              {result.firstImpression && (
+                <p className="text-xs text-muted-foreground text-center leading-relaxed">
+                  입학사정관 첫인상: {result.firstImpression}
+                </p>
+              )}
             </Card>
 
             {/* Tone */}
@@ -239,6 +255,7 @@ export default function EssayReviewPage() {
             </div>
 
             {/* Strengths */}
+            {result.strengths.length > 0 && (
             <div className="space-y-2">
               <h3 className="font-headline text-base font-bold flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" /> 강점
@@ -248,27 +265,31 @@ export default function EssayReviewPage() {
                   key={i}
                   className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800 rounded-2xl shadow-sm"
                 >
-                  <p className="text-sm text-emerald-800 dark:text-emerald-200 leading-relaxed">{s}</p>
+                  <p className="text-sm text-emerald-800 dark:text-emerald-200 leading-relaxed whitespace-pre-line">{s}</p>
                 </Card>
               ))}
             </div>
+            )}
 
             {/* Weaknesses */}
+            {result.weaknesses.length > 0 && (
             <div className="space-y-2">
               <h3 className="font-headline text-base font-bold flex items-center gap-1.5">
-                <AlertCircle className="w-4 h-4 text-red-500" /> 약점
+                <AlertCircle className="w-4 h-4 text-red-500" /> 개선이 필요한 부분
               </h3>
               {result.weaknesses.map((w, i) => (
                 <Card
                   key={i}
                   className="p-4 bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 rounded-2xl shadow-sm"
                 >
-                  <p className="text-sm text-red-800 dark:text-red-200 leading-relaxed">{w}</p>
+                  <p className="text-sm text-red-800 dark:text-red-200 leading-relaxed whitespace-pre-line">{w}</p>
                 </Card>
               ))}
             </div>
+            )}
 
             {/* Suggestions */}
+            {result.suggestions.length > 0 && (
             <div className="space-y-2">
               <h3 className="font-headline text-base font-bold flex items-center gap-1.5">
                 <Lightbulb className="w-4 h-4 text-blue-500" /> 개선 제안
@@ -278,12 +299,26 @@ export default function EssayReviewPage() {
                   key={i}
                   className="p-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 rounded-2xl shadow-sm"
                 >
-                  <p className="text-sm text-blue-800 dark:text-blue-200 leading-relaxed">{s}</p>
+                  <p className="text-sm text-blue-800 dark:text-blue-200 leading-relaxed whitespace-pre-line">{s}</p>
                 </Card>
               ))}
             </div>
+            )}
+
+            {/* Key Change */}
+            {result.keyChange && (
+            <div className="space-y-2">
+              <h3 className="font-headline text-base font-bold flex items-center gap-1.5">
+                <Target className="w-4 h-4 text-amber-500" /> 가장 중요한 변경 1가지
+              </h3>
+              <Card className="p-4 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 rounded-2xl shadow-sm">
+                <p className="text-sm text-amber-800 dark:text-amber-200 leading-relaxed whitespace-pre-line">{result.keyChange}</p>
+              </Card>
+            </div>
+            )}
 
             {/* Revised Opening */}
+            {result.revisedOpening && (
             <div className="space-y-2">
               <h3 className="font-headline text-base font-bold flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-primary" /> 수정된 첫 단락
@@ -292,6 +327,19 @@ export default function EssayReviewPage() {
                 <p className="text-sm leading-relaxed italic">{result.revisedOpening}</p>
               </Card>
             </div>
+            )}
+
+            {/* Admission Note */}
+            {result.admissionNote && (
+            <div className="space-y-2">
+              <h3 className="font-headline text-base font-bold flex items-center gap-1.5">
+                <MessageCircle className="w-4 h-4 text-violet-500" /> 입학사정관의 한마디
+              </h3>
+              <Card className="p-4 bg-violet-50 dark:bg-violet-950/20 border-violet-200 dark:border-violet-800 rounded-2xl shadow-sm">
+                <p className="text-sm text-violet-800 dark:text-violet-200 leading-relaxed whitespace-pre-line">{result.admissionNote}</p>
+              </Card>
+            </div>
+            )}
           </div>
         )}
       </div>

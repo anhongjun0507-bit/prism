@@ -315,7 +315,7 @@ export default function OnboardingPage() {
                 step="0.01"
                 min="0"
                 max="4.0"
-                placeholder="예: 3.8"
+                placeholder="예: 3.5"
                 className="h-12 rounded-xl border-2"
                 value={formData.gpa}
                 onChange={(e) => {
@@ -335,7 +335,7 @@ export default function OnboardingPage() {
                 type="number"
                 min="400"
                 max="1600"
-                placeholder="예: 1450"
+                placeholder="예: 1250"
                 className="h-12 rounded-xl border-2"
                 value={formData.sat}
                 onChange={(e) => {
@@ -355,7 +355,7 @@ export default function OnboardingPage() {
                 type="number"
                 min="0"
                 max="120"
-                placeholder="예: 105"
+                placeholder="예: 95"
                 className="h-12 rounded-xl border-2"
                 value={formData.toefl}
                 onChange={(e) => {
@@ -395,7 +395,7 @@ export default function OnboardingPage() {
                         className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0"
                         style={{ backgroundColor: s.c }}
                       >
-                        #{s.rk}
+                        {s.rk > 0 ? `#${s.rk}` : s.n.slice(0, 2)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
@@ -441,7 +441,7 @@ export default function OnboardingPage() {
                     className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0"
                     style={{ backgroundColor: s.c }}
                   >
-                    #{s.rk}
+                    {s.rk > 0 ? `#${s.rk}` : s.n.slice(0, 2)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

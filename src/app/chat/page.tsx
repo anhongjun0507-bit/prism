@@ -174,8 +174,8 @@ export default function ChatPage() {
             초기화
           </Button>
           {dailyLimit !== Infinity && (
-            <Badge variant="secondary" className="text-xs">
-              {remaining > 0 ? `${remaining}회 남음` : "한도 초과"}
+            <Badge variant="secondary" className={`text-xs ${remaining <= 0 ? "bg-red-100 text-red-600 dark:bg-red-950/30 dark:text-red-400" : ""}`}>
+              {remaining > 0 ? `오늘 ${remaining}회 남음` : "내일 다시 이용 가능"}
             </Badge>
           )}
         </div>
@@ -218,6 +218,30 @@ export default function ChatPage() {
             </div>
             );
           })}
+          {/* Example questions — shown only when no user messages yet */}
+          {!loading && messages.every(m => m.role === "ai") && (
+            <div className="flex flex-col items-center gap-2.5 pt-2 pb-4">
+              <p className="text-xs text-muted-foreground mb-1">이런 질문을 해보세요</p>
+              {[
+                { emoji: "\uD83C\uDF93", text: `${profile?.dreamSchool || "Harvard"}에 지원하려면 어떤 준비가 필요해요?` },
+                { emoji: "\uD83D\uDCDD", text: "Common App 에세이 주제 추천해주세요" },
+                { emoji: "\uD83D\uDCCA", text: "SAT 점수를 올리는 가장 효과적인 방법은?" },
+                { emoji: "\uD83C\uDFC6", text: "과외활동 추천해주세요" },
+              ].map((q) => (
+                <button
+                  key={q.text}
+                  onClick={() => {
+                    setInput("");
+                    setMessages(prev => [...prev, { role: "user", content: `${q.emoji} ${q.text}` }]);
+                    sendMessage(`${q.emoji} ${q.text}`);
+                  }}
+                  className="w-full max-w-sm text-left px-4 py-3 rounded-2xl border border-primary/20 bg-primary/5 hover:bg-primary/10 active:scale-[0.98] transition-all text-sm text-foreground"
+                >
+                  <span className="mr-2">{q.emoji}</span>{q.text}
+                </button>
+              ))}
+            </div>
+          )}
           {loading && (
             <div className="flex gap-3 animate-msg-ai" role="status" aria-label="AI 응답 대기 중">
               <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center">
@@ -236,18 +260,27 @@ export default function ChatPage() {
       {/* Input - fixed above BottomNav */}
       <div className="shrink-0 p-4 px-6 pb-20 bg-gradient-to-t from-background via-background to-transparent">
         {/* Remaining chat progress bar */}
-        {dailyLimit !== Infinity && remaining > 0 && (
-          <div className="flex items-center gap-2 mb-2 px-1">
-            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${remaining <= 1 ? "bg-red-500" : remaining <= 2 ? "bg-amber-500" : "bg-primary"}`}
-                style={{ width: `${(remaining / dailyLimit) * 100}%` }}
-              />
+        {dailyLimit !== Infinity && (
+          remaining > 0 ? (
+            <div className="flex items-center gap-2 mb-2 px-1">
+              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${remaining <= 1 ? "bg-red-500" : remaining <= 2 ? "bg-amber-500" : "bg-primary"}`}
+                  style={{ width: `${(remaining / dailyLimit) * 100}%` }}
+                />
+              </div>
+              <span className={`text-xs font-medium shrink-0 ${remaining <= 1 ? "text-red-500" : "text-muted-foreground"}`}>
+                오늘 {remaining}회 남음
+              </span>
             </div>
-            <span className={`text-xs font-medium shrink-0 ${remaining <= 1 ? "text-red-500" : "text-muted-foreground"}`}>
-              {remaining}/{dailyLimit}회
-            </span>
-          </div>
+          ) : (
+            <div className="flex items-center gap-2 mb-2 px-1 py-2 bg-red-50 dark:bg-red-950/20 rounded-xl">
+              <div className="flex-1 h-1.5 bg-red-200 dark:bg-red-900 rounded-full" />
+              <span className="text-xs font-medium text-red-500 shrink-0">
+                오늘 {dailyLimit}회 모두 사용했어요
+              </span>
+            </div>
+          )
         )}
         <div className="glass-card p-2 rounded-2xl flex gap-2 shadow-xl border border-white/50">
           <Input
