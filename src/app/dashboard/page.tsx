@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useAnimateOnView } from "@/hooks/use-animate-on-view";
 import { AdmissionResultBanner, AdmissionResultModal } from "@/components/AdmissionResultModal";
 import { AdmissionFeed } from "@/components/AdmissionFeed";
@@ -9,7 +9,11 @@ import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Sparkles, Target, BookOpen, FileText, ChevronRight, GraduationCap, LogOut, Crown, Settings, TrendingUp, Heart, Search } from "lucide-react";
+import { Sparkles, Target, BookOpen, FileText, ChevronRight, GraduationCap, LogOut, Crown, Settings, TrendingUp, Heart, Search, AlertTriangle } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { PLANS } from "@/lib/plans";
 import { Button } from "@/components/ui/button";
@@ -27,6 +31,7 @@ function getDDay(dateStr: string): number {
 
 export default function DashboardPage() {
   const { profile, user, logout, snapshots, toggleFavorite, isFavorite } = useAuth();
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const heroAnim = useAnimateOnView();
   const statsAnim = useAnimateOnView();
   const growthAnim = useAnimateOnView();
@@ -117,7 +122,7 @@ export default function DashboardPage() {
                 <Settings className="w-5 h-5" />
               </Button>
             </Link>
-            <Button variant="ghost" size="icon" onClick={logout} className="text-muted-foreground w-10 h-10">
+            <Button variant="ghost" size="icon" onClick={() => setShowLogoutDialog(true)} className="text-muted-foreground w-10 h-10">
               <LogOut className="w-5 h-5" />
             </Button>
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm overflow-hidden">
@@ -578,6 +583,25 @@ export default function DashboardPage() {
         })()}
       </div>
       <AdmissionResultModal open={showResultModal} onClose={() => setShowResultModal(false)} />
+
+      {/* Logout confirmation dialog */}
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent className="max-w-sm rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg">로그아웃</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
+              로그아웃을 진행하시겠습니까? 저장되지 않은 데이터는 사라질 수 있습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">취소</AlertDialogCancel>
+            <AlertDialogAction onClick={logout} className="rounded-xl bg-red-500 hover:bg-red-600 text-white">
+              로그아웃
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <BottomNav />
     </div>
   );

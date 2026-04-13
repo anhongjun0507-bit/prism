@@ -29,6 +29,7 @@ export interface UserProfile {
   essayReviewUsed?: number;
   whatIfUsed?: number;
   favoriteSchools?: string[];
+  specLastUpdated?: string;
 }
 
 export interface ProfileSnapshot {
@@ -59,6 +60,17 @@ interface AuthContextValue {
   snapshots: ProfileSnapshot[];
   toggleFavorite: (schoolName: string) => Promise<void>;
   isFavorite: (schoolName: string) => boolean;
+}
+
+/* ── Master account: bypasses all plan restrictions ── */
+const MASTER_EMAILS = (process.env.NEXT_PUBLIC_MASTER_EMAILS || "")
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
+export function isMasterEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return MASTER_EMAILS.includes(email.toLowerCase());
 }
 
 const SNAPSHOT_KEY = "prism_snapshots";
@@ -137,9 +149,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (u) {
           try {
             const snap = await getDoc(doc(db, "users", u.uid));
-            if (snap.exists()) setProfile(snap.data() as UserProfile);
+            if (snap.exists()) {
+              const data = snap.data() as UserProfile;
+              // Master account → force premium with unlimited usage
+              if (isMasterEmail(u.email)) {
+                data.plan = "premium";
+              }
+              setProfile(data);
+            } else if (isMasterEmail(u.email)) {
+              // Master account without Firestore profile yet
+              setProfile({ name: u.displayName || "Master", grade: "", dreamSchool: "", major: "", onboarded: false, plan: "premium" });
+            }
           } catch {
-            // Firestore unavailable
+            // Firestore unavailable — still grant master access
+            if (isMasterEmail(u.email)) {
+              setProfile({ name: u.displayName || "Master", grade: "", dreamSchool: "", major: "", onboarded: false, plan: "premium" });
+            }
           }
         } else {
           setProfile(null);
@@ -225,13 +250,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithPopup(auth, appleProvider);
   };
 
-  const logout = () => {
-    signOut(auth);
+  const logout = async () => {
+    await signOut(auth);
     setProfile(null);
+    // Clear local caches
+    try {
+      localStorage.removeItem("prism_saved_specs");
+      localStorage.removeItem("prism_chat_history");
+    } catch {}
+    // Redirect to login page
+    window.location.href = "/";
   };
 
   const saveProfile = async (data: Partial<UserProfile>) => {
     const merged = { ...profile, ...data, onboarded: true } as UserProfile;
+    // Master account always stays premium
+    if (isMasterEmail(user?.email)) {
+      merged.plan = "premium";
+    }
 
     if (user) {
       try {

@@ -127,10 +127,10 @@ export default function WelcomePage() {
     <span className="w-5 h-5 border-2 border-current/20 border-t-current rounded-full animate-spin" />
   );
 
-  const inputClass = "h-[52px] rounded-[14px] bg-white border border-[#E2E8F0] text-[#0F172A] placeholder:text-[#94A3B8] text-[15px] px-4 focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-colors";
+  const inputClass = "h-[52px] rounded-[14px] bg-white dark:bg-card border border-[#E2E8F0] dark:border-border text-foreground placeholder:text-muted-foreground text-[15px] px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors";
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-b from-[#F8FAFC] to-[#EEF2FF] flex flex-col items-center justify-center px-6 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-gradient-to-b from-[#F8FAFC] to-[#EEF2FF] dark:from-background dark:to-background flex flex-col items-center justify-center px-6 overflow-y-auto">
       <div className="w-full max-w-[380px] flex flex-col items-center py-12">
 
         {/* === Branding Section === */}
@@ -216,7 +216,7 @@ export default function WelcomePage() {
               <button
                 onClick={handleGoogle}
                 disabled={!!authLoading}
-                className="w-full h-[54px] rounded-[14px] bg-white text-[#0F172A] font-semibold text-[15px] flex items-center justify-center gap-3 border border-[#E2E8F0] hover:bg-[#F8FAFC] active:scale-[0.98] transition-all disabled:opacity-40 shadow-sm mt-2.5"
+                className="w-full h-[54px] rounded-[14px] bg-white dark:bg-card text-foreground font-semibold text-[15px] flex items-center justify-center gap-3 border border-[#E2E8F0] dark:border-border hover:bg-[#F8FAFC] dark:hover:bg-muted active:scale-[0.98] transition-all disabled:opacity-40 shadow-sm mt-2.5"
               >
                 {authLoading === "google" ? <Spinner /> : (
                   <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24">

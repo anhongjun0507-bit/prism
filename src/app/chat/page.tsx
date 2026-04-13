@@ -73,7 +73,13 @@ export default function ChatPage() {
   const chatCount = profile?.aiChatDate === todayKey ? (profile?.aiChatCount || 0) : 0;
   const remaining = dailyLimit === Infinity ? Infinity : dailyLimit - chatCount;
 
+  const isInitialLoad = useRef(true);
   useEffect(() => {
+    if (isInitialLoad.current) {
+      // Don't auto-scroll on initial load — start from the top
+      isInitialLoad.current = false;
+      return;
+    }
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: "smooth" });
     }
@@ -157,7 +163,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      <header className="p-4 px-6 bg-white border-b border-border flex items-center justify-between z-10 shrink-0">
+      <header className="p-4 px-6 bg-white dark:bg-card border-b border-border flex items-center justify-between z-10 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
             <Sparkles className="w-5 h-5 text-primary" aria-hidden="true" />
@@ -204,7 +210,7 @@ export default function ChatPage() {
                   m.role === "ai"
                     ? m.error
                       ? "bg-red-50 text-red-700 rounded-tl-none"
-                      : "bg-white border-none shadow-sm text-foreground rounded-tl-none"
+                      : "bg-white dark:bg-card border-none shadow-sm text-foreground rounded-tl-none"
                     : "bg-primary text-white rounded-tr-none"
                 )}>
                   {m.content}
@@ -247,7 +253,7 @@ export default function ChatPage() {
               <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center">
                 <Bot size={16} aria-hidden="true" />
               </div>
-              <div className="bg-white p-4 rounded-2xl text-sm rounded-tl-none shadow-sm flex items-center gap-2">
+              <div className="bg-white dark:bg-card p-4 rounded-2xl text-sm rounded-tl-none shadow-sm flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin text-primary" aria-hidden="true" />
                 AI가 생각 중입니다...
               </div>

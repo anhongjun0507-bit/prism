@@ -22,7 +22,7 @@ import {
   BarChart3, TrendingUp, Filter, DollarSign, ArrowLeft, Search,
   MapPin, Users, GraduationCap, Calendar, FileText, Trophy,
   ExternalLink, X, Sparkles, BookOpen, Lock, Loader2, MessageSquare, Heart, Share2, Target,
-  ChevronDown, School, Briefcase,
+  ChevronDown, School as SchoolIcon, Briefcase,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { PLANS } from "@/lib/plans";
@@ -167,36 +167,38 @@ function SchoolModal({ school, open, onClose, specs }: { school: School | null; 
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent hideClose className="max-w-md p-0 rounded-2xl overflow-hidden max-h-[92vh] flex flex-col border-none">
-        {/* Hero header with campus photo */}
-        <CampusPhoto schoolName={school.n} color={school.c} className="p-6 pb-8">
-          <button onClick={onClose} className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/20 flex items-center justify-center text-white hover:bg-black/30 transition">
-            <X className="w-4 h-4" />
-          </button>
-          <DialogHeader className="text-white">
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <SchoolLogo domain={school.d} color={school.c} name={school.n} size="sm" className="border-white/20" />
-              {school.rk > 0 && (
-              <Badge className="bg-white/20 text-white border-none text-xs">
-                #{school.rk} US News
-              </Badge>
-              )}
-              {school.tg.map((t) => (
-                <Badge key={t} className="bg-white/10 text-white/80 border-none text-xs">{t}</Badge>
-              ))}
-              {(school as any).est && (
-                <Badge className="bg-amber-500/30 text-amber-100 border-amber-300/30 text-xs">추정치</Badge>
-              )}
-            </div>
-            <DialogTitle className="text-2xl font-headline font-bold text-white">{school.n}</DialogTitle>
-            <DialogDescription className="text-white/70 text-sm flex items-center gap-1.5 mt-1">
-              <MapPin className="w-3.5 h-3.5" /> {school.loc || "미국"} · {school.setting || ""}
-            </DialogDescription>
-          </DialogHeader>
+      <DialogContent hideClose className="max-w-md p-0 rounded-2xl max-h-[92vh] flex flex-col border-none overflow-hidden">
+        {/* Hero header with campus photo + floating card wrapper */}
+        <div className="relative shrink-0">
+          <CampusPhoto schoolName={school.n} color={school.c} className="p-6 pb-14">
+            <button onClick={onClose} className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/20 flex items-center justify-center text-white hover:bg-black/30 transition">
+              <X className="w-4 h-4" />
+            </button>
+            <DialogHeader className="text-white">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <SchoolLogo domain={school.d} color={school.c} name={school.n} size="sm" className="border-white/20" />
+                {school.rk > 0 && (
+                <Badge className="bg-white/20 text-white border-none text-xs">
+                  #{school.rk} US News
+                </Badge>
+                )}
+                {school.tg.map((t) => (
+                  <Badge key={t} className="bg-white/10 text-white/80 border-none text-xs">{t}</Badge>
+                ))}
+                {school.est && (
+                  <Badge className="bg-amber-500/30 text-amber-100 border-amber-300/30 text-xs">추정치</Badge>
+                )}
+              </div>
+              <DialogTitle className="text-2xl font-headline font-bold text-white">{school.n}</DialogTitle>
+              <DialogDescription className="text-white/70 text-sm flex items-center gap-1.5 mt-1">
+                <MapPin className="w-3.5 h-3.5" /> {school.loc || "미국"} · {school.setting || ""}
+              </DialogDescription>
+            </DialogHeader>
+          </CampusPhoto>
 
-          {/* Floating probability card */}
-          <div className="absolute -bottom-10 left-6 right-6">
-            <div className="bg-white rounded-2xl shadow-xl p-4 flex items-center gap-4">
+          {/* Floating probability card — outside CampusPhoto to avoid overflow clip */}
+          <div className="absolute -bottom-8 left-6 right-6 z-10">
+            <div className="bg-white dark:bg-card rounded-2xl shadow-xl p-4 flex items-center gap-4">
               <div className="relative w-16 h-16 shrink-0">
                 <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
                   <circle cx="32" cy="32" r="28" fill="none" stroke="#e5e7eb" strokeWidth="6" />
@@ -222,10 +224,10 @@ function SchoolModal({ school, open, onClose, specs }: { school: School | null; 
               </div>
             </div>
           </div>
-        </CampusPhoto>
+        </div>
 
         {/* Scrollable body */}
-        <ScrollArea className="flex-1 pt-14">
+        <ScrollArea className="flex-1 pt-12">
           <Tabs defaultValue="overview" className="px-6 pb-6">
             <TabsList className="w-full bg-muted/50 rounded-xl h-11 p-1">
               <TabsTrigger value="overview" className="flex-1 rounded-lg text-sm">개요</TabsTrigger>
@@ -249,19 +251,45 @@ function SchoolModal({ school, open, onClose, specs }: { school: School | null; 
               <div className="space-y-2">
                 <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">입학 기준</h4>
                 <div className="grid grid-cols-3 gap-2.5">
-                  <StatChip icon={<TrendingUp className="w-3.5 h-3.5" />} label="SAT" value={school.sat[0] > 0 || school.sat[1] > 0 ? `${school.sat[0]}–${school.sat[1]}` : "N/A"} />
+                  <StatChip icon={<TrendingUp className="w-3.5 h-3.5" />} label="SAT 총점" value={school.sat[0] > 0 || school.sat[1] > 0 ? `${school.sat[0]}–${school.sat[1]}` : "N/A"} />
                   <StatChip icon={<GraduationCap className="w-3.5 h-3.5" />} label="GPA" value={school.gpa > 0 ? school.gpa.toString() : "N/A"} />
                   <StatChip icon={<BookOpen className="w-3.5 h-3.5" />} label="TOEFL" value={`${school.toefl}+`} />
                 </div>
+                {school.scorecard && (school.scorecard.sat_math_25 || school.scorecard.sat_reading_25) && (
+                  <div className="grid grid-cols-2 gap-2.5 mt-2">
+                    {school.scorecard.sat_math_25 != null && school.scorecard.sat_math_75 != null && (
+                      <StatChip icon={<TrendingUp className="w-3.5 h-3.5" />} label="SAT Math (25-75%)" value={`${school.scorecard.sat_math_25}–${school.scorecard.sat_math_75}`} />
+                    )}
+                    {school.scorecard.sat_reading_25 != null && school.scorecard.sat_reading_75 != null && (
+                      <StatChip icon={<TrendingUp className="w-3.5 h-3.5" />} label="SAT R&W (25-75%)" value={`${school.scorecard.sat_reading_25}–${school.scorecard.sat_reading_75}`} />
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* School info */}
               <div className="space-y-2">
                 <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">학교 정보</h4>
                 <div className="grid grid-cols-2 gap-2.5">
-                  <StatChip icon={<Users className="w-3.5 h-3.5" />} label="학부 규모" value={school.size ? `${school.size.toLocaleString()}명` : "N/A"} />
+                  <StatChip icon={<Users className="w-3.5 h-3.5" />} label="학부 규모" value={school.scorecard?.student_size ? `${school.scorecard.student_size.toLocaleString()}명` : school.size ? `${school.size.toLocaleString()}명` : "N/A"} />
                   <StatChip icon={<MapPin className="w-3.5 h-3.5" />} label="환경" value={school.setting || "N/A"} />
                 </div>
+                {(school.qs || school.scorecard) && (
+                  <div className="grid grid-cols-2 gap-2.5 mt-2">
+                    {school.qs?.rank_2025 && (
+                      <StatChip icon={<Trophy className="w-3.5 h-3.5" />} label="QS 세계 랭킹" value={`#${school.qs.rank_2025}`} />
+                    )}
+                    {school.scorecard?.completion_rate != null && school.scorecard.completion_rate > 0 && (
+                      <StatChip icon={<GraduationCap className="w-3.5 h-3.5" />} label="졸업률" value={`${(school.scorecard.completion_rate * 100).toFixed(0)}%`} />
+                    )}
+                    {school.scorecard?.earnings_10yr != null && school.scorecard.earnings_10yr > 0 && (
+                      <StatChip icon={<DollarSign className="w-3.5 h-3.5" />} label="졸업 10년 후 연봉" value={`$${school.scorecard.earnings_10yr.toLocaleString()}`} />
+                    )}
+                    {school.scorecard?.median_debt != null && school.scorecard.median_debt > 0 && (
+                      <StatChip icon={<Briefcase className="w-3.5 h-3.5" />} label="졸업 시 학자금 부채" value={`$${school.scorecard.median_debt.toLocaleString()}`} />
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Deadlines */}
@@ -431,7 +459,7 @@ function SchoolModal({ school, open, onClose, specs }: { school: School | null; 
               </div>
 
               {/* Estimated data warning */}
-              {(school as any).est && (
+              {school.est && (
                 <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3">
                   <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 mb-1">⚠ 추정 데이터</p>
                   <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed">
@@ -452,34 +480,78 @@ function SchoolModal({ school, open, onClose, specs }: { school: School | null; 
 
             {/* ── 학비 Tab ── */}
             <TabsContent value="cost" className="space-y-4 mt-4">
+              {/* Tuition headline */}
               <div className="text-center py-4">
-                <p className="text-xs text-muted-foreground mb-1">연간 등록금 (공식)</p>
+                <p className="text-xs text-muted-foreground mb-1">연간 등록금 (Out-of-State)</p>
                 <p className="text-4xl font-bold font-headline">
-                  {school.tuition ? `$${school.tuition.toLocaleString()}` : "N/A"}
+                  {school.scorecard?.tuition_out_of_state
+                    ? `$${school.scorecard.tuition_out_of_state.toLocaleString()}`
+                    : school.tuition ? `$${school.tuition.toLocaleString()}` : "N/A"}
                 </p>
+                {school.scorecard?.tuition_in_state != null && school.scorecard.tuition_in_state !== school.scorecard.tuition_out_of_state && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    In-State: ${school.scorecard.tuition_in_state.toLocaleString()}
+                  </p>
+                )}
               </div>
 
-              {school.tuition && (
+              {/* CDS Scorecard breakdown */}
+              {school.scorecard && (
+                <>
+                  <div className="h-px bg-border" />
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">비용 상세 (College Scorecard)</h4>
+                    <div className="space-y-2">
+                      {school.scorecard.total_cost != null && school.scorecard.total_cost > 0 && (
+                        <div className="flex items-center justify-between bg-accent/30 rounded-xl p-4">
+                          <span className="text-xs text-muted-foreground">총 비용 (등록금+기숙사+생활비)</span>
+                          <span className="text-sm font-bold">${school.scorecard.total_cost.toLocaleString()}/년</span>
+                        </div>
+                      )}
+                      {school.scorecard.room_board != null && school.scorecard.room_board > 0 && (
+                        <div className="flex items-center justify-between bg-accent/30 rounded-xl p-4">
+                          <span className="text-xs text-muted-foreground">기숙사 + 식비</span>
+                          <span className="text-sm font-bold">${school.scorecard.room_board.toLocaleString()}/년</span>
+                        </div>
+                      )}
+                      {school.scorecard.pell_grant_rate != null && school.scorecard.pell_grant_rate > 0 && (
+                        <div className="flex items-center justify-between bg-accent/30 rounded-xl p-4">
+                          <span className="text-xs text-muted-foreground">Pell Grant 수혜율</span>
+                          <span className="text-sm font-bold">{(school.scorecard.pell_grant_rate * 100).toFixed(0)}%</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Net cost estimates */}
+              {(school.tuition || school.scorecard?.tuition_out_of_state) && (
                 <>
                   <div className="h-px bg-border" />
                   <div className="space-y-3">
                     <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">예상 순 비용 (재정보조 반영)</h4>
-                    {[
-                      { label: "재정보조 없음", factor: 1 },
-                      { label: "부분 보조 (30%)", factor: 0.7 },
-                      { label: "대폭 보조 (55%)", factor: 0.45 },
-                    ].map(({ label, factor }) => (
-                      <div key={label} className="flex items-center justify-between bg-accent/30 rounded-xl p-4">
-                        <span className="text-xs text-muted-foreground">{label}</span>
-                        <span className="text-sm font-bold">${Math.round(school.tuition! * factor).toLocaleString()}/년</span>
-                      </div>
-                    ))}
+                    {(() => {
+                      const baseTuition = school.scorecard?.total_cost || school.scorecard?.tuition_out_of_state || school.tuition || 0;
+                      return [
+                        { label: "재정보조 없음", factor: 1 },
+                        { label: "부분 보조 (30%)", factor: 0.7 },
+                        { label: "대폭 보조 (55%)", factor: 0.45 },
+                      ].map(({ label, factor }) => (
+                        <div key={label} className="flex items-center justify-between bg-accent/30 rounded-xl p-4">
+                          <span className="text-xs text-muted-foreground">{label}</span>
+                          <span className="text-sm font-bold">${Math.round(baseTuition * factor).toLocaleString()}/년</span>
+                        </div>
+                      ));
+                    })()}
                   </div>
                   <div className="h-px bg-border" />
                   <div className="bg-accent/30 rounded-xl p-4 text-center">
                     <p className="text-xs text-muted-foreground mb-1">4년 총 예상 비용</p>
-                    <p className="text-2xl font-bold">${(school.tuition * 4).toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground mt-1">생활비 별도 (약 $15,000~$20,000/년)</p>
+                    <p className="text-2xl font-bold">
+                      ${((school.scorecard?.total_cost || school.scorecard?.tuition_out_of_state || school.tuition || 0) * 4).toLocaleString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">등록금 + 기숙사 + 생활비 포함 추정</p>
                   </div>
                 </>
               )}
@@ -489,6 +561,34 @@ function SchoolModal({ school, open, onClose, specs }: { school: School | null; 
                   <p className="text-xs text-primary font-semibold mb-1">내 프로필 기반 예상 순 비용</p>
                   <p className="text-2xl font-bold text-primary">${school.netCost.toLocaleString()}/년</p>
                 </div>
+              )}
+
+              {/* ROI: Earnings vs Debt */}
+              {school.scorecard?.earnings_10yr != null && school.scorecard.earnings_10yr > 0 && (
+                <>
+                  <div className="h-px bg-border" />
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">투자 수익 (ROI)</h4>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {school.scorecard.earnings_6yr != null && school.scorecard.earnings_6yr > 0 && (
+                        <div className="bg-emerald-50 dark:bg-emerald-950/20 rounded-xl p-4 text-center">
+                          <p className="text-xs text-muted-foreground">졸업 6년 후 연봉</p>
+                          <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">${school.scorecard.earnings_6yr.toLocaleString()}</p>
+                        </div>
+                      )}
+                      <div className="bg-emerald-50 dark:bg-emerald-950/20 rounded-xl p-4 text-center">
+                        <p className="text-xs text-muted-foreground">졸업 10년 후 연봉</p>
+                        <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">${school.scorecard.earnings_10yr.toLocaleString()}</p>
+                      </div>
+                    </div>
+                    {school.scorecard.median_debt != null && school.scorecard.median_debt > 0 && (
+                      <div className="bg-amber-50 dark:bg-amber-950/20 rounded-xl p-4 text-center">
+                        <p className="text-xs text-muted-foreground">졸업 시 학자금 부채 (중앙값)</p>
+                        <p className="text-lg font-bold text-amber-700 dark:text-amber-400">${school.scorecard.median_debt.toLocaleString()}</p>
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
 
               {/* International student financial aid info */}
@@ -522,7 +622,7 @@ function SchoolModal({ school, open, onClose, specs }: { school: School | null; 
               </div>
               {school.prompts && school.prompts.length > 0 ? (
                 school.prompts.map((prompt, i) => (
-                  <div key={i} className="bg-white border rounded-xl p-4 space-y-2">
+                  <div key={i} className="bg-white dark:bg-card border rounded-xl p-4 space-y-2">
                     <div className="flex items-start gap-2">
                       <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
                         {i + 1}
@@ -601,21 +701,21 @@ function SchoolModal({ school, open, onClose, specs }: { school: School | null; 
                 <div className="space-y-2">
                   <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">학교 정보</h4>
                   <div className="grid grid-cols-2 gap-2">
-                    {school.size > 0 && (
+                    {(school.size ?? 0) > 0 && (
                       <div className="bg-accent/30 rounded-xl p-3 flex items-center gap-2">
                         <Users className="w-4 h-4 text-muted-foreground shrink-0" />
                         <div>
                           <p className="text-xs text-muted-foreground">학부 규모</p>
-                          <p className="text-sm font-semibold">{school.size.toLocaleString()}명</p>
+                          <p className="text-sm font-semibold">{school.size!.toLocaleString()}명</p>
                         </div>
                       </div>
                     )}
-                    {school.tuition > 0 && (
+                    {(school.tuition ?? 0) > 0 && (
                       <div className="bg-accent/30 rounded-xl p-3 flex items-center gap-2">
                         <DollarSign className="w-4 h-4 text-muted-foreground shrink-0" />
                         <div>
                           <p className="text-xs text-muted-foreground">연간 등록금</p>
-                          <p className="text-sm font-semibold">${(school.tuition / 1000).toFixed(0)}k</p>
+                          <p className="text-sm font-semibold">${(school.tuition! / 1000).toFixed(0)}k</p>
                         </div>
                       </div>
                     )}
@@ -805,31 +905,45 @@ export default function AnalysisPage() {
     return matchSchools(specs);
   }, [specs, step]);
 
-  // Strategic free preview: balanced 10 schools (Reach 2-3, Hard Target 2, Target 3-4, Safety 2-3)
+  // Strategic free preview: top-ranked schools from each category, prioritize famous universities
+  const FREE_PREVIEW_COUNT = 20;
   const freePreviewIds = useMemo(() => {
     if (!isFree || !results.length) return new Set<string>();
     const byCategory: Record<string, typeof results> = { Reach: [], "Hard Target": [], Target: [], Safety: [] };
     results.forEach(s => { if (s.cat && byCategory[s.cat]) byCategory[s.cat].push(s); });
+    // Sort each category by ranking (famous universities first)
+    Object.values(byCategory).forEach(arr => arr.sort((a, b) => (a.rk || 999) - (b.rk || 999)));
     const picks: string[] = [];
-    // Balanced distribution: Reach 2~3, Hard Target 2, Target 3~4, Safety 2~3
-    byCategory.Reach.slice(0, 3).forEach(s => picks.push(s.n));
-    byCategory["Hard Target"].slice(0, 2).forEach(s => picks.push(s.n));
-    byCategory.Target.slice(0, 3).forEach(s => picks.push(s.n));
-    byCategory.Safety.slice(0, 2).forEach(s => picks.push(s.n));
-    // Fill remaining up to schoolLimit
-    if (picks.length < schoolLimit) {
-      results.forEach(s => { if (picks.length < schoolLimit && !picks.includes(s.n)) picks.push(s.n); });
+    // Balanced distribution: Reach 5, Hard Target 4, Target 6, Safety 5
+    byCategory.Reach.slice(0, 5).forEach(s => picks.push(s.n));
+    byCategory["Hard Target"].slice(0, 4).forEach(s => picks.push(s.n));
+    byCategory.Target.slice(0, 6).forEach(s => picks.push(s.n));
+    byCategory.Safety.slice(0, 5).forEach(s => picks.push(s.n));
+    // Fill remaining with top-ranked schools
+    if (picks.length < FREE_PREVIEW_COUNT) {
+      const ranked = [...results].sort((a, b) => (a.rk || 999) - (b.rk || 999));
+      ranked.forEach(s => { if (picks.length < FREE_PREVIEW_COUNT && !picks.includes(s.n)) picks.push(s.n); });
     }
-    return new Set(picks.slice(0, schoolLimit));
-  }, [isFree, results, schoolLimit]);
+    return new Set(picks.slice(0, FREE_PREVIEW_COUNT));
+  }, [isFree, results]);
 
   const filtered = useMemo(() => {
     let list = results;
     if (filterCat) list = list.filter((s) => s.cat === filterCat);
     if (searchQuery) list = list.filter((s) => schoolMatchesQuery(s, searchQuery));
-    if (sortBy === "prob") list = [...list].sort((a, b) => (b.prob || 0) - (a.prob || 0));
+    // Sort: unlocked first, then by ranking (famous) or probability
+    list = [...list].sort((a, b) => {
+      // Unlocked schools always come first for free users
+      if (isFree) {
+        const aOpen = freePreviewIds.has(a.n) ? 0 : 1;
+        const bOpen = freePreviewIds.has(b.n) ? 0 : 1;
+        if (aOpen !== bOpen) return aOpen - bOpen;
+      }
+      if (sortBy === "prob") return (b.prob || 0) - (a.prob || 0);
+      return (a.rk || 999) - (b.rk || 999);
+    });
     return list;
-  }, [results, filterCat, searchQuery, sortBy]);
+  }, [results, filterCat, searchQuery, sortBy, isFree, freePreviewIds]);
 
   const stats = useMemo(() => {
     if (!results.length) return { safety: 0, target: 0, hardTarget: 0, reach: 0, recommended: 0, focusSchools: [] as { school: School; label: string; tag: string }[] };
@@ -984,12 +1098,12 @@ export default function AnalysisPage() {
                 placeholder="대학 검색..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-10 rounded-xl bg-white border-none shadow-sm"
+                className="pl-9 h-10 rounded-xl bg-white dark:bg-card border-none shadow-sm"
               />
             </div>
             <button
               onClick={() => setSortBy(sortBy === "rank" ? "prob" : "rank")}
-              className="h-10 px-3 rounded-xl bg-white shadow-sm text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap"
+              className="h-10 px-3 rounded-xl bg-white dark:bg-card shadow-sm text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap"
             >
               {sortBy === "rank" ? "랭킹순" : "확률순"}
               <TrendingUp className="w-3.5 h-3.5" />
@@ -1030,7 +1144,7 @@ export default function AnalysisPage() {
                 style={{ animationDelay: `${Math.min(index * 50, 300)}ms` }}
                 onClick={() => !isLocked && setSelectedSchool(school)}
               >
-                <Card className={`bg-white border-none shadow-sm hover:shadow-md transition-all p-0 overflow-hidden group relative ${isLocked ? "pointer-events-none" : ""}`}>
+                <Card className={`bg-white dark:bg-card border-none shadow-sm hover:shadow-md transition-all p-0 overflow-hidden group relative ${isLocked ? "pointer-events-none" : ""}`}>
                   {isLocked && (
                     <div className="absolute inset-0 z-10 bg-gradient-to-b from-white/40 via-white/80 to-white flex items-center justify-center">
                       <div className="flex items-center gap-1.5 bg-white/90 rounded-full px-3 py-1.5 shadow-sm">
@@ -1161,7 +1275,7 @@ export default function AnalysisPage() {
               { name: "MIT", prob: 28, color: "#A31F34" },
               { name: "UC Berkeley", prob: 54, color: "#003262" },
             ].map((s) => (
-              <Card key={s.name} className="bg-white border-none shadow-sm p-4 flex items-center gap-3">
+              <Card key={s.name} className="bg-white dark:bg-card border-none shadow-sm p-4 flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg text-white text-xs font-bold flex items-center justify-center" style={{ backgroundColor: s.color }}>
                   #1
                 </div>
@@ -1187,7 +1301,7 @@ export default function AnalysisPage() {
       <div className="px-6 space-y-5">
         {/* Step 1: 학업 성적 */}
         {formStep === 1 && (
-          <Card className="bg-white border-none shadow-sm p-5 space-y-4">
+          <Card className="bg-white dark:bg-card border-none shadow-sm p-5 space-y-4">
             <h3 className="font-bold text-sm flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-primary" /> 학업 성적
             </h3>
@@ -1234,7 +1348,7 @@ export default function AnalysisPage() {
 
         {/* Step 2: AP 과목 */}
         {formStep === 2 && (
-          <Card className="bg-white border-none shadow-sm p-5 space-y-4">
+          <Card className="bg-white dark:bg-card border-none shadow-sm p-5 space-y-4">
             <h3 className="font-bold text-sm flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-primary" /> AP 과목
             </h3>
@@ -1255,7 +1369,7 @@ export default function AnalysisPage() {
         {/* Step 3: 비교과 */}
         {formStep === 3 && (
           <div className="space-y-4">
-            <Card className="bg-white border-none shadow-sm p-5 space-y-4">
+            <Card className="bg-white dark:bg-card border-none shadow-sm p-5 space-y-4">
               <h3 className="font-bold text-sm flex items-center gap-2">
                 <Filter className="w-4 h-4 text-primary" /> 비교과 활동 & 수상
               </h3>
@@ -1289,7 +1403,7 @@ export default function AnalysisPage() {
               <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showDetailedEC ? "rotate-180" : ""}`} />
             </button>
             {showDetailedEC && (
-              <Card className="bg-white border-none shadow-sm p-5 space-y-3">
+              <Card className="bg-white dark:bg-card border-none shadow-sm p-5 space-y-3">
                 <p className="text-xs text-muted-foreground">상세 활동을 입력하면 AI 분석이 더 정확해져요. 모든 항목은 선택사항이에요.</p>
                 <FormField label="동아리/클럽 활동" placeholder="예: 로봇 동아리 회장, 모의유엔 2년" type="text"
                   value={specs.clubs || ""} onChange={(v) => updateSpec("clubs", v)} />
@@ -1312,9 +1426,9 @@ export default function AnalysisPage() {
 
         {/* Step 4: 학교 정보 */}
         {formStep === 4 && (
-          <Card className="bg-white border-none shadow-sm p-5 space-y-4">
+          <Card className="bg-white dark:bg-card border-none shadow-sm p-5 space-y-4">
             <h3 className="font-bold text-sm flex items-center gap-2">
-              <School className="w-4 h-4 text-primary" /> 학교 정보
+              <SchoolIcon className="w-4 h-4 text-primary" /> 학교 정보
             </h3>
             <FormField label="고등학교명" placeholder="예: Seoul International School" type="text"
               value={specs.highSchool || ""} onChange={(v) => updateSpec("highSchool", v)} />
@@ -1372,7 +1486,7 @@ export default function AnalysisPage() {
         {/* Step 5: 에세이 & 지원 정보 */}
         {formStep === 5 && (
           <div className="space-y-5">
-            <Card className="bg-white border-none shadow-sm p-5 space-y-4">
+            <Card className="bg-white dark:bg-card border-none shadow-sm p-5 space-y-4">
               <h3 className="font-bold text-sm flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-primary" /> 에세이 & 추천서
               </h3>
@@ -1386,7 +1500,7 @@ export default function AnalysisPage() {
               </div>
             </Card>
 
-            <Card className="bg-white border-none shadow-sm p-5 space-y-4">
+            <Card className="bg-white dark:bg-card border-none shadow-sm p-5 space-y-4">
               <h3 className="font-bold text-sm flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-primary" /> 지원 정보
               </h3>

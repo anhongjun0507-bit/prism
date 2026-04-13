@@ -1,11 +1,29 @@
 import { SCHOOLS } from './school';
 
+export interface Scorecard {
+  official_name?: string; city?: string; state?: string; url?: string;
+  tuition_in_state?: number; tuition_out_of_state?: number;
+  total_cost?: number; room_board?: number; median_debt?: number;
+  pell_grant_rate?: number; completion_rate?: number;
+  earnings_10yr?: number; earnings_6yr?: number; student_size?: number;
+  admission_rate?: number; sat_average?: number;
+  sat_math_25?: number; sat_math_75?: number;
+  sat_reading_25?: number; sat_reading_75?: number;
+}
+
+export interface QSRanking {
+  rank_2025?: string; rank_2024?: string;
+  overall_score?: string;
+  academic_reputation?: string; employer_reputation?: string;
+}
+
 export interface School {
   n: string; rk: number; r: number; sat: number[]; gpa: number;
   c: string; d: string; ea?: string; rd: string; tg: string[];
   toefl: number; tp: string; reqs: string[]; prompts: string[];
   mr: Record<string,number>; tuition?: number; size?: number;
-  loc?: string; setting?: string;
+  loc?: string; setting?: string; est?: boolean;
+  scorecard?: Scorecard; qs?: QSRanking;
   // Computed
   prob?: number; lo?: number; hi?: number; cat?: string;
   netCost?: number | null; ecPts?: number; academicIdx?: number;

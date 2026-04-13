@@ -222,7 +222,7 @@ export default function OnboardingPage() {
               autoComplete="off"
             />
             {filteredUnis.length > 0 && !formData.dreamSchool && (
-              <div role="listbox" aria-label="대학 검색 결과" className="absolute top-full left-0 right-0 z-10 bg-white rounded-xl shadow-lg border mt-1 overflow-hidden">
+              <div role="listbox" aria-label="대학 검색 결과" className="absolute top-full left-0 right-0 z-10 bg-white dark:bg-card rounded-xl shadow-lg border mt-1 overflow-hidden">
                 {filteredUnis.map((u, idx) => (
                   <button
                     key={u}
@@ -273,7 +273,7 @@ export default function OnboardingPage() {
               autoComplete="off"
             />
             {filteredMajors.length > 0 && !formData.major && (
-              <div role="listbox" aria-label="전공 검색 결과" className="absolute top-full left-0 right-0 z-10 bg-white rounded-xl shadow-lg border mt-1 overflow-hidden">
+              <div role="listbox" aria-label="전공 검색 결과" className="absolute top-full left-0 right-0 z-10 bg-white dark:bg-card rounded-xl shadow-lg border mt-1 overflow-hidden">
                 {filteredMajors.map((m, idx) => (
                   <button
                     key={m}
@@ -408,7 +408,7 @@ export default function OnboardingPage() {
               {previewOpen && (
                 <div className="mt-2 space-y-2 animate-fade-up">
                   {previewSchools.map((s) => (
-                    <Card key={s.n} className="p-4 bg-white border-none shadow-sm flex items-center gap-3">
+                    <Card key={s.n} className="p-4 bg-white dark:bg-card border-none shadow-sm flex items-center gap-3">
                       <div
                         className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0"
                         style={{ backgroundColor: s.c }}
@@ -454,7 +454,7 @@ export default function OnboardingPage() {
             <div className="w-full space-y-2">
               <p className="text-xs font-bold text-muted-foreground">나의 추천 대학 미리보기</p>
               {previewSchools.map((s) => (
-                <Card key={s.n} className="p-4 bg-white border-none shadow-sm flex items-center gap-3">
+                <Card key={s.n} className="p-4 bg-white dark:bg-card border-none shadow-sm flex items-center gap-3">
                   <div
                     className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0"
                     style={{ backgroundColor: s.c }}

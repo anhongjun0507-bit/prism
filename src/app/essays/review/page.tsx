@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { PLANS } from "@/lib/plans";
@@ -86,6 +86,29 @@ export default function EssayReviewPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ReviewResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Persist & restore review state (essay + result)
+  const REVIEW_KEY = "prism_essay_review";
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(REVIEW_KEY);
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data.essay) setEssay(data.essay);
+        if (data.prompt) setPrompt(data.prompt);
+        if (data.university) setUniversity(data.university);
+        if (data.result) setResult(data.result);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (essay || result) {
+      try {
+        localStorage.setItem(REVIEW_KEY, JSON.stringify({ essay, prompt, university, result }));
+      } catch {}
+    }
+  }, [essay, prompt, university, result]);
 
   const handleReview = async () => {
     if (!essay.trim()) return;
