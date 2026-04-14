@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ExternalLink, Heart } from "lucide-react";
 import type { School } from "@/lib/matching";
 import { SchoolLogo } from "@/components/SchoolLogo";
-import { CAT_STYLE, probGradient } from "@/lib/analysis-helpers";
+import { CAT_STYLE, probGradientStyle } from "@/lib/analysis-helpers";
 import type { RowComponentProps } from "react-window";
 
 export type SchoolRowData = {
@@ -52,8 +52,8 @@ export const SchoolRow = ({
               <div className="flex items-center gap-2">
                 <div className="relative flex-1 h-2.5 bg-muted rounded-full overflow-hidden ring-1 ring-inset ring-black/5 dark:ring-white/5">
                   <div
-                    className={`h-full rounded-full bg-gradient-to-r ${probGradient(school.prob || 0)} transition-all duration-500`}
-                    style={{ width: `${school.prob || 0}%` }}
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${school.prob || 0}%`, ...probGradientStyle(school.prob || 0) }}
                   />
                   {/* subtle highlight for glossy feel */}
                   <div

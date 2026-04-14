@@ -900,7 +900,7 @@ export default function EssaysPage() {
         </Link>
       </div>
 
-      <div className="px-6 space-y-3 md:grid md:grid-cols-2 md:gap-3">
+      <div className="px-6 space-y-3 md:grid md:grid-cols-2 md:gap-3 md:items-start md:space-y-0">
         {essays.length === 0 ? (
           <Card variant="elevated" className="md:col-span-2">
             <EmptyState
@@ -915,11 +915,11 @@ export default function EssaysPage() {
             />
           </Card>
         ) : (
-          essays.map((essay, idx) => {
+          essays.map((essay) => {
             const reviews = (essay.reviews ?? []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
             const isExpanded = expandedReviewsFor.has(essay.id);
             return (
-              <div key={essay.id} className="space-y-2 animate-stagger" style={{ ["--i" as string]: idx } as React.CSSProperties}>
+              <div key={essay.id} className="space-y-2">
                 <Card
                   variant="elevated"
                   interactive

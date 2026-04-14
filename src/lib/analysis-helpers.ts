@@ -2,6 +2,7 @@
  * Analysis 페이지에서 공유되는 순수 헬퍼 + 상수.
  * 분석 페이지·SchoolModal·SchoolRow에서 모두 사용.
  */
+import type React from "react";
 import type { Specs } from "@/lib/matching";
 
 /** 카테고리별 색상 스타일 */
@@ -15,12 +16,27 @@ export const CAT_STYLE: Record<string, { bg: string; ring: string; dot: string }
 /** 필터 pill 등에서 사용하는 카테고리 정렬 순서 */
 export const CAT_ORDER = ["Reach", "Hard Target", "Target", "Safety"];
 
-/** 합격 확률 → 그라디언트 클래스 (시각적 색상) */
+/** 합격 확률 → 그라디언트 클래스 (legacy, deprecated — probGradientStyle 사용 권장) */
 export function probGradient(prob: number): string {
   if (prob >= 70) return "from-emerald-500 to-emerald-400";
   if (prob >= 40) return "from-blue-500 to-blue-400";
   if (prob >= 15) return "from-amber-500 to-amber-400";
   return "from-red-500 to-red-400";
+}
+
+/**
+ * 합격 확률 → CSS gradient 인라인 스타일.
+ * Tailwind JIT가 동적 클래스 문자열을 가끔 purge하는 문제를 회피.
+ * SchoolRow 등에서 직접 style로 적용.
+ */
+export function probGradientStyle(prob: number): React.CSSProperties {
+  // emerald-500 → 400 / blue-500 → 400 / amber-500 → 400 / red-500 → 400 (Tailwind v3 hex)
+  const stops =
+    prob >= 70 ? ["#10b981", "#34d399"] :          // emerald
+    prob >= 40 ? ["#3b82f6", "#60a5fa"] :          // blue
+    prob >= 15 ? ["#f59e0b", "#fbbf24"] :          // amber
+                 ["#ef4444", "#f87171"];           // red
+  return { backgroundImage: `linear-gradient(to right, ${stops[0]}, ${stops[1]})` };
 }
 
 /* ─── Story cache (per-school AI-generated narrative, sessionStorage) ─── */
