@@ -6,6 +6,7 @@ import { ExternalLink, Heart } from "lucide-react";
 import type { School } from "@/lib/matching";
 import { SchoolLogo } from "@/components/SchoolLogo";
 import { CAT_STYLE, probGradientStyle } from "@/lib/analysis-helpers";
+import { haptic } from "@/hooks/use-haptic";
 import type { RowComponentProps } from "react-window";
 
 export type SchoolRowData = {
@@ -73,7 +74,7 @@ export const SchoolRow = ({
               </div>
             </div>
             <button
-              onClick={(e) => { e.stopPropagation(); onToggleFavorite(school.n); }}
+              onClick={(e) => { e.stopPropagation(); haptic("light"); onToggleFavorite(school.n); }}
               className="shrink-0 p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
               aria-label={fav ? `${school.n} 즐겨찾기 해제` : `${school.n} 즐겨찾기 추가`}
               aria-pressed={fav}

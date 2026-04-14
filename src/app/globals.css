@@ -33,10 +33,21 @@
 /* Font loading optimization — prevent flash */
 html {
   font-display: swap;
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 body {
-  font-feature-settings: "kern" 1;
+  /* kern: pair kerning, liga: 표준 합자, calt: contextual alternates */
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
   text-rendering: optimizeLegibility;
+  /* 한글-라틴 혼용 시 자동 word-break, 영문 hyphen 방지 */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+/* 숫자에 tabular-nums 기본 (UI 일관성). 콘텐츠 본문은 명시적 lining-nums로 override 가능 */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Print styles for PDF export */
@@ -237,6 +248,37 @@ body {
   animation: fade-up 0.45s ease-out both;
   animation-delay: calc(var(--i, 0) * 60ms);
 }
+
+/* ─── Illustration micro-motion (lottie-like, no library) ─── */
+@keyframes illust-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes illust-bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-2px) rotate(2deg); }
+}
+@keyframes illust-twinkle {
+  0%, 100% { opacity: 0.4; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+@keyframes illust-write {
+  0% { transform: rotate(35deg) translateX(0); }
+  25% { transform: rotate(38deg) translateX(-1px); }
+  50% { transform: rotate(35deg) translateX(0); }
+  75% { transform: rotate(32deg) translateX(1px); }
+  100% { transform: rotate(35deg) translateX(0); }
+}
+@keyframes illust-ping {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+.illust-float    { animation: illust-float 3s ease-in-out infinite; transform-origin: center; }
+.illust-bob      { animation: illust-bob 2.6s ease-in-out infinite; transform-origin: center; }
+.illust-twinkle  { animation: illust-twinkle 2s ease-in-out infinite; transform-origin: center; }
+.illust-twinkle-delay { animation: illust-twinkle 2s ease-in-out 0.7s infinite; transform-origin: center; }
+.illust-write    { animation: illust-write 4s ease-in-out infinite; transform-origin: 50% 100%; }
+.illust-ping     { animation: illust-ping 2.4s ease-out infinite; transform-origin: center; }
 
 /* Brand shimmer — skeleton/loading 표면에 brand-tinted sweep.
    기본 muted 배경 위에 70deg primary 그라디언트가 좌→우로 흐름.

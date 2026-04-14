@@ -49,7 +49,7 @@ export default function WelcomePage() {
     try {
       await loginWithGoogle();
     } catch (e: unknown) {
-      setError("Google 로그인에 실패했습니다.");
+      setError("Google 로그인이 안 됐어요. 잠시 후 다시 시도해주세요.");
       setAuthLoading(null);
     }
   };
@@ -60,7 +60,7 @@ export default function WelcomePage() {
     try {
       await loginWithKakao();
     } catch (e: unknown) {
-      setError(errMessage(e, "카카오 로그인에 실패했습니다."));
+      setError(errMessage(e, "카카오 로그인이 안 됐어요. 잠시 후 다시 시도해주세요."));
       setAuthLoading(null);
     }
   };
@@ -72,7 +72,7 @@ export default function WelcomePage() {
       await loginWithApple();
     } catch (e: unknown) {
       if (authErrorCode(e) !== "auth/popup-closed-by-user") {
-        setError("Apple 로그인에 실패했습니다.");
+        setError("Apple 로그인이 안 됐어요. 잠시 후 다시 시도해주세요.");
       }
       setAuthLoading(null);
     }
@@ -90,7 +90,7 @@ export default function WelcomePage() {
       if (code === "auth/user-not-found") setError("등록되지 않은 이메일입니다.");
       else if (code === "auth/wrong-password" || code === "auth/invalid-credential") setError("비밀번호가 올바르지 않습니다.");
       else if (code === "auth/too-many-requests") setError("로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.");
-      else setError("로그인에 실패했습니다.");
+      else setError("로그인이 안 됐어요. 다시 시도해주세요.");
       setAuthLoading(null);
     }
   };
@@ -110,7 +110,7 @@ export default function WelcomePage() {
       if (code === "auth/email-already-in-use") setError("이미 사용 중인 이메일입니다.");
       else if (code === "auth/invalid-email") setError("올바른 이메일 형식이 아닙니다.");
       else if (code === "auth/weak-password") setError("비밀번호가 너무 약합니다.");
-      else setError("회원가입에 실패했습니다.");
+      else setError("회원가입이 안 됐어요. 다시 시도해주세요.");
       setAuthLoading(null);
     }
   };
@@ -124,7 +124,7 @@ export default function WelcomePage() {
       await resetPassword(email);
       setResetSent(true);
     } catch (err: unknown) {
-      setError("비밀번호 재설정 이메일 발송에 실패했습니다.");
+      setError("재설정 이메일을 보내지 못했어요. 잠시 후 다시 시도해주세요.");
     }
     setAuthLoading(null);
   };

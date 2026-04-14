@@ -3,18 +3,55 @@
   "short_name": "PRISM",
   "description": "AI가 분석하는 1001개 미국 대학 합격 확률, 맞춤 에세이 첨삭, 입시 플래너.",
   "start_url": "/dashboard",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#1a1714",
-  "theme_color": "#1a1714",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#f5f3f0",
+  "theme_color": "#9a3c12",
   "orientation": "portrait",
   "lang": "ko",
   "dir": "ltr",
   "categories": ["education", "productivity"],
   "icons": [
     {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
       "src": "/favicon.ico",
       "sizes": "any",
       "type": "image/x-icon"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "합격 분석",
+      "short_name": "분석",
+      "description": "내 스펙 기반 1000+ 대학 합격 확률",
+      "url": "/analysis",
+      "icons": [{ "src": "/icon.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "AI 카운슬러",
+      "short_name": "상담",
+      "description": "입시 질문 AI 답변",
+      "url": "/chat",
+      "icons": [{ "src": "/icon.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "에세이",
+      "short_name": "에세이",
+      "description": "Common App + 자유 에세이 작성·첨삭",
+      "url": "/essays",
+      "icons": [{ "src": "/icon.svg", "sizes": "192x192" }]
     }
   ]
 }

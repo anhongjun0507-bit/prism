@@ -17,16 +17,29 @@ export default {
         headline: ['Inter', 'Pretendard Variable', 'Pretendard', 'sans-serif'],
         code: ['monospace'],
       },
+      // Typographic scale — refined modular ratio (~1.2-1.25 between adjacent tiers).
+      // 이전엔 xl == 2xl, 3xl == 4xl 가 collapse되어 시각적 위계 부재.
+      // 새 scale은 strictly monotonic + golden-feeling progression.
+      //
+      //   xs   12  body micro · captions
+      //   sm   13  body small · UI labels
+      //   base 15  body default
+      //   lg   18  emphasized body · sub-headlines
+      //   xl   21  card/section headlines (was 24, 살짝 줄여 2xl과 분리)
+      //   2xl  24  page-level title
+      //   3xl  30  hero secondary (was 36, 4xl과 분리)
+      //   4xl  36  hero primary
+      //   5xl  48  marketing hero
       fontSize: {
-        xs: ['0.75rem', { lineHeight: '1rem' }],          // 12px (WCAG min)
-        sm: ['0.8125rem', { lineHeight: '1.25rem' }],     // 13px
-        base: ['0.9375rem', { lineHeight: '1.5rem' }],    // 15px
-        lg: ['1.125rem', { lineHeight: '1.75rem' }],      // 18px
-        xl: ['1.5rem', { lineHeight: '2rem' }],            // 24px
-        '2xl': ['1.5rem', { lineHeight: '2rem' }],         // 24px (alias)
-        '3xl': ['2.25rem', { lineHeight: '2.5rem' }],      // 36px
-        '4xl': ['2.25rem', { lineHeight: '2.5rem' }],      // 36px (alias)
-        '5xl': ['3rem', { lineHeight: '1' }],               // 48px (hero)
+        xs: ['0.75rem', { lineHeight: '1rem' }],            // 12 / 16
+        sm: ['0.8125rem', { lineHeight: '1.15rem' }],       // 13 / 18.4
+        base: ['0.9375rem', { lineHeight: '1.45rem' }],     // 15 / 23.2
+        lg: ['1.125rem', { lineHeight: '1.65rem' }],        // 18 / 26.4
+        xl: ['1.3125rem', { lineHeight: '1.75rem' }],       // 21 / 28
+        '2xl': ['1.5rem', { lineHeight: '1.9rem' }],        // 24 / 30.4
+        '3xl': ['1.875rem', { lineHeight: '2.25rem' }],     // 30 / 36
+        '4xl': ['2.25rem', { lineHeight: '2.5rem' }],       // 36 / 40
+        '5xl': ['3rem', { lineHeight: '1' }],               // 48 / 48
       },
       colors: {
         background: 'hsl(var(--background))',

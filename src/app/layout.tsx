@@ -17,6 +17,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthGate } from "@/components/AuthGate";
 import { Analytics } from "@/components/Analytics";
+import { InstallPrompt } from "@/components/InstallPrompt";
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://prism-app-3ab7d.web.app'),
@@ -53,6 +54,11 @@ export const viewport: Viewport = {
   // (instead of overlaying), so sticky/100dvh inputs land above the keyboard.
   interactiveWidget: 'resizes-content',
   viewportFit: 'cover', // enable env(safe-area-inset-*) on iOS
+  // Light/dark별 theme-color → 모바일 status bar 색 자동
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#9a3c12" },
+    { media: "(prefers-color-scheme: dark)", color: "#1a1714" },
+  ],
 };
 
 export default function RootLayout({
@@ -84,7 +90,22 @@ export default function RootLayout({
         />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("prism_theme")||"light";var d=t==="dark";document.documentElement.classList.toggle("dark",d)}catch(e){}})()`,
+            __html: `(function(){try{
+              var t=localStorage.getItem("prism_theme")||"light";
+              var d=t==="dark";
+              document.documentElement.classList.toggle("dark",d);
+              var a=localStorage.getItem("prism_accent")||"orange";
+              var map={
+                orange:{l:"19 79% 34%",dk:"19 79% 50%"},
+                blue:{l:"217 91% 45%",dk:"217 91% 60%"},
+                violet:{l:"265 70% 50%",dk:"265 70% 65%"},
+                emerald:{l:"160 60% 38%",dk:"160 60% 50%"},
+                pink:{l:"330 75% 50%",dk:"330 75% 62%"}
+              };
+              var hsl=(map[a]||map.orange)[d?"dk":"l"];
+              document.documentElement.style.setProperty("--primary",hsl);
+              document.documentElement.style.setProperty("--ring",hsl);
+            }catch(e){}})()`,
           }}
         />
       </head>
@@ -98,6 +119,7 @@ export default function RootLayout({
                   <PageTransition>{children}</PageTransition>
                 </main>
                 <Toaster />
+                <InstallPrompt />
               </AuthGate>
             </AuthProvider>
           </ErrorBoundary>

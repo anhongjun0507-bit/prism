@@ -69,7 +69,7 @@ export default function SpecAnalysisPage() {
         body: JSON.stringify({ profile }),
       });
       if (!data.analysis) {
-        setError("분석에 실패했습니다.");
+        setError("분석을 완료하지 못했어요. 다시 시도해주세요.");
         return;
       }
       setAnalysis(data.analysis);
@@ -77,7 +77,7 @@ export default function SpecAnalysisPage() {
       const profileKey = `${profile.gpa}_${profile.sat}_${profile.toefl}_${profile.major}_${profile.dreamSchool}`;
       sessionStorage.setItem(CACHE_KEY, JSON.stringify({ analysis: data.analysis, profileKey }));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "네트워크 오류가 발생했습니다.");
+      setError(err instanceof ApiError ? err.message : "연결에 문제가 있어요. 잠시 후 다시 시도해주세요.");
     } finally {
       setLoading(false);
     }
@@ -117,8 +117,8 @@ export default function SpecAnalysisPage() {
           <div className="flex justify-center mb-4">
             <PrismLoader size={56} />
           </div>
-          <p className="font-bold mb-1">AI가 분석 중입니다</p>
-          <p className="text-xs text-muted-foreground">10-15초 정도 소요됩니다</p>
+          <p className="font-bold mb-1">스펙을 분석하고 있어요</p>
+          <p className="text-xs text-muted-foreground">10-15초 정도 걸려요</p>
         </Card>
       )}
 

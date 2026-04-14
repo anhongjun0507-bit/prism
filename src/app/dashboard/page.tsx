@@ -27,6 +27,7 @@ import { SchoolLogo } from "@/components/SchoolLogo";
 import { EmptyState } from "@/components/EmptyState";
 import { Sparkline } from "@/components/Sparkline";
 import { useCountUp } from "@/hooks/use-count-up";
+import { useMouseParallax } from "@/hooks/use-mouse-parallax";
 
 function getDDay(dateStr: string): number {
   const now = new Date();
@@ -219,16 +220,11 @@ export default function DashboardPage() {
           const offset = C - (ringPct / 100) * C;
           const ringColor = nextDeadline <= 30 ? "stroke-red-300" : nextDeadline <= 90 ? "stroke-amber-300" : "stroke-emerald-300";
           return (
-          <Card
-            ref={heroAnim.ref}
-            variant="hero"
-            style={stripStops}
-            className={`dark-hero-gradient p-6 pb-7 text-white prism-strip-reactive ${heroAnim.isVisible ? "animate-fade-up" : "opacity-0"}`}
+          <HeroCard
+            heroAnimRef={heroAnim.ref}
+            isVisible={heroAnim.isVisible}
+            stripStops={stripStops}
           >
-            {/* Floating prismatic orbs */}
-            <div className="brand-orb brand-orb-primary -top-12 -right-8 w-44 h-44" />
-            <div className="brand-orb brand-orb-violet -bottom-16 -left-12 w-40 h-40 opacity-30" />
-            <div className="brand-orb brand-orb-amber top-1/3 right-1/4 w-24 h-24 opacity-20" />
 
             <div className="relative z-10">
               <Badge variant="secondary" className="bg-white/10 text-white border-white/20 mb-3 backdrop-blur-sm">
@@ -273,7 +269,7 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-          </Card>
+          </HeroCard>
           );
         })()}
 
@@ -655,6 +651,44 @@ export default function DashboardPage() {
 }
 
 /* ─── Sub-components ─── */
+
+interface HeroCardProps {
+  heroAnimRef: React.RefObject<HTMLDivElement | null>;
+  isVisible: boolean;
+  stripStops: React.CSSProperties;
+  children: React.ReactNode;
+}
+
+function HeroCard({ heroAnimRef, isVisible, stripStops, children }: HeroCardProps) {
+  const { ref: parallaxRef, x, y } = useMouseParallax<HTMLDivElement>();
+
+  // 두 ref(IntersectionObserver + parallax)를 동일 노드에 attach
+  const setRefs = (node: HTMLDivElement | null) => {
+    (heroAnimRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    (parallaxRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+  };
+
+  // 각 orb는 다른 depth — 멀수록 적게 움직임
+  const orbStyle = (depth: number): React.CSSProperties => ({
+    transform: `translate3d(${x * depth}px, ${y * depth}px, 0)`,
+    transition: "transform 0.4s cubic-bezier(0.22, 1, 0.36, 1)",
+  });
+
+  return (
+    <Card
+      ref={setRefs}
+      variant="hero"
+      style={stripStops}
+      className={`dark-hero-gradient p-6 pb-7 text-white prism-strip-reactive ${isVisible ? "animate-fade-up" : "opacity-0"}`}
+    >
+      {/* Floating prismatic orbs — mouse parallax */}
+      <div className="brand-orb brand-orb-primary -top-12 -right-8 w-44 h-44" style={orbStyle(12)} />
+      <div className="brand-orb brand-orb-violet -bottom-16 -left-12 w-40 h-40 opacity-30" style={orbStyle(8)} />
+      <div className="brand-orb brand-orb-amber top-1/3 right-1/4 w-24 h-24 opacity-20" style={orbStyle(16)} />
+      {children}
+    </Card>
+  );
+}
 
 interface StatCardProps {
   label: string;

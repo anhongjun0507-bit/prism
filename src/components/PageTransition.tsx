@@ -1,20 +1,19 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useRef } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 /**
- * PageTransition — directional slide based on navigation depth.
+ * PageTransition — Framer Motion 기반 directional spring transition.
  *
- * 깊이 비교:
- *   - 새 경로 segments가 더 많음 → drill-down (slide from right)
- *   - 새 경로 segments가 더 적음 → drill-back (slide from left)
- *   - 같은 깊이 → fade (sibling navigation)
+ * 깊이 비교로 forward/back 방향 자동 감지:
+ *   - 새 경로 segments가 더 많음 → forward (오른쪽에서 슬라이드)
+ *   - 더 적음 → back (왼쪽에서)
+ *   - 같은 깊이 → fade
  *
- * 최상위 (/) ↔ 대시보드 같은 lateral 이동도 fade로 fallback.
+ * prefers-reduced-motion 사용자는 즉시 표시 (Framer Motion 내장 가드).
  */
-
-type Direction = "forward" | "back" | "lateral";
 
 function depth(pathname: string): number {
   return pathname.split("/").filter(Boolean).length;
@@ -22,38 +21,32 @@ function depth(pathname: string): number {
 
 export function PageTransition({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [displayChildren, setDisplayChildren] = useState(children);
-  const [direction, setDirection] = useState<Direction>("lateral");
-  const [animKey, setAnimKey] = useState(0);
   const prevPathname = useRef(pathname);
+  const prevDepth = depth(prevPathname.current);
+  const newDepth = depth(pathname);
+  const direction: 1 | -1 | 0 =
+    newDepth > prevDepth ? 1 :
+    newDepth < prevDepth ? -1 :
+    0;
+  prevPathname.current = pathname;
 
-  useEffect(() => {
-    if (pathname !== prevPathname.current) {
-      const prevDepth = depth(prevPathname.current);
-      const newDepth = depth(pathname);
-      const dir: Direction =
-        newDepth > prevDepth ? "forward" :
-        newDepth < prevDepth ? "back" :
-        "lateral";
-
-      prevPathname.current = pathname;
-      setDirection(dir);
-      setDisplayChildren(children);
-      // Bump key so animation restarts even when direction unchanged.
-      setAnimKey((k) => k + 1);
-    } else {
-      setDisplayChildren(children);
-    }
-  }, [pathname, children]);
-
-  const animClass =
-    direction === "forward" ? "animate-page-forward" :
-    direction === "back" ? "animate-page-back" :
-    "animate-page-enter";
+  const reduced = useReducedMotion();
+  const xDelta = reduced ? 0 : 16 * direction;
 
   return (
-    <div key={animKey} className={animClass}>
-      {displayChildren}
-    </div>
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={pathname}
+        initial={{ opacity: 0, x: xDelta, y: direction === 0 && !reduced ? 6 : 0 }}
+        animate={{ opacity: 1, x: 0, y: 0 }}
+        exit={{ opacity: 0, x: -xDelta, y: 0 }}
+        transition={{
+          duration: 0.32,
+          ease: [0.22, 1, 0.36, 1], // easeOutExpo
+        }}
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
   );
 }

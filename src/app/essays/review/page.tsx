@@ -15,6 +15,8 @@ import { db } from "@/lib/firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
 import { readJSON, writeJSON, removeKey } from "@/lib/storage";
+import { haptic } from "@/hooks/use-haptic";
+import { chime } from "@/lib/chime";
 import {
   ArrowLeft, Loader2, CheckCircle2, AlertCircle, Lightbulb, Sparkles,
   Target, MessageCircle, RotateCcw, X,
@@ -213,11 +215,13 @@ export default function EssayReviewPage() {
       });
 
       if (!data.review) {
-        setError("AI 응답을 파싱할 수 없습니다. 다시 시도해주세요.");
+        setError("AI가 답을 잘 못 만들었어요. 다시 시도해주세요.");
         return;
       }
 
       setResult(data.review);
+      haptic("success");
+      chime("complete");
 
       const newReview: EssayReview = {
         ...data.review,
@@ -280,7 +284,7 @@ export default function EssayReviewPage() {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError("네트워크 오류가 발생했습니다. 다시 시도해주세요.");
+        setError("연결에 문제가 있어요. 잠시 후 다시 시도해주세요.");
       }
     } finally {
       setLoading(false);
