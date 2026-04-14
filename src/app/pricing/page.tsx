@@ -18,15 +18,9 @@ export default function PricingPage() {
 
   const handlePlanSelect = (planType: PlanType) => {
     if (planType === "free") return;
-    // Detect if running in native app (Capacitor) — would call native IAP
-    // For web, show "open in app" prompt
-    if (typeof window !== "undefined" && (window as any).Capacitor) {
-      // Native IAP flow (to be implemented with RevenueCat or native plugins)
-      // For now, just show prompt
-      setShowAppPrompt(planType);
-    } else {
-      setShowAppPrompt(planType);
-    }
+    // TODO: 실제 웹 결제는 Toss SDK로 /api/payment/confirm을 호출해야 함.
+    // 현재는 임시로 "앱에서 결제" 안내만 표시. 별도 작업에서 Toss 체크아웃 페이지 구현 필요.
+    setShowAppPrompt(planType);
   };
 
   return (

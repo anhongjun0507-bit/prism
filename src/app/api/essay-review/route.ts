@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth, enforceQuota } from "@/lib/api-auth";
 
 function getClient() {
   const key = process.env.ANTHROPIC_API_KEY;
@@ -77,6 +78,12 @@ const SYSTEM_PROMPT = `당신은 미국 명문대 (Ivy League + Top 30) 입학�
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await requireAuth(req);
+    if (session instanceof NextResponse) return session;
+
+    const quotaErr = await enforceQuota(session, "essayReview");
+    if (quotaErr) return quotaErr;
+
     const anthropic = getClient();
     if (!anthropic) {
       return NextResponse.json({ error: "API 키 미설정" }, { status: 503 });
@@ -85,7 +92,7 @@ export async function POST(req: NextRequest) {
     const { essay, prompt: essayPrompt, university, grade, gpa, sat, major } = await req.json();
 
     if (!essay) {
-      return NextResponse.json({ error: "Missing essay" }, { status: 400 });
+      return NextResponse.json({ error: "에세이 내용이 필요해요" }, { status: 400 });
     }
 
     if (essay.length < 250) {
@@ -159,6 +166,6 @@ ${essay}
     }
   } catch (error) {
     console.error("Essay review error:", error);
-    return NextResponse.json({ error: "Failed to review essay" }, { status: 500 });
+    return NextResponse.json({ error: "에세이 첨삭에 실패했어요" }, { status: 500 });
   }
 }

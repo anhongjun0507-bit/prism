@@ -8,9 +8,15 @@ import {
   User,
 } from "firebase/auth";
 import { auth, googleProvider, appleProvider, db } from "./firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import type { PlanType } from "./plans";
-import { matchSchools, type Specs } from "./matching";
+import { doc, setDoc, onSnapshot } from "firebase/firestore";
+import type { PlanType, BillingCycle } from "./plans";
+// matchSchools는 server-only. snapshot 생성 시 dreamProb·catCounts는
+// 사용자가 분석 페이지에서 본 결과를 별도 채널로 전달받거나 생략한다.
+// (이 파일은 client-side context이므로 server-only 모듈을 import할 수 없음)
+// Specs 타입은 type-only import — 번들에 영향 없음
+import type { Specs } from "./matching";
+
+const SPECS_LS_KEY = "prism_specs";
 
 export interface UserProfile {
   name: string;
@@ -20,6 +26,16 @@ export interface UserProfile {
   photoURL?: string;
   onboarded: boolean;
   plan?: PlanType;
+  // 서버 Admin SDK가 갱신 — Firestore 규칙이 클라이언트 write 차단
+  planBilling?: BillingCycle;
+  planActivatedAt?: string;
+  lastPayment?: {
+    orderId: string;
+    totalAmount: number;
+    method?: string;
+    approvedAt?: string;
+    paymentKey?: string;
+  };
   aiChatCount?: number;
   aiChatDate?: string;
   gpa?: string;
@@ -30,6 +46,7 @@ export interface UserProfile {
   whatIfUsed?: number;
   favoriteSchools?: string[];
   specLastUpdated?: string;
+  specs?: Specs;
 }
 
 export interface ProfileSnapshot {
@@ -95,28 +112,10 @@ function saveSnapshot(profile: UserProfile, prev: UserProfile | null) {
   const today = new Date().toISOString().split("T")[0];
   const snaps = loadSnapshots();
 
-  let dreamProb: number | undefined;
-  let catCounts: { reach?: number; target?: number; safety?: number } = {};
-  if (profile.dreamSchool && (profile.gpa || profile.sat)) {
-    try {
-      const specs: Specs = {
-        gpaUW: profile.gpa || "", gpaW: "", sat: profile.sat || "", act: "",
-        toefl: profile.toefl || "", ielts: "", apCount: "", apAvg: "",
-        satSubj: "", classRank: "", ecTier: 2, awardTier: 2,
-        essayQ: 3, recQ: 3, interviewQ: 3, legacy: false, firstGen: false,
-        earlyApp: "", needAid: false, gender: "", intl: true,
-        major: profile.major || "Computer Science",
-      };
-      const results = matchSchools(specs);
-      const dreamResult = results.find(s => s.n === profile.dreamSchool);
-      if (dreamResult) dreamProb = dreamResult.prob;
-      catCounts = {
-        reach: results.filter(s => s.cat === "Reach").length,
-        target: results.filter(s => s.cat === "Target" || s.cat === "Hard Target").length,
-        safety: results.filter(s => s.cat === "Safety").length,
-      };
-    } catch { /* ignore */ }
-  }
+  // dreamProb·catCounts는 클라이언트에서 매칭이 불가능하므로 생략.
+  // 분석 페이지에서 결과를 얻은 직후 별도로 saveSnapshot에 채워주는 식으로 추후 보강 가능.
+  const dreamProb: number | undefined = undefined;
+  const catCounts: { reach?: number; target?: number; safety?: number } = {};
 
   const filtered = snaps.filter(s => s.date !== today);
   filtered.push({
@@ -143,35 +142,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [snapshots, setSnapshots] = useState<ProfileSnapshot[]>(loadSnapshots);
 
   useEffect(() => {
+    let profileUnsub: (() => void) | null = null;
+
+    const cleanup = () => {
+      if (profileUnsub) { profileUnsub(); profileUnsub = null; }
+    };
+
     try {
-      const unsub = onAuthStateChanged(auth, async (u) => {
+      const unsub = onAuthStateChanged(auth, (u) => {
+        cleanup(); // 이전 사용자의 profile 구독 해제
         setUser(u);
-        if (u) {
-          try {
-            const snap = await getDoc(doc(db, "users", u.uid));
-            if (snap.exists()) {
-              const data = snap.data() as UserProfile;
-              // Master account → force premium with unlimited usage
-              if (isMasterEmail(u.email)) {
-                data.plan = "premium";
-              }
-              setProfile(data);
-            } else if (isMasterEmail(u.email)) {
-              // Master account without Firestore profile yet
-              setProfile({ name: u.displayName || "Master", grade: "", dreamSchool: "", major: "", onboarded: false, plan: "premium" });
-            }
-          } catch {
-            // Firestore unavailable — still grant master access
-            if (isMasterEmail(u.email)) {
-              setProfile({ name: u.displayName || "Master", grade: "", dreamSchool: "", major: "", onboarded: false, plan: "premium" });
-            }
-          }
-        } else {
+
+        if (!u) {
           setProfile(null);
+          setLoading(false);
+          return;
         }
-        setLoading(false);
+
+        // 실시간 profile 구독 — 다른 탭/기기의 변경이 즉시 반영됨
+        try {
+          profileUnsub = onSnapshot(
+            doc(db, "users", u.uid),
+            (snap) => {
+              if (snap.exists()) {
+                const data = snap.data() as UserProfile;
+                // Master account → force premium with unlimited usage
+                if (isMasterEmail(u.email)) {
+                  data.plan = "premium";
+                }
+                setProfile(data);
+                // Sync Firestore specs → localStorage cache (cross-device hydration)
+                if (data.specs && typeof window !== "undefined") {
+                  try { localStorage.setItem(SPECS_LS_KEY, JSON.stringify(data.specs)); } catch {}
+                }
+              } else if (isMasterEmail(u.email)) {
+                // Master account without Firestore profile yet
+                setProfile({ name: u.displayName || "Master", grade: "", dreamSchool: "", major: "", onboarded: false, plan: "premium" });
+              }
+              setLoading(false);
+            },
+            (err) => {
+              console.error("[auth] profile snapshot error:", err);
+              // Firestore unavailable — still grant master access
+              if (isMasterEmail(u.email)) {
+                setProfile({ name: u.displayName || "Master", grade: "", dreamSchool: "", major: "", onboarded: false, plan: "premium" });
+              }
+              setLoading(false);
+            }
+          );
+        } catch {
+          if (isMasterEmail(u.email)) {
+            setProfile({ name: u.displayName || "Master", grade: "", dreamSchool: "", major: "", onboarded: false, plan: "premium" });
+          }
+          setLoading(false);
+        }
       });
-      return unsub;
+
+      return () => {
+        cleanup();
+        unsub();
+      };
     } catch {
       setLoading(false);
     }
@@ -184,14 +214,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUpWithEmail = async (email: string, password: string, name: string) => {
     const credential = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(credential.user, { displayName: name });
-    // Initialize profile in Firestore
+    // Initialize profile in Firestore (plan은 클라이언트가 쓰지 못하도록 firestore.rules가 차단 →
+    // 누락 시 서버 사이드에서 'free'로 기본값 처리됨)
     await setDoc(doc(db, "users", credential.user.uid), {
       name,
       grade: "",
       dreamSchool: "",
       major: "",
       onboarded: false,
-      plan: "free",
     }, { merge: true });
   };
 
@@ -217,9 +247,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Open popup for Kakao login
     const popup = window.open(kakaoAuthUrl, "kakao-login", "width=480,height=700");
 
+    // 같은 origin의 콜백 페이지만 신뢰 — 다른 origin의 위장 메시지 차단
+    const expectedOrigin = window.location.origin;
+
     // Listen for callback message from popup
     return new Promise<void>((resolve, reject) => {
       const handleMessage = async (event: MessageEvent) => {
+        // Origin 검증 — 우리 callback 라우트가 보낸 메시지만 처리
+        if (event.origin !== expectedOrigin) return;
+
         if (event.data?.type === "kakao-login-success" && event.data.customToken) {
           window.removeEventListener("message", handleMessage);
           popup?.close();
@@ -255,8 +291,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
     // Clear local caches
     try {
-      localStorage.removeItem("prism_saved_specs");
+      localStorage.removeItem(SPECS_LS_KEY);
+      localStorage.removeItem("prism_saved_specs"); // legacy key
       localStorage.removeItem("prism_chat_history");
+      localStorage.removeItem("prism_tasks");
     } catch {}
     // Redirect to login page
     window.location.href = "/";
@@ -264,22 +302,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const saveProfile = async (data: Partial<UserProfile>) => {
     const merged = { ...profile, ...data, onboarded: true } as UserProfile;
-    // Master account always stays premium
+    // Master account always stays premium — in-memory only, never written to Firestore
     if (isMasterEmail(user?.email)) {
       merged.plan = "premium";
     }
 
     if (user) {
+      // 보호 필드(plan/planBilling/planActivatedAt/lastPayment)는 Firestore 규칙이 거부하므로
+      // strip 후 쓴다. 이 필드들은 서버 Admin SDK(결제 confirm, 카카오 callback)만 갱신.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { plan, planBilling, planActivatedAt, lastPayment, ...writableData } = merged;
       try {
-        await setDoc(doc(db, "users", user.uid), merged, { merge: true });
+        await setDoc(doc(db, "users", user.uid), writableData, { merge: true });
       } catch {
-        // Firestore unavailable
+        // Firestore unavailable — in-memory state는 여전히 유지됨
       }
     }
 
     saveSnapshot(merged, profile);
     setSnapshots(loadSnapshots());
-    setProfile(merged);
+    setProfile(merged); // in-memory에는 plan 포함 (마스터·서버 응답 등)
   };
 
   const toggleFavorite = async (schoolName: string) => {

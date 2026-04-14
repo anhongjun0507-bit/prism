@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { getCachedResponse, setCachedResponse, makeCacheKey } from "@/lib/ai-cache";
+import { requireAuth, enforceQuota } from "@/lib/api-auth";
 
 function getClient() {
   const key = process.env.ANTHROPIC_API_KEY;
@@ -10,6 +11,12 @@ function getClient() {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await requireAuth(req);
+    if (session instanceof NextResponse) return session;
+
+    const quotaErr = await enforceQuota(session, "admissionDetail");
+    if (quotaErr) return quotaErr;
+
     const anthropic = getClient();
     if (!anthropic) {
       return NextResponse.json({ error: "API 키 미설정" }, { status: 503 });
@@ -17,7 +24,7 @@ export async function POST(req: NextRequest) {
 
     const { school, profile } = await req.json();
     if (!school?.name || !profile) {
-      return NextResponse.json({ error: "Missing data" }, { status: 400 });
+      return NextResponse.json({ error: "필수 정보가 누락되었어요" }, { status: 400 });
     }
 
     // Check Firestore cache first

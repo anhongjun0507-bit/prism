@@ -39,6 +39,11 @@ next-env.d.ts
 
 .genkit/*
 .env*
+!.env.local.example
+!.env.example
+
+# Local-only data files (kept out of repo to avoid leaking sensitive prep data)
+/prism_master.json
 
 # firebase
 firebase-debug.log

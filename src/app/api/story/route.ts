@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth, enforceQuota } from "@/lib/api-auth";
 
 function getClient() {
   const key = process.env.ANTHROPIC_API_KEY;
@@ -9,6 +10,12 @@ function getClient() {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await requireAuth(req);
+    if (session instanceof NextResponse) return session;
+
+    const quotaErr = await enforceQuota(session, "story");
+    if (quotaErr) return quotaErr;
+
     const anthropic = getClient();
     if (!anthropic) {
       return NextResponse.json({ error: "API 키 미설정" }, { status: 503 });
@@ -17,7 +24,7 @@ export async function POST(req: NextRequest) {
     const { school, specs } = await req.json();
 
     if (!school?.name || !specs) {
-      return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
+      return NextResponse.json({ error: "필수 정보가 누락되었어요" }, { status: 400 });
     }
 
     const systemPrompt = `미국 대학별 합격 분석을 3문장으로 요약하는 전문가입니다.
@@ -64,6 +71,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ story: textBlock?.text || "" });
   } catch (error) {
     console.error("Story API error:", error);
-    return NextResponse.json({ error: "Failed to generate story" }, { status: 500 });
+    return NextResponse.json({ error: "분석 생성에 실패했어요" }, { status: 500 });
   }
 }

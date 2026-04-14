@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Search, X, Plus, GraduationCap } from "lucide-react";
-import { SCHOOLS, schoolMatchesQuery } from "@/lib/school";
+import { ArrowLeft, Search, X, Plus, GraduationCap, Loader2 } from "lucide-react";
+import { SCHOOLS_INDEX, schoolMatchesQuery } from "@/lib/schools-index";
 import { SchoolLogo } from "@/components/SchoolLogo";
 import { useAuth } from "@/lib/auth-context";
-import { matchSchools, type Specs, type School } from "@/lib/matching";
+import type { Specs, School } from "@/lib/matching";
+import { fetchWithAuth } from "@/lib/api-client";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import Link from "next/link";
 
 const MAX_SCHOOLS = 3;
@@ -64,33 +66,62 @@ function formatSize(s?: number) {
 
 export default function ComparePage() {
   const { profile } = useAuth();
+  const showApiError = useApiErrorToast();
   const [selected, setSelected] = useState<School[]>([]);
   const [openSlot, setOpenSlot] = useState<number | null>(null);
   const [searchQ, setSearchQ] = useState("");
 
   const specs = useMemo(() => buildSpecs(profile), [profile]);
-  const matchedSchools = useMemo(() => {
-    if (!specs) return SCHOOLS as School[];
-    return matchSchools(specs);
+  // Match 결과는 서버에서 가져옴 (specs 있을 때만). 없으면 인덱스만 표시.
+  const [matchedSchools, setMatchedSchools] = useState<School[]>([]);
+  const [matchLoading, setMatchLoading] = useState(false);
+  useEffect(() => {
+    if (!specs) {
+      // specs 없으면 빈 매치 결과로, 학교 picker는 SCHOOLS_INDEX로 채움 (아래 fallback)
+      setMatchedSchools([]);
+      return;
+    }
+    let cancelled = false;
+    setMatchLoading(true);
+    fetchWithAuth<{ results: School[] }>("/api/match", {
+      method: "POST",
+      body: JSON.stringify({ specs }),
+    })
+      .then((d) => { if (!cancelled) setMatchedSchools(d.results || []); })
+      .catch((e) => { if (!cancelled) showApiError(e, { title: "비교 데이터 불러오기 실패" }); })
+      .finally(() => { if (!cancelled) setMatchLoading(false); });
+    return () => { cancelled = true; };
   }, [specs]);
+
+  // specs 없을 때는 인덱스로 학교 picker만 채우기 (prob/cat 등은 빈 값)
+  const effectiveSchools = useMemo<School[]>(() => {
+    if (matchedSchools.length > 0) return matchedSchools;
+    return SCHOOLS_INDEX.map((s) => ({
+      ...s,
+      n: s.n, c: s.c, d: s.d, rk: s.rk,
+      r: s.r ?? 0, sat: s.sat ?? [0, 0], gpa: s.gpa ?? 0,
+      ea: s.ea, rd: s.rd ?? "", tg: s.tg ?? [], toefl: 0,
+      tp: "", reqs: [], prompts: [], mr: {},
+    } as School));
+  }, [matchedSchools]);
 
   const schoolMap = useMemo(() => {
     const map = new Map<string, School>();
-    matchedSchools.forEach((s) => map.set(s.n, s));
+    effectiveSchools.forEach((s) => map.set(s.n, s));
     return map;
-  }, [matchedSchools]);
+  }, [effectiveSchools]);
 
   const filteredSchools = useMemo(() => {
-    if (!searchQ.trim()) return matchedSchools.slice(0, 10);
+    if (!searchQ.trim()) return effectiveSchools.slice(0, 10);
     const q = searchQ.toLowerCase();
-    return matchedSchools
+    return effectiveSchools
       .filter(
         (s) =>
           schoolMatchesQuery(s, searchQ) ||
           (s.loc && s.loc.toLowerCase().includes(q))
       )
       .slice(0, 10);
-  }, [searchQ, matchedSchools]);
+  }, [searchQ, effectiveSchools]);
 
   const selectedNames = new Set(selected.map((s) => s.n));
 

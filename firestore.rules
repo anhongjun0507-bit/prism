@@ -1,0 +1,114 @@
+rules_version = '2';
+
+// PRISM Firestore 보안 규칙
+// 배포: firebase deploy --only firestore:rules
+//
+// 핵심 원칙:
+// 1. 기본은 deny — 명시적으로 허용된 경로만 접근 가능
+// 2. 사용자 데이터는 본인만 read/write (request.auth.uid == uid)
+// 3. 결제·플랜 필드는 클라이언트가 못 씀 (서버 Admin SDK 전용)
+//    → 클라이언트가 플랜을 임의로 'premium'으로 변경 못함
+// 4. admission_results는 익명 공개 피드 (인증 사용자만 read/create, update/delete 금지)
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ──────────────────────────────────────────────────────────
+       사용자 프로필: users/{uid}
+       ──────────────────────────────────────────────────────── */
+
+    // 결제·플랜 보호 필드 — 클라이언트가 직접 수정 불가 (서버 Admin SDK 전용)
+    //
+    // - plan: 무료→프리미엄 우회 차단 (서버 /api/match가 plan을 신뢰함)
+    // - planBilling/planActivatedAt/lastPayment: 결제 감사 트레일 위변조 차단
+    //
+    // 마스터 계정·신규 회원가입은 plan을 Firestore에 쓰지 않도록 클라이언트 코드에서 우회
+    // (auth-context에서 saveProfile 시 plan 필드 strip)
+    function touchesProtectedFields() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['plan', 'planBilling', 'planActivatedAt', 'lastPayment']);
+    }
+
+    function createIncludesProtectedFields() {
+      return request.resource.data.keys()
+        .hasAny(['plan', 'planBilling', 'planActivatedAt', 'lastPayment']);
+    }
+
+    match /users/{uid} {
+      // 본인만 읽기 가능
+      allow read: if request.auth != null && request.auth.uid == uid;
+
+      // 신규 생성: 본인 + 보호 필드 미포함
+      allow create: if request.auth != null
+                    && request.auth.uid == uid
+                    && !createIncludesProtectedFields();
+
+      // 업데이트: 본인 + 보호 필드 변경 없음
+      // (Admin SDK는 보안 규칙을 우회하므로 결제 confirm·카카오 callback은 영향 없음)
+      allow update: if request.auth != null
+                    && request.auth.uid == uid
+                    && !touchesProtectedFields();
+
+      // 삭제는 어떤 클라이언트도 못함 (계정 삭제는 서버 함수로 처리)
+      allow delete: if false;
+
+      /* ────────────────────────────
+         레거시 에세이 단일 doc: users/{uid}/data/essays
+         (서브컬렉션으로 마이그레이션 중. 마이그레이션 완료 후 read-only로 변경 가능)
+         ──────────────────────────── */
+      match /data/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+
+      /* ────────────────────────────
+         에세이 (per-essay 서브컬렉션): users/{uid}/essays/{essayId}
+         per-record write로 race condition 방지
+         ──────────────────────────── */
+      match /essays/{essayId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+
+      /* ────────────────────────────
+         플래너 작업: users/{uid}/tasks/{taskId}
+         ──────────────────────────── */
+      match /tasks/{taskId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       익명 합격결과 피드: admission_results/{docId}
+       ──────────────────────────────────────────────────────── */
+    match /admission_results/{docId} {
+      // 읽기: 로그인 사용자만 (피드는 대시보드에서 표시)
+      allow read: if request.auth != null;
+
+      // 생성: 로그인 + 데이터 구조 검증 (최소 무결성)
+      allow create: if request.auth != null
+                    && request.resource.data.keys().hasAll(['results', 'submittedAt', 'year'])
+                    && request.resource.data.results is list
+                    && request.resource.data.results.size() > 0
+                    && request.resource.data.results.size() <= 30
+                    && request.resource.data.submittedAt is string
+                    && request.resource.data.year is number;
+
+      // 익명 데이터는 수정·삭제 불가 (한 번 제출하면 영구)
+      allow update, delete: if false;
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       결제 기록: payments/{orderId}
+       서버 Admin SDK 전용 — 클라이언트 직접 접근 완전 차단.
+       (멱등성·감사·환불 분쟁 시 진실의 단일 출처)
+       ──────────────────────────────────────────────────────── */
+    match /payments/{orderId} {
+      allow read, write: if false;
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       기본 deny — 명시되지 않은 모든 경로는 차단
+       ──────────────────────────────────────────────────────── */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

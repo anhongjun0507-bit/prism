@@ -1,31 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as admin from "firebase-admin";
+import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 
 function getAdmin() {
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-      }),
-    });
-  }
-  return { auth: admin.auth(), db: admin.firestore() };
+  return { auth: getAdminAuth(), db: getAdminDb() };
 }
 
 export async function GET(req: NextRequest) {
+  // 콜백을 호스팅하는 원본 (= opener 윈도우의 origin과 동일해야 정상)
+  // postMessage 시 이 origin으로만 전달 — 다른 origin의 악성 페이지가 opener를 가장한 경우 토큰 유출 차단
+  const targetOrigin = req.nextUrl.origin;
+
   const code = req.nextUrl.searchParams.get("code");
   const error = req.nextUrl.searchParams.get("error");
 
   if (error || !code) {
-    return new NextResponse(
-      `<!DOCTYPE html><html><body><script>
-        window.opener?.postMessage({ type: "kakao-login-error", error: "${error || "코드 없음"}" }, "*");
-        window.close();
-      </script></body></html>`,
-      { headers: { "Content-Type": "text/html" } }
-    );
+    return errorResponse(error || "코드 없음", targetOrigin);
   }
 
   const KAKAO_CLIENT_ID = process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID;
@@ -33,7 +22,7 @@ export async function GET(req: NextRequest) {
   const REDIRECT_URI = `${req.nextUrl.origin}/api/auth/kakao/callback`;
 
   if (!KAKAO_CLIENT_ID) {
-    return errorResponse("카카오 API 키가 설정되지 않았습니다");
+    return errorResponse("카카오 API 키가 설정되지 않았습니다", targetOrigin);
   }
 
   try {
@@ -52,7 +41,7 @@ export async function GET(req: NextRequest) {
 
     const tokenData = await tokenRes.json();
     if (!tokenData.access_token) {
-      return errorResponse("카카오 토큰 발급 실패");
+      return errorResponse("카카오 토큰 발급 실패", targetOrigin);
     }
 
     // Step 2: Get Kakao user profile
@@ -62,7 +51,7 @@ export async function GET(req: NextRequest) {
     const kakaoUser = await profileRes.json();
 
     if (!kakaoUser.id) {
-      return errorResponse("카카오 사용자 정보 조회 실패");
+      return errorResponse("카카오 사용자 정보 조회 실패", targetOrigin);
     }
 
     const kakaoId = `kakao:${kakaoUser.id}`;
@@ -103,22 +92,25 @@ export async function GET(req: NextRequest) {
     // Step 4: Create Firebase custom token
     const customToken = await auth.createCustomToken(firebaseUid);
 
-    // Step 5: Return HTML that signs in via popup messaging
+    // Step 5: Return HTML that signs in via popup messaging.
+    // postMessage 두 번째 인자에 명시적 origin 전달 → 다른 origin의 페이지가 opener를 가장해도 토큰 못 받음
     return new NextResponse(
       `<!DOCTYPE html><html><body>
         <script>
-          (async function() {
+          (function() {
+            var TARGET_ORIGIN = ${JSON.stringify(targetOrigin)};
             try {
-              // Send custom token to opener window
-              window.opener?.postMessage({
+              window.opener && window.opener.postMessage({
                 type: "kakao-login-success",
                 customToken: ${JSON.stringify(customToken)}
-              }, "*");
-              window.close();
+              }, TARGET_ORIGIN);
             } catch (e) {
-              window.opener?.postMessage({ type: "kakao-login-error", error: e.message }, "*");
-              window.close();
+              window.opener && window.opener.postMessage({
+                type: "kakao-login-error",
+                error: String(e && e.message || e)
+              }, TARGET_ORIGIN);
             }
+            window.close();
           })();
         </script>
         <p>로그인 처리 중...</p>
@@ -127,16 +119,25 @@ export async function GET(req: NextRequest) {
     );
   } catch (e: any) {
     console.error("Kakao auth error:", e);
-    return errorResponse(e.message || "카카오 로그인 실패");
+    return errorResponse(e.message || "카카오 로그인 실패", targetOrigin);
   }
 }
 
-function errorResponse(msg: string) {
+function errorResponse(msg: string, targetOrigin: string) {
+  // 모든 동적 값(msg, targetOrigin)은 JSON.stringify로 escape → XSS 방어.
+  // 화면 표시용 <p>는 dangerouslySet이 아닌 textContent로 setText 처리.
   return new NextResponse(
-    `<!DOCTYPE html><html><body><script>
-      window.opener?.postMessage({ type: "kakao-login-error", error: ${JSON.stringify(msg)} }, "*");
-      window.close();
-    </script><p>${msg}</p></body></html>`,
+    `<!DOCTYPE html><html><body><p id="msg"></p><script>
+      (function() {
+        var msg = ${JSON.stringify(msg)};
+        var targetOrigin = ${JSON.stringify(targetOrigin)};
+        document.getElementById("msg").textContent = msg;
+        try {
+          window.opener && window.opener.postMessage({ type: "kakao-login-error", error: msg }, targetOrigin);
+        } catch (_) { /* ignore */ }
+        window.close();
+      })();
+    </script></body></html>`,
     { headers: { "Content-Type": "text/html" } }
   );
 }

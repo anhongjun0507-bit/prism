@@ -1,0 +1,20 @@
+{
+  "name": "PRISM — 미국 대학 입시 매니저",
+  "short_name": "PRISM",
+  "description": "AI가 분석하는 1001개 미국 대학 합격 확률, 맞춤 에세이 첨삭, 입시 플래너.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#1a1714",
+  "theme_color": "#1a1714",
+  "orientation": "portrait",
+  "lang": "ko",
+  "dir": "ltr",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}

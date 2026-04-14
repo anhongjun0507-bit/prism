@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { UNI_LIST, MAJOR_LIST, majorMatchesQuery } from "@/lib/constants";
-import { schoolMatchesQuery } from "@/lib/school";
-import { matchSchools, type Specs } from "@/lib/matching";
+import { schoolMatchesQuery } from "@/lib/school-search";
+import type { Specs, School } from "@/lib/matching";
+import { fetchWithAuth } from "@/lib/api-client";
 import { CheckCircle2, ChevronRight, ChevronUp, Sparkles } from "lucide-react";
 
 const grades = ["9학년", "10학년", "11학년", "12학년", "졸업생/Gap Year", "홈스쿨/기타"];
@@ -73,76 +74,67 @@ export default function OnboardingPage() {
     ? MAJOR_LIST.filter((m) => majorMatchesQuery(m, majorSearch)).slice(0, 8)
     : [];
 
-  // Preview schools when academic info is provided
-  const previewSchools = useMemo(() => {
-    if (!formData.gpa && !formData.sat) return [];
-    const specs: Specs = {
-      gpaUW: formData.gpa, gpaW: formData.gpa, sat: formData.sat, act: "",
-      toefl: formData.toefl, ielts: "", apCount: "", apAvg: "",
-      satSubj: "", classRank: "", ecTier: 2,
-      awardTier: 2, essayQ: 3, recQ: 3,
-      interviewQ: 3, legacy: false, firstGen: false,
-      earlyApp: "", needAid: false, gender: "",
-      intl: true, major: formData.major || "Computer Science",
-    };
-    const all = matchSchools(specs);
-
-    // Pick the best-ranked school from each category for an impressive preview
-    const bestByCategory = (cat: string) => {
-      const ranked = all.filter((s) => s.cat === cat && s.rk > 0);
-      if (ranked.length > 0) return ranked.sort((a, b) => a.rk - b.rk)[0];
-      // Fallback: pick school with lowest acceptance rate in this category
-      const inCat = all.filter((s) => s.cat === cat);
-      return inCat.sort((a, b) => a.r - b.r)[0] ?? null;
-    };
-
-    const reach = bestByCategory("Reach") ?? bestByCategory("Hard Target");
-    const target = bestByCategory("Target") ?? bestByCategory("Hard Target");
-    const safety = bestByCategory("Safety");
-
-    const picks = [reach, target, safety].filter(
-      (s): s is NonNullable<typeof s> => s !== null && s !== undefined
-    );
-
-    // Deduplicate (in case same school was picked for multiple categories)
-    const seen = new Set<string>();
-    const unique = picks.filter((s) => {
-      if (seen.has(s.n)) return false;
-      seen.add(s.n);
-      return true;
-    });
-
-    if (unique.length >= 3) return unique.slice(0, 3);
-
-    // Fill remaining slots from ranked schools not already picked
-    const remaining = all.filter((s) => !seen.has(s.n) && s.rk > 0)
-      .sort((a, b) => a.rk - b.rk);
-    for (const s of remaining) {
-      if (unique.length >= 3) break;
-      unique.push(s);
-      seen.add(s.n);
+  // Preview schools — server fetch (debounced)
+  const [previewSchools, setPreviewSchools] = useState<School[]>([]);
+  useEffect(() => {
+    if (!formData.gpa && !formData.sat) {
+      setPreviewSchools([]);
+      return;
     }
-
-    // Last resort: pick schools with diverse acceptance rates
-    if (unique.length < 3) {
-      const rest = all.filter((s) => !seen.has(s.n)).sort((a, b) => a.r - b.r);
-      if (rest.length >= 3) {
-        const low = rest[0];
-        const high = rest[rest.length - 1];
-        const mid = rest[Math.floor(rest.length / 2)];
-        for (const s of [low, mid, high]) {
-          if (unique.length >= 3) break;
-          if (!seen.has(s.n)) { unique.push(s); seen.add(s.n); }
-        }
-      } else {
-        for (const s of rest) {
-          if (unique.length >= 3) break;
-          unique.push(s);
-        }
-      }
-    }
-
-    return unique.slice(0, 3);
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      const specs: Specs = {
+        gpaUW: formData.gpa, gpaW: formData.gpa, sat: formData.sat, act: "",
+        toefl: formData.toefl, ielts: "", apCount: "", apAvg: "",
+        satSubj: "", classRank: "", ecTier: 2,
+        awardTier: 2, essayQ: 3, recQ: 3,
+        interviewQ: 3, legacy: false, firstGen: false,
+        earlyApp: "", needAid: false, gender: "",
+        intl: true, major: formData.major || "Computer Science",
+      };
+      fetchWithAuth<{ results: School[] }>("/api/match", {
+        method: "POST",
+        body: JSON.stringify({ specs }),
+      })
+        .then((data) => {
+          if (cancelled) return;
+          const all = data.results || [];
+          // Pick the best-ranked school from each category for an impressive preview
+          const bestByCategory = (cat: string) => {
+            const ranked = all.filter((s) => s.cat === cat && s.rk > 0);
+            if (ranked.length > 0) return ranked.sort((a, b) => a.rk - b.rk)[0];
+            const inCat = all.filter((s) => s.cat === cat);
+            return inCat.sort((a, b) => a.r - b.r)[0] ?? null;
+          };
+          const reach = bestByCategory("Reach") ?? bestByCategory("Hard Target");
+          const target = bestByCategory("Target") ?? bestByCategory("Hard Target");
+          const safety = bestByCategory("Safety");
+          const picks = [reach, target, safety].filter(
+            (s): s is NonNullable<typeof s> => s !== null && s !== undefined
+          );
+          const seen = new Set<string>();
+          const unique = picks.filter((s) => {
+            if (seen.has(s.n)) return false;
+            seen.add(s.n);
+            return true;
+          });
+          if (unique.length < 3) {
+            const remaining = all.filter((s) => !seen.has(s.n) && s.rk > 0)
+              .sort((a, b) => a.rk - b.rk);
+            for (const s of remaining) {
+              if (unique.length >= 3) break;
+              unique.push(s);
+              seen.add(s.n);
+            }
+          }
+          setPreviewSchools(unique.slice(0, 3));
+        })
+        .catch(() => {
+          // preview는 보조 UI — 실패해도 사용자 진행 막지 않음.
+          // 진짜 분석은 onboarding 완료 후 분석 페이지에서 다시 fetch됨.
+        });
+    }, 400);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [formData.gpa, formData.sat, formData.toefl, formData.major]);
 
   const [previewOpen, setPreviewOpen] = useState(false);

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
+import { fetchWithAuth, ApiError } from "@/lib/api-client";
 import { ArrowLeft, BarChart3, AlertCircle, CheckCircle2, Lightbulb, Download, Sparkles, Loader2, Eye, Zap } from "lucide-react";
 
 interface AnalysisItem {
@@ -62,22 +63,20 @@ export default function SpecAnalysisPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/spec-analysis", {
+      const data = await fetchWithAuth<{ analysis: any }>("/api/spec-analysis", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ profile }),
       });
-      const data = await res.json();
-      if (!res.ok || !data.analysis) {
-        setError(data.error || "분석에 실패했습니다.");
+      if (!data.analysis) {
+        setError("분석에 실패했습니다.");
         return;
       }
       setAnalysis(data.analysis);
       // Cache by profile key
       const profileKey = `${profile.gpa}_${profile.sat}_${profile.toefl}_${profile.major}_${profile.dreamSchool}`;
       sessionStorage.setItem(CACHE_KEY, JSON.stringify({ analysis: data.analysis, profileKey }));
-    } catch {
-      setError("네트워크 오류가 발생했습니다.");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "네트워크 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }

@@ -1,12 +1,22 @@
+/**
+ * ⚠️ SERVER-ONLY ⚠️
+ * 풀 학교 데이터(1.3MB). 클라이언트가 import하면 빌드 실패.
+ * 클라이언트는 src/lib/schools-index.ts (가벼운 인덱스) 또는
+ * /api/schools/[name] (단일 학교 상세) 사용.
+ */
+import "server-only";
 import schoolsData from "@/data/schools.json";
+export { schoolMatchesQuery } from "./school-search";
 
 export const SCHOOLS = schoolsData as any[];
 
 export const DOMS: Record<string,string> = {};
 SCHOOLS.forEach((s: any) => { if(s.d) DOMS[s.n] = s.d; });
 
-// Alias map for search — covers abbreviations, Korean names, and common nicknames
-const ALIASES: Record<string, string[]> = {
+// schoolMatchesQuery는 lib/school-search.ts에서 re-export. 아래 ALIASES + local 함수는
+// 더 이상 사용되지 않으므로 제거 가능. 보존 이유: 일부 스크립트가 직접 참조할 수 있어 안전한
+// 이전을 위해 다음 빌드 사이클에 정리. (TODO: 다음 정리 PR에서 삭제)
+const _LEGACY_ALIASES: Record<string, string[]> = {
   "Princeton": ["프린스턴"],
   "MIT": ["매사추세츠공대", "엠아이티", "Massachusetts Institute of Technology"],
   "Harvard": ["하버드"],
@@ -92,17 +102,5 @@ const ALIASES: Record<string, string[]> = {
   "CU Boulder": ["University of Colorado Boulder", "콜로라도"],
 };
 
-/**
- * Search schools by name, alias, or Korean name.
- * Returns true if the school matches the query.
- */
-export function schoolMatchesQuery(school: { n: string }, query: string): boolean {
-  if (!query) return true;
-  const q = query.toLowerCase();
-  // Direct name match
-  if (school.n.toLowerCase().includes(q)) return true;
-  // Alias match
-  const aliases = ALIASES[school.n];
-  if (aliases && aliases.some(a => a.toLowerCase().includes(q))) return true;
-  return false;
-}
+// (schoolMatchesQuery는 ./school-search에서 re-export됨 — 위 export 참조)
+void _LEGACY_ALIASES; // suppress unused warning

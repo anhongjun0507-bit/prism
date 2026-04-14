@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { PLANS } from "@/lib/plans";
-import { matchSchools, type Specs } from "@/lib/matching";
+import type { Specs, School } from "@/lib/matching";
+import { fetchWithAuth } from "@/lib/api-client";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,13 +18,14 @@ import { ArrowLeft, Users, TrendingUp, Award, FileText, Calendar, Download, Spar
 export default function ParentReportPage() {
   const router = useRouter();
   const { profile, snapshots } = useAuth();
+  const showApiError = useApiErrorToast();
   const currentPlan = profile?.plan || "free";
   const hasAccess = PLANS[currentPlan].limits.parentReport;
 
-  /* ── compute stats ── */
-  const stats = useMemo(() => {
-    if (!profile) return null;
-
+  /* ── compute stats — server fetch ── */
+  const [matchResults, setMatchResults] = useState<School[]>([]);
+  useEffect(() => {
+    if (!profile) return;
     const specs: Specs = {
       gpaUW: profile.gpa || "3.8", gpaW: "", sat: profile.sat || "1500", act: "",
       toefl: profile.toefl || "105", ielts: "", apCount: "", apAvg: "",
@@ -31,17 +34,26 @@ export default function ParentReportPage() {
       earlyApp: "", needAid: false, gender: "",
       intl: true, major: profile.major || "Computer Science",
     };
+    let cancelled = false;
+    fetchWithAuth<{ results: School[] }>("/api/match", {
+      method: "POST",
+      body: JSON.stringify({ specs }),
+    })
+      .then((d) => { if (!cancelled) setMatchResults(d.results || []); })
+      .catch((e) => { if (!cancelled) showApiError(e, { title: "리포트 데이터 로드 실패" }); });
+    return () => { cancelled = true; };
+  }, [profile, showApiError]);
 
-    const results = matchSchools(specs);
-    const reach = results.filter(s => s.cat === "Reach").length;
-    const target = results.filter(s => s.cat === "Target" || s.cat === "Hard Target").length;
-    const safety = results.filter(s => s.cat === "Safety").length;
-    const avgProb = results.length > 0
-      ? Math.round(results.reduce((sum, s) => sum + (s.prob || 0), 0) / results.length)
+  const stats = useMemo(() => {
+    if (!profile || matchResults.length === 0) return null;
+    const reach = matchResults.filter(s => s.cat === "Reach").length;
+    const target = matchResults.filter(s => s.cat === "Target" || s.cat === "Hard Target").length;
+    const safety = matchResults.filter(s => s.cat === "Safety").length;
+    const avgProb = matchResults.length > 0
+      ? Math.round(matchResults.reduce((sum, s) => sum + (s.prob || 0), 0) / matchResults.length)
       : 0;
-
-    return { reach, target, safety, avgProb, results };
-  }, [profile]);
+    return { reach, target, safety, avgProb, results: matchResults };
+  }, [profile, matchResults]);
 
   /* ── growth comparison ── */
   const growth = useMemo(() => {

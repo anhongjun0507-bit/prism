@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { useAnimateOnView } from "@/hooks/use-animate-on-view";
 import { AdmissionResultBanner, AdmissionResultModal } from "@/components/AdmissionResultModal";
 import { AdmissionFeed } from "@/components/AdmissionFeed";
@@ -19,8 +19,10 @@ import { PLANS } from "@/lib/plans";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useAuth, type ProfileSnapshot } from "@/lib/auth-context";
-import { SCHOOLS, schoolMatchesQuery } from "@/lib/school";
-import { matchSchools, type Specs } from "@/lib/matching";
+import { SCHOOLS_INDEX, schoolMatchesQuery } from "@/lib/schools-index";
+import type { Specs, School } from "@/lib/matching";
+import { fetchWithAuth } from "@/lib/api-client";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { SchoolLogo } from "@/components/SchoolLogo";
 
 function getDDay(dateStr: string): number {
@@ -32,6 +34,7 @@ function getDDay(dateStr: string): number {
 export default function DashboardPage() {
   const { profile, user, logout, snapshots, toggleFavorite, isFavorite } = useAuth();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const showApiError = useApiErrorToast();
   const heroAnim = useAnimateOnView();
   const statsAnim = useAnimateOnView();
   const growthAnim = useAnimateOnView();
@@ -40,13 +43,14 @@ export default function DashboardPage() {
 
   const dreamSchoolData = useMemo(() => {
     if (!profile?.dreamSchool) return null;
-    return SCHOOLS.find((s) => s.n === profile.dreamSchool) || null;
+    return SCHOOLS_INDEX.find((s) => s.n === profile.dreamSchool) || null;
   }, [profile?.dreamSchool]);
 
-  // Quick analysis based on profile data (or defaults if not entered)
+  // Quick analysis — server fetch (서버가 plan에 따라 결과 자름)
   const hasSpecs = !!(profile?.gpa || profile?.sat);
-  const quickResults = useMemo(() => {
-    if (!profile) return [];
+  const [allMatchResults, setAllMatchResults] = useState<School[]>([]);
+  useEffect(() => {
+    if (!profile) return;
     const specs: Specs = {
       gpaUW: profile.gpa || "3.8", gpaW: "", sat: profile.sat || "1500", act: "",
       toefl: profile.toefl || "105", ielts: "", apCount: "", apAvg: "",
@@ -56,15 +60,29 @@ export default function DashboardPage() {
       earlyApp: "", needAid: false, gender: "",
       intl: true, major: profile.major || "Computer Science",
     };
-    return matchSchools(specs).slice(0, 8);
-  }, [profile]);
+    let cancelled = false;
+    fetchWithAuth<{ results: School[] }>("/api/match", {
+      method: "POST",
+      body: JSON.stringify({ specs }),
+    })
+      .then((data) => { if (!cancelled) setAllMatchResults(data.results || []); })
+      .catch((e) => { if (!cancelled) showApiError(e, { title: "분석 결과를 불러오지 못했어요" }); });
+    return () => { cancelled = true; };
+  }, [profile?.gpa, profile?.sat, profile?.toefl, profile?.major, showApiError]);
+  const quickResults = useMemo(() => allMatchResults.slice(0, 8), [allMatchResults]);
+  // User's saved schools, with full match data (prob, cat, etc.)
+  const savedSchoolResults = useMemo(() => {
+    const fav = profile?.favoriteSchools || [];
+    if (fav.length === 0) return [];
+    return allMatchResults.filter(s => fav.includes(s.n));
+  }, [allMatchResults, profile?.favoriteSchools]);
 
   const safetyCount = quickResults.filter((s) => s.cat === "Safety").length;
   const targetCount = quickResults.filter((s) => s.cat === "Target" || s.cat === "Hard Target").length;
   const reachCount = quickResults.filter((s) => s.cat === "Reach").length;
 
   const nextDeadline = dreamSchoolData
-    ? getDDay(dreamSchoolData.ea || dreamSchoolData.rd)
+    ? getDDay(dreamSchoolData.ea || dreamSchoolData.rd || "Jan 1")
     : getDDay("Jan 1");
 
   const catColor: Record<string, string> = {
@@ -99,7 +117,7 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    return SCHOOLS.filter(s => schoolMatchesQuery(s, searchQuery)).slice(0, 5);
+    return SCHOOLS_INDEX.filter(s => schoolMatchesQuery(s, searchQuery)).slice(0, 5);
   }, [searchQuery]);
 
   const [showResultModal, setShowResultModal] = useState(false);
@@ -188,7 +206,7 @@ export default function DashboardPage() {
         )}
 
         {/* D-day Card */}
-        <Card ref={heroAnim.ref} style={stripStops} className={`dark-hero-gradient p-6 text-white relative overflow-hidden border-none shadow-2xl prism-strip-reactive ${heroAnim.isVisible ? "animate-fade-up" : "opacity-0"}`}>
+        <Card ref={heroAnim.ref} style={stripStops} className={`dark-hero-gradient p-6 text-white relative isolate rounded-2xl rounded-t-2xl overflow-hidden border-none shadow-2xl prism-strip-reactive mt-4 ${heroAnim.isVisible ? "animate-fade-up" : "opacity-0"}`}>
           <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-primary/20 rounded-full blur-[60px]" />
           <div className="relative z-10 space-y-1">
             <Badge variant="secondary" className="bg-white/10 text-white border-white/20 mb-2">
@@ -297,34 +315,33 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* School List Preview */}
+        {/* School List Preview — user's saved schools */}
         <div className="space-y-3">
           <div className="flex justify-between items-center">
             <h2 className="font-headline text-lg font-bold">나의 지원 대학</h2>
-            {quickResults.length > 0 && (
+            {savedSchoolResults.length > 0 && (
               <Link href="/analysis" className="text-xs text-primary font-semibold flex items-center">
                 전체 보기 <ChevronRight className="w-3 h-3" />
               </Link>
             )}
           </div>
-          {quickResults.length === 0 ? (
+          {savedSchoolResults.length === 0 ? (
             <Card className="p-6 bg-white dark:bg-card border-none shadow-sm text-center relative overflow-hidden prism-strip-once">
               <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <Sparkles className="w-8 h-8 text-primary/60" aria-hidden="true" />
+                <Heart className="w-8 h-8 text-primary/60" aria-hidden="true" />
               </div>
-              <h3 className="font-bold text-base mb-1">어떤 대학이 나를 기다리고 있을까?</h3>
-              <p className="text-sm text-muted-foreground mb-2 leading-relaxed">
-                GPA와 SAT만 입력하면<br />200개 대학의 합격 확률을 바로 확인할 수 있어요
+              <h3 className="font-bold text-base mb-1">아직 저장한 대학이 없어요</h3>
+              <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
+                분석 페이지에서 ♡를 눌러<br />관심 대학을 추가해보세요
               </p>
-              <p className="text-xs text-primary/60 mb-5">평균 30초면 충분해요</p>
               <Link href="/analysis">
                 <Button className="rounded-xl px-6">
-                  내 확률 알아보기 <ChevronRight className="w-4 h-4 ml-1" />
+                  대학 둘러보기 <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
               </Link>
             </Card>
           ) : (
-            quickResults.slice(0, 5).map((school) => {
+            savedSchoolResults.slice(0, 5).map((school) => {
               const userGpa = parseFloat(profile?.gpa || "0");
               const userSat = parseInt(profile?.sat || "0");
               const satMid = school.sat ? Math.round((school.sat[0] + school.sat[1]) / 2) : 0;
@@ -365,42 +382,18 @@ export default function DashboardPage() {
                 <Badge className={`${catColor[school.cat || "Reach"]} border-none text-xs shrink-0`}>
                   {school.cat}
                 </Badge>
+                <button
+                  onClick={() => toggleFavorite(school.n)}
+                  className="shrink-0 p-1"
+                  aria-label="즐겨찾기 해제"
+                >
+                  <Heart className={`w-4 h-4 ${isFavorite(school.n) ? "fill-red-500 text-red-500" : "text-muted-foreground/30"}`} />
+                </button>
               </Card>
               );
             })
           )}
         </div>
-
-        {/* Favorites Section */}
-        {(profile?.favoriteSchools?.length ?? 0) > 0 && (
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <h2 className="font-headline text-lg font-bold flex items-center gap-2">
-                <Heart className="w-4 h-4 fill-red-500 text-red-500" /> 즐겨찾기
-              </h2>
-            </div>
-            {SCHOOLS.filter(s => profile?.favoriteSchools?.includes(s.n)).map(school => {
-              const matchResult = quickResults.find(r => r.n === school.n);
-              return (
-                <Card key={school.n} className="p-3 bg-white dark:bg-card border-none shadow-sm flex items-center gap-3">
-                  <SchoolLogo domain={school.d} color={school.c} name={school.n} rank={school.rk} size="md" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm truncate">{school.n}</p>
-                    {matchResult && (
-                      <p className="text-xs text-primary font-semibold mt-0.5">{matchResult.prob}%</p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => toggleFavorite(school.n)}
-                    className="shrink-0 p-1"
-                  >
-                    <Heart className={`w-4 h-4 ${isFavorite(school.n) ? "fill-red-500 text-red-500" : "text-muted-foreground/30"}`} />
-                  </button>
-                </Card>
-              );
-            })}
-          </div>
-        )}
 
         {/* Quick Actions — horizontal scrollable chips */}
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scroll-fade-right">

@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import schoolsData from "@/data/schools.json";
+import { requireAuth, enforceQuota } from "@/lib/api-auth";
 
 function getClient() {
   const key = process.env.ANTHROPIC_API_KEY;
@@ -83,6 +84,12 @@ const SYSTEM_PROMPT = `당신은 '프리즘 선생님'이에요. 미국 대학 �
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await requireAuth(req);
+    if (session instanceof NextResponse) return session;
+
+    const quotaErr = await enforceQuota(session, "aiChat");
+    if (quotaErr) return quotaErr;
+
     const { message, history } = await req.json();
 
     const anthropic = getClient();

@@ -1,23 +1,53 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, memo } from "react";
+import { fetchWithAuth } from "@/lib/api-client";
 
-/**
- * Returns a Clearbit logo URL for the given domain.
- * Falls back to Google favicon if Clearbit fails.
- */
-export function getLogoUrl(domain: string, size = 128): string {
-  return `https://logo.clearbit.com/${domain}?size=${size}`;
+/* ─── Logo source cache (skip the failed-image fallback chain on remount) ─── */
+const LOGO_CACHE_PREFIX = "logo_cache_";
+type LogoSource = "ddg" | "favicon" | "none";
+
+function getCachedSource(domain: string): LogoSource | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const v = localStorage.getItem(LOGO_CACHE_PREFIX + domain);
+    if (v === "ddg" || v === "favicon" || v === "none") return v;
+    // 레거시 "clearbit" 캐시는 무시 (Clearbit free tier 종료 — 다음 마운트에서 DDG로 새로 시도)
+  } catch {}
+  return null;
 }
 
+function setCachedSource(domain: string, source: LogoSource) {
+  if (typeof window === "undefined") return;
+  try { localStorage.setItem(LOGO_CACHE_PREFIX + domain, source); } catch {}
+}
+
+/**
+ * DuckDuckGo Icons API — auth 불필요, 무료, 무제한, 프라이버시 친화적.
+ * Clearbit (HubSpot 인수 후 free tier 종료) 대체.
+ * 참고: https://icons.duckduckgo.com/ip3/{domain}.ico
+ */
+export function getLogoUrl(domain: string): string {
+  return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+}
+
+/** Google favicon — DDG 실패 시 fallback. sz=128로 비교적 선명. */
 export function getFaviconUrl(domain: string): string {
   return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
 }
 
+const sizeMap = {
+  sm: "w-8 h-8 rounded-lg",
+  md: "w-11 h-11 rounded-xl",
+  lg: "w-14 h-14 rounded-2xl",
+} as const;
+
 /**
- * SchoolLogo — shows university logo with colored fallback
+ * SchoolLogo — shows university logo with colored fallback.
+ * Caches resolved source per domain in localStorage so repeated mounts
+ * (e.g. virtual scroll) skip the Clearbit→favicon→error fallback chain.
  */
-export function SchoolLogo({
+function SchoolLogoBase({
   domain,
   color,
   name,
@@ -32,19 +62,17 @@ export function SchoolLogo({
   size?: "sm" | "md" | "lg";
   className?: string;
 }) {
-  const [imgError, setImgError] = useState(false);
-  const [useFavicon, setUseFavicon] = useState(false);
+  const cached = useMemo(() => getCachedSource(domain), [domain]);
+  const [imgError, setImgError] = useState(cached === "none");
+  const [useFavicon, setUseFavicon] = useState(cached === "favicon");
 
-  const sizeMap = {
-    sm: "w-8 h-8 rounded-lg",
-    md: "w-11 h-11 rounded-xl",
-    lg: "w-14 h-14 rounded-2xl",
-  };
-
-  const logoSize = size === "sm" ? 64 : size === "lg" ? 128 : 80;
+  // Fallback chain: DDG (primary) → Google favicon → 색상 placeholder
+  const src = useMemo(
+    () => (useFavicon ? getFaviconUrl(domain) : getLogoUrl(domain)),
+    [domain, useFavicon]
+  );
 
   if (imgError) {
-    // Colored fallback with rank
     return (
       <div
         className={`${sizeMap[size]} flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-sm ${className}`}
@@ -60,14 +88,18 @@ export function SchoolLogo({
       className={`${sizeMap[size]} shrink-0 shadow-sm overflow-hidden bg-white flex items-center justify-center border border-gray-100 ${className}`}
     >
       <img
-        src={useFavicon ? getFaviconUrl(domain) : getLogoUrl(domain, logoSize)}
+        src={src}
         alt={`${name} logo`}
         className="w-[70%] h-[70%] object-contain"
         loading="lazy"
+        onLoad={() => {
+          if (!cached) setCachedSource(domain, useFavicon ? "favicon" : "ddg");
+        }}
         onError={() => {
           if (!useFavicon) {
             setUseFavicon(true);
           } else {
+            setCachedSource(domain, "none");
             setImgError(true);
           }
         }}
@@ -76,10 +108,42 @@ export function SchoolLogo({
   );
 }
 
+export const SchoolLogo = memo(SchoolLogoBase);
+
+/* ─── CampusPhoto: Wikipedia URL cache (avoid refetch on every modal open) ─── */
+const CAMPUS_CACHE_PREFIX = "campus_cache_";
+
+function getCachedCampusUrl(schoolName: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const v = localStorage.getItem(CAMPUS_CACHE_PREFIX + schoolName);
+    return v && v !== "__none__" ? v : null;
+  } catch { return null; }
+}
+
+function isCampusKnownMissing(schoolName: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem(CAMPUS_CACHE_PREFIX + schoolName) === "__none__";
+  } catch { return false; }
+}
+
+function setCachedCampusUrl(schoolName: string, url: string | null) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(CAMPUS_CACHE_PREFIX + schoolName, url || "__none__");
+  } catch {}
+}
+
 /**
- * CampusPhoto — fetches campus image from Wikipedia with colored gradient fallback
+ * CampusPhoto — 학교 캠퍼스 사진을 표시. 사진 없으면 학교 색상 그라디언트로 폴백.
+ *
+ * 이미지 URL은 서버 프록시(/api/campus-photo)로 가져옴 — Wikipedia 직접 호출 안 함.
+ * (rate limit, User-Agent 정책, 변형 시도 중복 회피)
+ *
+ * 캐시: localStorage(즉시 렌더) → 미스 시 서버 호출 → 결과 localStorage에 기록.
  */
-export function CampusPhoto({
+function CampusPhotoBase({
   schoolName,
   color,
   className = "",
@@ -90,48 +154,48 @@ export function CampusPhoto({
   className?: string;
   children?: React.ReactNode;
 }) {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(() => getCachedCampusUrl(schoolName));
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
 
-  // Fetch from Wikipedia on mount — try multiple name variations
   useEffect(() => {
+    // localStorage 캐시 hit이면 즉시 렌더, 추가 fetch 안 함
+    const cached = getCachedCampusUrl(schoolName);
+    if (cached) {
+      setImageUrl(cached);
+      return;
+    }
+    if (isCampusKnownMissing(schoolName)) {
+      setError(true);
+      return;
+    }
+
     setImageUrl(null);
     setLoaded(false);
     setError(false);
 
-    // Try multiple Wikipedia article name formats
-    const variations = [
-      schoolName,
-      schoolName + " University",
-      schoolName.replace(/ U$/, " University"),
-      schoolName.replace(/^U of /, "University of "),
-      schoolName.replace(/ College$/, ""),
-    ];
+    const controller = new AbortController();
+    fetchWithAuth<{ url: string | null }>(
+      `/api/campus-photo?school=${encodeURIComponent(schoolName)}`,
+      { signal: controller.signal }
+    )
+      .then((data) => {
+        if (data.url) {
+          setCachedCampusUrl(schoolName, data.url);
+          setImageUrl(data.url);
+        } else {
+          setCachedCampusUrl(schoolName, null); // known missing
+          setError(true);
+        }
+      })
+      .catch((e) => {
+        // AbortError는 정상 (re-mount 또는 unmount). 그 외는 silent — 그라디언트 fallback으로 충분.
+        if (e?.name !== "AbortError") {
+          setError(true);
+        }
+      });
 
-    // Remove duplicates
-    const unique = [...new Set(variations.map(v => v.replace(/ /g, "_")))];
-
-    let found = false;
-    const tryNext = (index: number) => {
-      if (index >= unique.length || found) {
-        if (!found) setError(true);
-        return;
-      }
-      fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(unique[index])}`)
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.thumbnail?.source && !found) {
-            found = true;
-            const src = data.originalimage?.source || data.thumbnail.source;
-            setImageUrl(src);
-          } else {
-            tryNext(index + 1);
-          }
-        })
-        .catch(() => tryNext(index + 1));
-    };
-    tryNext(0);
+    return () => controller.abort();
   }, [schoolName]);
 
   return (
@@ -146,7 +210,6 @@ export function CampusPhoto({
           loading="lazy"
         />
       )}
-      {/* Gradient overlay */}
       <div
         className="absolute inset-0"
         style={{
@@ -157,3 +220,5 @@ export function CampusPhoto({
     </div>
   );
 }
+
+export const CampusPhoto = memo(CampusPhotoBase);

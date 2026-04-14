@@ -20,10 +20,11 @@ import { ToastAction } from "@/components/ui/toast";
 import { useAuth } from "@/lib/auth-context";
 import Link from "next/link";
 import { PLANS } from "@/lib/plans";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { collection, doc, setDoc, getDoc, deleteDoc, onSnapshot, writeBatch } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
-import { SCHOOLS, schoolMatchesQuery } from "@/lib/school";
+import { fetchWithAuth } from "@/lib/api-client";
+import { SCHOOLS_INDEX, schoolMatchesQuery } from "@/lib/schools-index";
 import { COMMON_APP_PROMPTS, COMMON_APP_PROMPTS_KO } from "@/lib/constants";
 import { SchoolLogo } from "@/components/SchoolLogo";
 
@@ -34,26 +35,59 @@ interface EssayVersion {
   wordCount: number;
 }
 
+interface EssayReview {
+  id: string;
+  score: number;            // 1–10
+  summary: string;          // one-line takeaway
+  firstImpression: string;  // 입학사정관 첫인상
+  tone?: string;
+  strengths: string[];
+  weaknesses: string[];
+  suggestions: string[];    // = improvements
+  keyChange?: string;
+  admissionNote?: string;
+  revisedOpening?: string;
+  createdAt: string;        // ISO
+}
+
 interface Essay {
   id: string;
   university: string;
   prompt: string;
   content: string;
-  lastSaved: string;
+  lastSaved: string;       // YYYY-MM-DD (UI 표시용)
+  updatedAt?: string;      // ISO timestamp (race-resolution용)
   wordLimit?: number;
   versions?: EssayVersion[];
+  reviews?: EssayReview[];
+}
+
+interface OutlineSection {
+  title: string;
+  // New fields (preferred)
+  korean_guide?: string;
+  english_starter?: string;
+  // Legacy fields (fallback for older API responses / cached data)
+  hint?: string;
+  starter?: string;
 }
 
 interface EssayOutline {
-  past: { title: string; hint: string; starter: string };
-  turning: { title: string; hint: string; starter: string };
-  growth: { title: string; hint: string; starter: string };
-  connection?: { title: string; hint: string; starter: string };
+  past: OutlineSection;
+  turning: OutlineSection;
+  growth: OutlineSection;
+  connection?: OutlineSection;
 }
 
-function getSchoolList() {
-  return SCHOOLS as Array<{ n: string; c: string; rk: number; d: string; prompts: string[]; tg: string[]; tp: string; reqs: string[] }>;
-}
+/** Read either the new or legacy field — used for migration safety. */
+const getKoreanGuide = (s: OutlineSection) => s.korean_guide ?? s.hint ?? "";
+const getEnglishStarter = (s: OutlineSection) => s.english_starter ?? s.starter ?? "";
+
+// 학교 picker는 SCHOOLS_INDEX 사용 (가벼운 메타). 선택 시 prompts/tp/reqs를 /api/schools/{name}으로 fetch.
+type SchoolDetail = {
+  n: string; c: string; rk: number; d: string;
+  prompts: string[]; tg: string[]; tp: string; reqs: string[];
+};
 
 const ESSAYS_KEY = "prism_essays";
 
@@ -81,6 +115,85 @@ export default function EssaysPage() {
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<Essay | null>(null);
 
+  // Review viewing / expansion state
+  const [viewingReview, setViewingReview] = useState<{ essay: Essay; review: EssayReview } | null>(null);
+  const [expandedReviewsFor, setExpandedReviewsFor] = useState<Set<string>>(new Set());
+  const [reviewDeleteTarget, setReviewDeleteTarget] = useState<{ essayId: string; reviewId: string } | null>(null);
+
+  // One-time migration: import legacy single-key review into matching essay's reviews array
+  useEffect(() => {
+    try {
+      const legacy = localStorage.getItem("prism_essay_review");
+      if (!legacy) return;
+      const parsed = JSON.parse(legacy);
+      const r = parsed?.result;
+      if (!r) {
+        localStorage.removeItem("prism_essay_review");
+        return;
+      }
+      const targetUniversity = parsed.university;
+      const targetPrompt = parsed.prompt;
+      setEssays(prev => {
+        if (prev.length === 0) {
+          localStorage.removeItem("prism_essay_review");
+          return prev;
+        }
+        // Best match: same university + prompt; fallback: same university; fallback: first essay
+        let target = prev.find(e => e.university === targetUniversity && e.prompt === targetPrompt);
+        if (!target) target = prev.find(e => e.university === targetUniversity);
+        if (!target) target = prev[0];
+        // Skip if this review already migrated (idempotency)
+        const alreadyHasMigrated = target.reviews?.some(rev => rev.summary === r.summary && rev.score === r.score);
+        if (alreadyHasMigrated) {
+          localStorage.removeItem("prism_essay_review");
+          return prev;
+        }
+        const review: EssayReview = {
+          id: `migrated-${Date.now()}`,
+          score: r.score ?? 0,
+          summary: r.summary ?? "",
+          firstImpression: r.firstImpression ?? "",
+          tone: r.tone,
+          strengths: r.strengths ?? [],
+          weaknesses: r.weaknesses ?? [],
+          suggestions: r.suggestions ?? [],
+          keyChange: r.keyChange,
+          admissionNote: r.admissionNote,
+          revisedOpening: r.revisedOpening,
+          createdAt: new Date().toISOString(),
+        };
+        const updatedTarget = { ...target, reviews: [...(target.reviews ?? []), review] };
+        writeEssayDoc(updatedTarget); // Firestore 서브컬렉션에도 반영
+        const updated = prev.map(e => e.id === target!.id ? updatedTarget : e);
+        localStorage.removeItem("prism_essay_review");
+        return updated;
+      });
+    } catch {
+      try { localStorage.removeItem("prism_essay_review"); } catch {}
+    }
+    // Run once on mount
+     
+  }, []);
+
+  const removeReview = (essayId: string, reviewId: string) => {
+    setEssays(prev => {
+      const target = prev.find(e => e.id === essayId);
+      if (!target) return prev;
+      const updated = { ...target, reviews: (target.reviews ?? []).filter(r => r.id !== reviewId) };
+      writeEssayDoc(updated); // Firestore에 동기화
+      return prev.map(e => e.id === essayId ? updated : e);
+    });
+    toast({ title: "첨삭 삭제됨", description: "에세이 첨삭 결과를 삭제했어요." });
+  };
+
+  const toggleExpandedReviews = (essayId: string) => {
+    setExpandedReviewsFor(prev => {
+      const next = new Set(prev);
+      if (next.has(essayId)) next.delete(essayId); else next.add(essayId);
+      return next;
+    });
+  };
+
   // Version history
   const [viewingVersion, setViewingVersion] = useState<EssayVersion | null>(null);
   const [showVersions, setShowVersions] = useState(false);
@@ -94,36 +207,63 @@ export default function EssaysPage() {
   const canShowOutline = canUseOutline || outlineUnlocked;
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
 
-  // Persist essays to localStorage + Firestore for authenticated users
-  const firestoreSyncTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // Persist essays to localStorage cache (always — both logged-in and out)
+  // localStorage = read-only cache for fast initial paint;
+  // Firestore subcollection (per-essay docs) = source of truth for logged-in users.
   useEffect(() => {
     try { localStorage.setItem(ESSAYS_KEY, JSON.stringify(essays)); } catch {}
-    // Debounced Firestore sync for authenticated users
-    if (user) {
-      if (firestoreSyncTimer.current) clearTimeout(firestoreSyncTimer.current);
-      firestoreSyncTimer.current = setTimeout(() => {
-        setDoc(doc(db, "users", user.uid, "data", "essays"), { essays, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
-      }, 3000);
-    }
-  }, [essays, user]);
+  }, [essays]);
 
-  // Load from Firestore on mount if authenticated (overrides localStorage if newer)
+  // Real-time sync from Firestore subcollection (logged-in only).
+  // Per-essay docs → 다른 탭/기기에서 다른 essay를 동시에 수정해도 race 없음.
   useEffect(() => {
     if (!user) return;
-    getDoc(doc(db, "users", user.uid, "data", "essays")).then((snap) => {
-      if (snap.exists()) {
-        const remote = snap.data()?.essays as Essay[] | undefined;
-        if (remote && remote.length > 0) {
-          const local = loadEssays();
-          // Use whichever has more recent data
-          const remoteLatest = remote.reduce((max, e) => e.lastSaved > max ? e.lastSaved : max, "");
-          const localLatest = local.reduce((max, e) => e.lastSaved > max ? e.lastSaved : max, "");
-          if (remoteLatest >= localLatest) {
-            setEssays(remote);
-          }
+
+    // 한 번만 마이그레이션: 레거시 단일 doc → 서브컬렉션
+    let migrationDone = false;
+    const tryMigrateLegacy = async () => {
+      if (migrationDone) return;
+      migrationDone = true;
+      try {
+        const legacy = await getDoc(doc(db, "users", user.uid, "data", "essays"));
+        if (!legacy.exists()) return;
+        const data = legacy.data();
+        if (data?.migrated) return; // 이미 마이그레이션된 doc
+        const oldEssays = (data?.essays as Essay[]) || [];
+        if (oldEssays.length === 0) return;
+
+        const batch = writeBatch(db);
+        const colRef = collection(db, "users", user.uid, "essays");
+        const now = new Date().toISOString();
+        for (const e of oldEssays) {
+          if (!e.id) continue;
+          batch.set(doc(colRef, e.id), { ...e, updatedAt: e.updatedAt || now }, { merge: true });
         }
+        // 레거시 doc은 마이그레이션 표시 (삭제하지 않고 보존 — 롤백 가능)
+        batch.set(doc(db, "users", user.uid, "data", "essays"), { migrated: true, migratedAt: now }, { merge: true });
+        await batch.commit();
+      } catch (e) {
+        console.error("[essays] legacy migration failed:", e);
       }
-    }).catch(() => {});
+    };
+
+    const colRef = collection(db, "users", user.uid, "essays");
+    const unsub = onSnapshot(
+      colRef,
+      (snap) => {
+        const list = snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Essay, "id">) }));
+        // 첫 snapshot이 비어있으면 레거시 마이그레이션 시도 (다음 snapshot이 데이터 채움)
+        if (list.length === 0) {
+          tryMigrateLegacy();
+          return;
+        }
+        // updatedAt 내림차순 정렬 (최신 편집 먼저)
+        list.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
+        setEssays(list);
+      },
+      (err) => console.error("[essays] snapshot error:", err)
+    );
+    return unsub;
   }, [user]);
 
   // Auto-save: sync activeEssay back to essays array on every change
@@ -131,10 +271,36 @@ export default function EssaysPage() {
   const activeEssayRef = useRef<Essay | null>(null);
   activeEssayRef.current = activeEssay;
 
+  /**
+   * Essay 단일 doc을 Firestore 서브컬렉션에 쓰기.
+   * 로그아웃 상태에선 no-op (localStorage는 setEssays useEffect가 처리).
+   * `updatedAt`을 자동 부여해 race resolution에 사용.
+   */
+  const writeEssayDoc = useCallback((essay: Essay): Essay => {
+    const stamped = {
+      ...essay,
+      lastSaved: new Date().toISOString().split("T")[0],
+      updatedAt: new Date().toISOString(),
+    };
+    if (user) {
+      setDoc(doc(db, "users", user.uid, "essays", essay.id), stamped, { merge: true })
+        .catch((e) => console.error("[essays] write failed:", e));
+    }
+    return stamped;
+  }, [user]);
+
+  const removeEssayDoc = useCallback((id: string) => {
+    if (user) {
+      deleteDoc(doc(db, "users", user.uid, "essays", id))
+        .catch((e) => console.error("[essays] delete failed:", e));
+    }
+  }, [user]);
+
   const syncEssay = useCallback((essay: Essay) => {
-    setEssays((prev) => prev.map((e) => e.id === essay.id ? { ...essay, lastSaved: new Date().toISOString().split("T")[0] } : e));
+    const stamped = writeEssayDoc(essay);
+    setEssays((prev) => prev.map((e) => e.id === essay.id ? stamped : e));
     setAutoSaveStatus("saved");
-  }, []);
+  }, [writeEssayDoc]);
 
   // Flush pending save on tab close / navigate away
   useEffect(() => {
@@ -165,19 +331,31 @@ export default function EssaysPage() {
     autoSaveTimer.current = setTimeout(() => syncEssay(updated), 1000);
   };
 
-  const schools = useMemo(() => getSchoolList(), []);
-
+  // 학교 목록은 가벼운 인덱스만 사용
   const filteredSchools = useMemo(() => {
-    if (!searchQuery) return schools.slice(0, 20);
-    return schools
-      .filter((s: { n: string }) => schoolMatchesQuery(s, searchQuery))
+    if (!searchQuery) return SCHOOLS_INDEX.slice(0, 20);
+    return SCHOOLS_INDEX
+      .filter((s) => schoolMatchesQuery(s, searchQuery))
       .slice(0, 20);
-  }, [searchQuery, schools]);
+  }, [searchQuery]);
 
-  const selectedSchoolData = useMemo(
-    () => schools.find((s: { n: string }) => s.n === selectedSchool),
-    [selectedSchool, schools]
-  );
+  // 선택된 학교의 상세 정보(prompts/tp/reqs)는 서버에서 fetch
+  const [selectedSchoolData, setSelectedSchoolData] = useState<SchoolDetail | null>(null);
+  useEffect(() => {
+    if (!selectedSchool || selectedSchool === "Common App") {
+      setSelectedSchoolData(null);
+      return;
+    }
+    let cancelled = false;
+    fetchWithAuth<{ school: SchoolDetail }>(`/api/schools/${encodeURIComponent(selectedSchool)}`)
+      .then((d) => { if (!cancelled) setSelectedSchoolData(d.school); })
+      .catch((e) => {
+        // 학교 상세는 prompts 표시용 — 실패 시 picker는 동작하지만 prompts는 못 보여줌.
+        // 사용자가 다른 학교 선택하면 자연 회복되므로 toast 생략.
+        console.warn("[essays] school detail fetch failed:", e);
+      });
+    return () => { cancelled = true; };
+  }, [selectedSchool]);
 
   const wordCount = activeEssay?.content.split(/\s+/).filter(Boolean).length || 0;
   const charCount = activeEssay?.content.length || 0;
@@ -220,12 +398,19 @@ export default function EssaysPage() {
     if (!deleteTarget) return;
     const deleted = deleteTarget;
     setEssays(prev => prev.filter(e => e.id !== deleted.id));
+    removeEssayDoc(deleted.id);
     setDeleteTarget(null);
     toast({
       title: "삭제됨",
       description: `${deleted.university} 에세이가 삭제되었습니다.`,
       action: (
-        <ToastAction altText="되돌리기" onClick={() => setEssays(prev => [deleted, ...prev])}>
+        <ToastAction
+          altText="되돌리기"
+          onClick={() => {
+            const restored = writeEssayDoc(deleted); // Firestore에 다시 쓰기
+            setEssays(prev => [restored, ...prev]);
+          }}
+        >
           되돌리기
         </ToastAction>
       ),
@@ -242,22 +427,34 @@ export default function EssaysPage() {
       lastSaved: new Date().toISOString().split("T")[0],
       wordLimit: limitMatch ? parseInt(limitMatch[1]) : undefined,
     };
-    setEssays((prev) => [newEssay, ...prev]);
-    setActiveEssay(newEssay);
+    const stamped = writeEssayDoc(newEssay);
+    setEssays((prev) => [stamped, ...prev]);
+    setActiveEssay(stamped);
     setView("editor");
     setSelectedSchool(null);
     setOutline(null);
     setShowOutline(canShowOutline); // Show outline panel for premium users
   };
 
+  // Abort in-flight outline request on re-click or unmount
+  const outlineAbortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => outlineAbortRef.current?.abort(), []);
+
   // Generate Time-Machine outline
   const generateOutline = async () => {
     if (!activeEssay) return;
+    if (outlineLoading) return; // guard against double-clicks
+
+    // Cancel any prior in-flight request
+    outlineAbortRef.current?.abort();
+    const controller = new AbortController();
+    outlineAbortRef.current = controller;
+
+    console.log("[outline] start", { university: activeEssay.university, prompt: activeEssay.prompt?.slice(0, 60) });
     setOutlineLoading(true);
     try {
-      const res = await fetch("/api/essay-outline", {
+      const data = await fetchWithAuth<{ outline: EssayOutline }>("/api/essay-outline", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: activeEssay.prompt,
           university: activeEssay.university,
@@ -270,28 +467,55 @@ export default function EssaysPage() {
             sat: profile?.sat,
           },
         }),
+        signal: controller.signal,
       });
-      const data = await res.json();
-      if (data.outline) {
-        setOutline(data.outline);
-        setShowOutline(true);
-        setOutlineUnlocked(true);
-        // Track free trial usage
-        if (!hasPlanAccess) {
-          await saveProfile({ outlineUsed: (profile?.outlineUsed || 0) + 1 });
-        }
+
+      if (!data?.outline) {
+        throw new Error("AI 응답이 비어있어요. 다시 시도해주세요.");
       }
-    } catch {
-      toast({ title: "오류", description: "에세이 구조 생성에 실패했습니다." });
+
+      console.log("[outline] parsed", Object.keys(data.outline));
+      setOutline(data.outline);
+      setShowOutline(true);
+      setOutlineUnlocked(true);
+      // Track free trial usage
+      if (!hasPlanAccess) {
+        try { await saveProfile({ outlineUsed: (profile?.outlineUsed || 0) + 1 }); }
+        catch (e) { console.warn("[outline] usage tracking failed", e); /* non-fatal */ }
+      }
+    } catch (err: any) {
+      // AbortError = user re-clicked or navigated away; not a real failure
+      if (err?.name === "AbortError") {
+        console.log("[outline] aborted");
+        return;
+      }
+      console.error("[outline] failed", err);
+      toast({
+        title: "에세이 구조 생성 실패",
+        description: err?.message || "잠시 후 다시 시도해주세요.",
+        variant: "destructive",
+      });
     } finally {
-      setOutlineLoading(false);
+      // Only clear loading state if this controller is still the current one
+      if (outlineAbortRef.current === controller) {
+        setOutlineLoading(false);
+        outlineAbortRef.current = null;
+      }
     }
   };
 
-  const insertStarter = (text: string) => {
+  const insertSection = (section: OutlineSection) => {
     if (!activeEssay) return;
+    const guide = getKoreanGuide(section);
+    const starter = getEnglishStarter(section);
+    // Korean guide as a markdown blockquote (참고용), English starter as the actual draft text.
+    const parts: string[] = [];
+    if (guide) parts.push(`> 💡 ${guide}`);
+    if (starter) parts.push(starter);
+    const insertText = parts.join("\n\n");
+    if (!insertText) return;
     const separator = activeEssay.content ? "\n\n" : "";
-    handleContentChange(activeEssay.content + separator + text);
+    handleContentChange(activeEssay.content + separator + insertText + "\n\n");
   };
 
   // Editor View
@@ -339,7 +563,7 @@ export default function EssaysPage() {
         <div className="px-6 space-y-4">
           {/* Version history panel */}
           {showVersions && activeEssay.versions && activeEssay.versions.length > 0 && (
-            <Card className="p-4 bg-white border-none shadow-sm space-y-2">
+            <Card className="p-4 bg-white dark:bg-card border-none shadow-sm space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
                   <History className="w-3.5 h-3.5" /> 버전 기록
@@ -428,25 +652,35 @@ export default function EssaysPage() {
                 { key: "turning" as const, icon: <Zap className="w-4 h-4" />, color: "bg-amber-50 border-amber-100 text-amber-700", iconBg: "bg-amber-100" },
                 { key: "growth" as const, icon: <TrendingUp className="w-4 h-4" />, color: "bg-emerald-50 border-emerald-100 text-emerald-700", iconBg: "bg-emerald-100" },
                 { key: "connection" as const, icon: <GraduationCap className="w-4 h-4" />, color: "bg-violet-50 border-violet-100 text-violet-700", iconBg: "bg-violet-100" },
-              ] as const).filter(({ key }) => outline[key]).map(({ key, icon, color, iconBg }) => (
-                <Card key={key} className={`${color} border p-4 space-y-2`}>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-7 h-7 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
-                      {icon}
+              ] as const).filter(({ key }) => outline[key]).map(({ key, icon, color, iconBg }) => {
+                const section = outline[key]!;
+                const guide = getKoreanGuide(section);
+                const starter = getEnglishStarter(section);
+                return (
+                  <Card key={key} className={`${color} border p-4 space-y-2`}>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-7 h-7 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
+                        {icon}
+                      </div>
+                      <p className="text-sm font-bold">{section.title}</p>
                     </div>
-                    <p className="text-sm font-bold">{outline[key]!.title}</p>
-                  </div>
-                  <p className="text-xs leading-relaxed">{outline[key]!.hint}</p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => insertStarter(outline[key]!.starter)}
-                    className="text-xs h-7 px-2 gap-1 mt-1"
-                  >
-                    <Plus className="w-3 h-3" /> 에디터에 삽입
-                  </Button>
-                </Card>
-              ))}
+                    {guide && <p className="text-sm leading-relaxed">{guide}</p>}
+                    {starter && (
+                      <blockquote className="mt-2 border-l-2 border-current pl-3 italic text-xs opacity-80 leading-relaxed">
+                        {starter}
+                      </blockquote>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => insertSection(section)}
+                      className="text-xs h-7 px-2 gap-1 mt-1"
+                    >
+                      <Plus className="w-3 h-3" /> 에디터에 삽입
+                    </Button>
+                  </Card>
+                );
+              })}
             </div>
           )}
 
@@ -564,7 +798,7 @@ export default function EssaysPage() {
           {!selectedSchool ? (
             <>
               <Card
-                className="bg-white border-none shadow-sm cursor-pointer hover:bg-accent/30 transition-colors"
+                className="bg-white dark:bg-card border-none shadow-sm cursor-pointer hover:bg-accent/30 transition-colors"
                 onClick={() => setSelectedSchool("Common App")}
               >
                 <CardContent className="p-4 flex items-center gap-3">
@@ -579,17 +813,17 @@ export default function EssaysPage() {
                 </CardContent>
               </Card>
 
-              {filteredSchools.map((school: { n: string; c: string; rk: number; d: string; prompts: string[] }) => (
+              {filteredSchools.map((school) => (
                 <Card
                   key={school.n}
-                  className="bg-white border-none shadow-sm cursor-pointer hover:bg-accent/30 transition-colors"
+                  className="bg-white dark:bg-card border-none shadow-sm cursor-pointer hover:bg-accent/30 transition-colors"
                   onClick={() => setSelectedSchool(school.n)}
                 >
                   <CardContent className="p-4 flex items-center gap-3">
                     <SchoolLogo domain={school.d} color={school.c} name={school.n} rank={school.rk} size="md" />
                     <div className="flex-1">
                       <p className="font-bold text-sm">{school.n}</p>
-                      <p className="text-xs text-muted-foreground">{school.prompts?.length || 0}개 프롬프트</p>
+                      <p className="text-xs text-muted-foreground">{school.loc || ""}</p>
                     </div>
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   </CardContent>
@@ -607,7 +841,7 @@ export default function EssaysPage() {
               ).map((prompt: string, i: number) => (
                 <Card
                   key={i}
-                  className="bg-white border-none shadow-sm cursor-pointer hover:bg-accent/30 transition-colors"
+                  className="bg-white dark:bg-card border-none shadow-sm cursor-pointer hover:bg-accent/30 transition-colors"
                   onClick={() => handleCreateFromPrompt(selectedSchool, prompt)}
                 >
                   <CardContent className="p-4 space-y-1.5">
@@ -669,7 +903,7 @@ export default function EssaysPage() {
 
       <div className="px-6 space-y-3 md:grid md:grid-cols-2 md:gap-3">
         {essays.length === 0 ? (
-          <Card className="p-8 bg-white dark:bg-card border-none shadow-sm text-center md:col-span-2">
+          <Card className="p-8 bg-white dark:bg-card dark:bg-card border-none shadow-sm text-center md:col-span-2">
             {/* Decorative SVG illustration */}
             <div className="relative w-24 h-24 mx-auto mb-5">
               <div className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-100 to-orange-50 dark:from-orange-900/30 dark:to-orange-900/10 animate-pulse" />
@@ -688,36 +922,70 @@ export default function EssaysPage() {
             </Button>
           </Card>
         ) : (
-          essays.map((essay) => (
-            <Card
-              key={essay.id}
-              className="bg-white border-none shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
-              onClick={() => { setActiveEssay(essay); setView("editor"); }}
-            >
-              <CardContent className="p-5 space-y-2">
-                <div className="flex items-start justify-between">
-                  <h3 className="font-bold text-sm">{essay.university}</h3>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setDeleteTarget(essay); }}
-                      aria-label="에세이 삭제"
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground/0 group-hover:text-muted-foreground hover:bg-red-50 hover:text-red-500 transition-all"
-                    >
-                      <Trash2 size={14} aria-hidden="true" />
-                    </button>
-                    <Badge variant="secondary" className="text-xs shrink-0">
-                      {essay.content.split(/\s+/).filter(Boolean).length} 단어
-                    </Badge>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground line-clamp-2">{essay.prompt}</p>
-                {essay.content && (
-                  <p className="text-xs text-foreground/60 line-clamp-1 italic">{essay.content}</p>
+          essays.map((essay) => {
+            const reviews = (essay.reviews ?? []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+            const isExpanded = expandedReviewsFor.has(essay.id);
+            const visibleReviews = isExpanded ? reviews : reviews.slice(0, 1);
+            return (
+              <div key={essay.id} className="space-y-2">
+                <Card
+                  className="bg-white dark:bg-card border-none shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+                  onClick={() => { setActiveEssay(essay); setView("editor"); }}
+                >
+                  <CardContent className="p-5 space-y-2">
+                    <div className="flex items-start justify-between">
+                      <h3 className="font-bold text-sm">{essay.university}</h3>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDeleteTarget(essay); }}
+                          aria-label="에세이 삭제"
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground/0 group-hover:text-muted-foreground hover:bg-red-50 hover:text-red-500 transition-all"
+                        >
+                          <Trash2 size={14} aria-hidden="true" />
+                        </button>
+                        <Badge variant="secondary" className="text-xs shrink-0">
+                          {essay.content.split(/\s+/).filter(Boolean).length} 단어
+                        </Badge>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{essay.prompt}</p>
+                    {essay.content && (
+                      <p className="text-xs text-foreground/60 line-clamp-1 italic">{essay.content}</p>
+                    )}
+                    <div className="flex items-center justify-between pt-1">
+                      <p className="text-xs text-primary font-medium">최종 수정: {essay.lastSaved}</p>
+                      <Link
+                        href={`/essays/review?essayId=${essay.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-xs text-primary font-semibold flex items-center gap-1 hover:underline"
+                      >
+                        <Sparkles className="w-3 h-3" /> AI 첨삭
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Reviews attached to this essay */}
+                {visibleReviews.map(review => (
+                  <ReviewSubCard
+                    key={review.id}
+                    review={review}
+                    onOpen={() => setViewingReview({ essay, review })}
+                    onDelete={() => setReviewDeleteTarget({ essayId: essay.id, reviewId: review.id })}
+                  />
+                ))}
+                {reviews.length > 1 && (
+                  <button
+                    onClick={() => toggleExpandedReviews(essay.id)}
+                    className="ml-4 text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+                  >
+                    <History className="w-3 h-3" />
+                    {isExpanded ? "최신 첨삭만 보기" : `이전 첨삭 ${reviews.length - 1}개 더보기`}
+                  </button>
                 )}
-                <p className="text-xs text-primary font-medium">최종 수정: {essay.lastSaved}</p>
-              </CardContent>
-            </Card>
-          ))
+              </div>
+            );
+          })
         )}
       </div>
 
@@ -741,7 +1009,162 @@ export default function EssaysPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Review delete confirmation */}
+      <Dialog open={!!reviewDeleteTarget} onOpenChange={(v) => !v && setReviewDeleteTarget(null)}>
+        <DialogContent className="max-w-xs rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>이 첨삭을 삭제할까요?</DialogTitle>
+            <DialogDescription>첨삭 결과가 영구적으로 삭제됩니다.</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 mt-2">
+            <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setReviewDeleteTarget(null)}>
+              취소
+            </Button>
+            <Button
+              className="flex-1 rounded-xl bg-red-500 hover:bg-red-600 text-white"
+              onClick={() => {
+                if (reviewDeleteTarget) removeReview(reviewDeleteTarget.essayId, reviewDeleteTarget.reviewId);
+                setReviewDeleteTarget(null);
+              }}
+            >
+              삭제
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Full review viewer */}
+      <ReviewDetailDialog
+        target={viewingReview}
+        onClose={() => setViewingReview(null)}
+      />
+
       <BottomNav />
     </div>
+  );
+}
+
+/* ─── Review Sub-Card (under each essay) ─── */
+function ScoreBadge({ value }: { value: number }) {
+  const color =
+    value >= 8 ? "text-emerald-500 stroke-emerald-500" :
+    value >= 6 ? "text-blue-500 stroke-blue-500" :
+    value >= 4 ? "text-amber-500 stroke-amber-500" :
+    "text-red-500 stroke-red-500";
+  const radius = 22;
+  const circumference = 2 * Math.PI * radius;
+  const progress = (value / 10) * circumference;
+  return (
+    <div className="relative w-12 h-12 shrink-0">
+      <svg className="w-12 h-12 -rotate-90" viewBox="0 0 56 56">
+        <circle cx="28" cy="28" r={radius} fill="none" stroke="currentColor" className="text-muted/20" strokeWidth="4" />
+        <circle cx="28" cy="28" r={radius} fill="none" strokeWidth="4" strokeLinecap="round" className={color}
+          strokeDasharray={circumference} strokeDashoffset={circumference - progress} />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className={`text-sm font-bold ${color.split(" ")[0]}`}>{value}</span>
+      </div>
+    </div>
+  );
+}
+
+function ReviewSubCard({
+  review, onOpen, onDelete,
+}: { review: EssayReview; onOpen: () => void; onDelete: () => void }) {
+  return (
+    <div className="ml-4 p-4 rounded-xl bg-white dark:bg-card border-l-4 border-primary shadow-sm">
+      <div className="flex items-start gap-3">
+        <ScoreBadge value={review.score} />
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-sm leading-snug line-clamp-2">{review.summary || "AI 첨삭 결과"}</p>
+          {review.firstImpression && (
+            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{review.firstImpression}</p>
+          )}
+          <div className="flex items-center justify-between mt-2 gap-2">
+            <button
+              onClick={onOpen}
+              className="text-xs text-primary font-semibold hover:underline flex items-center gap-1"
+            >
+              전체 보기 <ChevronRight className="w-3 h-3" />
+            </button>
+            <button
+              onClick={onDelete}
+              aria-label="첨삭 삭제"
+              className="text-muted-foreground/40 hover:text-red-500 p-1"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Full Review Dialog ─── */
+function ReviewDetailDialog({
+  target, onClose,
+}: { target: { essay: Essay; review: EssayReview } | null; onClose: () => void }) {
+  if (!target) {
+    return (
+      <Dialog open={false} onOpenChange={(v) => !v && onClose()}>
+        <DialogContent />
+      </Dialog>
+    );
+  }
+  const { essay, review } = target;
+  const Section = ({ title, icon, color, items }: { title: string; icon: React.ReactNode; color: string; items: string[] }) =>
+    items.length === 0 ? null : (
+      <div className="space-y-2">
+        <h4 className="text-sm font-bold flex items-center gap-1.5">{icon} {title}</h4>
+        {items.map((s, i) => (
+          <div key={i} className={`p-3 rounded-xl text-xs leading-relaxed whitespace-pre-line ${color}`}>{s}</div>
+        ))}
+      </div>
+    );
+  return (
+    <Dialog open={!!target} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-md max-h-[88vh] overflow-y-auto rounded-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary" />
+            {essay.university} — AI 첨삭
+          </DialogTitle>
+          <DialogDescription>
+            {new Date(review.createdAt).toLocaleString("ko-KR")} · {review.score}/10
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          {review.summary && <p className="text-sm font-semibold leading-relaxed">{review.summary}</p>}
+          {review.firstImpression && (
+            <div className="p-3 rounded-xl bg-muted/50 text-xs text-muted-foreground leading-relaxed">
+              <span className="font-semibold">입학사정관 첫인상: </span>{review.firstImpression}
+            </div>
+          )}
+          {review.tone && <Badge variant="secondary" className="text-xs">톤: {review.tone}</Badge>}
+          <Section title="강점" icon={<TrendingUp className="w-3.5 h-3.5 text-emerald-500" />} color="bg-emerald-50 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-200" items={review.strengths} />
+          <Section title="개선이 필요한 부분" icon={<Zap className="w-3.5 h-3.5 text-red-500" />} color="bg-red-50 text-red-800 dark:bg-red-950/20 dark:text-red-200" items={review.weaknesses} />
+          <Section title="개선 제안" icon={<Sparkles className="w-3.5 h-3.5 text-blue-500" />} color="bg-blue-50 text-blue-800 dark:bg-blue-950/20 dark:text-blue-200" items={review.suggestions} />
+          {review.keyChange && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-bold flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-amber-500" /> 가장 중요한 변경 1가지</h4>
+              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 text-xs text-amber-800 dark:text-amber-200 leading-relaxed whitespace-pre-line">{review.keyChange}</div>
+            </div>
+          )}
+          {review.revisedOpening && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-bold flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-primary" /> 수정된 첫 단락</h4>
+              <div className="p-3 rounded-xl bg-primary/5 text-xs italic leading-relaxed">{review.revisedOpening}</div>
+            </div>
+          )}
+          {review.admissionNote && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-bold flex items-center gap-1.5">입학사정관의 한마디</h4>
+              <div className="p-3 rounded-xl bg-violet-50 dark:bg-violet-950/20 text-xs text-violet-800 dark:text-violet-200 leading-relaxed whitespace-pre-line">{review.admissionNote}</div>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

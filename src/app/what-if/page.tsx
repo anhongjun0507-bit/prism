@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Sparkles, ArrowLeft, TrendingUp, TrendingDown, Minus, RotateCcw } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { PLANS } from "@/lib/plans";
-import { matchSchools, type Specs } from "@/lib/matching";
+import type { Specs, School } from "@/lib/matching";
+import { fetchWithAuth } from "@/lib/api-client";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import Link from "next/link";
 
@@ -66,24 +67,48 @@ export default function WhatIfPage() {
     setAwardTier(baselineAwardTier);
   };
 
-  // Track free trial usage on first interaction
+  // 유저 슬라이더 상호작용을 감지해 free-trial 1회 카운트.
+  // baseline*·hasFullAccess·whatIfUsed·saveProfile은 deps에 넣지 않음 — 이들은 이 effect의
+  // 트리거 조건이 아니라 가드 조건이고, 변경 시 effect가 다시 발화하면 stale check가 잘못 fire됨.
+  // (예: 결제 후 hasFullAccess가 true로 바뀌면 이 effect가 재발화해도 가드에 막혀 의미 없음)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!hasFullAccess && whatIfUsed === 0 && (gpa !== baselineGpa || sat !== baselineSat || toefl !== baselineToefl || ecTier !== baselineEcTier || awardTier !== baselineAwardTier)) {
       saveProfile({ whatIfUsed: 1 });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gpa, sat, toefl, ecTier, awardTier]);
 
-  /* ── compute results ── */
-  const baselineResults = useMemo(
-    () => matchSchools(buildSpecs(profile)),
-    [profile],
-  );
+  /* ── compute results — server-side, debounced ── */
+  const [baselineResults, setBaselineResults] = useState<School[]>([]);
+  const [whatIfResults, setWhatIfResults] = useState<School[]>([]);
 
-  const whatIfResults = useMemo(
-    () => matchSchools(buildSpecs(profile, { gpa, sat, toefl, ecTier, awardTier })),
-    [profile, gpa, sat, toefl, ecTier, awardTier],
-  );
+  // baseline은 profile 변경 시에만 한 번 fetch
+  useEffect(() => {
+    if (!profile) return;
+    let cancelled = false;
+    fetchWithAuth<{ results: School[] }>("/api/match", {
+      method: "POST",
+      body: JSON.stringify({ specs: buildSpecs(profile) }),
+    })
+      .then((d) => { if (!cancelled) setBaselineResults(d.results || []); })
+      .catch((e) => console.warn("[what-if] baseline fetch failed:", e));
+    return () => { cancelled = true; };
+  }, [profile]);
+
+  // what-if는 슬라이더 변경 시 debounce 후 fetch (interactive UX)
+  useEffect(() => {
+    if (!profile) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      fetchWithAuth<{ results: School[] }>("/api/match", {
+        method: "POST",
+        body: JSON.stringify({ specs: buildSpecs(profile, { gpa, sat, toefl, ecTier, awardTier }) }),
+      })
+        .then((d) => { if (!cancelled) setWhatIfResults(d.results || []); })
+        .catch((e) => console.warn("[what-if] simulation fetch failed:", e));
+    }, 400); // 400ms debounce
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [profile, gpa, sat, toefl, ecTier, awardTier]);
 
   /* ── category counts ── */
   const count = (list: typeof baselineResults, cat: string) =>
@@ -113,7 +138,7 @@ export default function WhatIfPage() {
   const simulatorContent = (
     <div className="space-y-5">
       {/* ── Adjustable Specs ── */}
-      <Card className="rounded-2xl bg-white shadow-sm p-5 space-y-4">
+      <Card className="rounded-2xl bg-white dark:bg-card shadow-sm p-5 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-headline font-bold text-base">스펙 조정</h2>
           <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground" onClick={reset}>
@@ -202,7 +227,7 @@ export default function WhatIfPage() {
       </Card>
 
       {/* ── Category Summary ── */}
-      <Card className="rounded-2xl bg-white shadow-sm p-5 space-y-3">
+      <Card className="rounded-2xl bg-white dark:bg-card shadow-sm p-5 space-y-3">
         <h2 className="font-headline font-bold text-sm">카테고리 변화</h2>
         <div className="grid grid-cols-2 gap-3">
           {cats.map((cat) => {
@@ -230,7 +255,7 @@ export default function WhatIfPage() {
       </Card>
 
       {/* ── Top Changes ── */}
-      <Card className="rounded-2xl bg-white shadow-sm p-5 space-y-3">
+      <Card className="rounded-2xl bg-white dark:bg-card shadow-sm p-5 space-y-3">
         <h2 className="font-headline font-bold text-sm">확률 변화 Top 10</h2>
 
         {diffs.length === 0 ? (

@@ -2,7 +2,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { BottomNav } from "@/components/BottomNav";
+import { BottomNav, BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
+import { fetchWithAuth } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,6 +23,21 @@ interface Message {
 function getTodayKey() {
   return new Date().toISOString().slice(0, 10);
 }
+
+/** Maps a suggested-question category to a friendly color emoji. */
+const getQuestionEmoji = (category: string): string => {
+  const map: Record<string, string> = {
+    "지원준비": "🎓",
+    "에세이":   "✍️",
+    "시험":     "📈",
+    "활동":     "🏆",
+    "전공":     "📚",
+    "재정":     "💰",
+    "인터뷰":   "🎤",
+    "기타":     "💬",
+  };
+  return map[category] ?? "💬";
+};
 
 export default function ChatPage() {
   const { profile, saveProfile } = useAuth();
@@ -106,22 +122,18 @@ export default function ChatPage() {
       // Keep all messages except errors for API history (including AI greeting for context)
       const cleanHistory = messages.filter((m) => !m.error);
 
-      const res = await fetch("/api/chat", {
+      const data = await fetchWithAuth<{ response: string }>("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: userMessage + (cleanHistory.length <= 1 ? buildStudentContext() : ""),
           history: cleanHistory,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "API request failed");
-
       if (!data.response) throw new Error("Empty response");
 
       setMessages(prev => [...prev, { role: "ai", content: data.response }]);
 
-      // Only count on success
+      // Only count on success — server-side counter is the source of truth, this is just for UI cache
       const newCount = (profile?.aiChatDate === todayKey ? (profile?.aiChatCount || 0) : 0) + 1;
       await saveProfile({ aiChatCount: newCount, aiChatDate: todayKey });
     } catch (error: any) {
@@ -162,7 +174,16 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <>
+    <div
+      className="flex flex-col bg-background"
+      style={{
+        // h-[100dvh] avoids iOS Safari 100vh bug; padding-bottom reserves
+        // space for the fixed BottomNav + iOS home indicator safe-area.
+        height: "100dvh",
+        paddingBottom: `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom))`,
+      }}
+    >
       <header className="p-4 px-6 bg-white dark:bg-card border-b border-border flex items-center justify-between z-10 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
@@ -229,23 +250,26 @@ export default function ChatPage() {
             <div className="flex flex-col items-center gap-2.5 pt-2 pb-4">
               <p className="text-xs text-muted-foreground mb-1">이런 질문을 해보세요</p>
               {[
-                { emoji: "\uD83C\uDF93", text: `${profile?.dreamSchool || "Harvard"}에 지원하려면 어떤 준비가 필요해요?` },
-                { emoji: "\uD83D\uDCDD", text: "Common App 에세이 주제 추천해주세요" },
-                { emoji: "\uD83D\uDCCA", text: "SAT 점수를 올리는 가장 효과적인 방법은?" },
-                { emoji: "\uD83C\uDFC6", text: "과외활동 추천해주세요" },
-              ].map((q) => (
-                <button
-                  key={q.text}
-                  onClick={() => {
-                    setInput("");
-                    setMessages(prev => [...prev, { role: "user", content: `${q.emoji} ${q.text}` }]);
-                    sendMessage(`${q.emoji} ${q.text}`);
-                  }}
-                  className="w-full max-w-sm text-left px-4 py-3 rounded-2xl border border-primary/20 bg-primary/5 hover:bg-primary/10 active:scale-[0.98] transition-all text-sm text-foreground"
-                >
-                  <span className="mr-2">{q.emoji}</span>{q.text}
-                </button>
-              ))}
+                { category: "지원준비", text: `${profile?.dreamSchool || "Harvard"}에 지원하려면 어떤 준비가 필요해요?` },
+                { category: "에세이",   text: "Common App 에세이 주제 추천해주세요" },
+                { category: "시험",     text: "SAT 점수를 올리는 가장 효과적인 방법은?" },
+                { category: "활동",     text: "과외활동 추천해주세요" },
+              ].map((q) => {
+                const emoji = getQuestionEmoji(q.category);
+                return (
+                  <button
+                    key={q.text}
+                    onClick={() => {
+                      setInput("");
+                      setMessages(prev => [...prev, { role: "user", content: `${emoji} ${q.text}` }]);
+                      sendMessage(`${emoji} ${q.text}`);
+                    }}
+                    className="w-full max-w-sm text-left px-4 py-3 rounded-2xl border border-primary/20 bg-primary/5 hover:bg-primary/10 active:scale-[0.98] transition-all text-sm text-foreground"
+                  >
+                    <span className="text-xl mr-2">{emoji}</span>{q.text}
+                  </button>
+                );
+              })}
             </div>
           )}
           {loading && (
@@ -263,8 +287,8 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Input - fixed above BottomNav */}
-      <div className="shrink-0 p-4 px-6 pb-20 bg-gradient-to-t from-background via-background to-transparent">
+      {/* Input — sits at the bottom of the flex column, directly above BottomNav */}
+      <div className="shrink-0 p-4 px-6 bg-gradient-to-t from-background via-background to-transparent">
         {/* Remaining chat progress bar */}
         {dailyLimit !== Infinity && (
           remaining > 0 ? (
@@ -310,7 +334,10 @@ export default function ChatPage() {
       </div>
 
       <ChatLimitModal open={showLimitModal} onClose={() => setShowLimitModal(false)} />
-      <BottomNav />
     </div>
+    {/* BottomNav rendered as sibling so its fixed positioning is independent
+        of the chat flex column. Column already reserves BOTTOM_NAV_HEIGHT below. */}
+    <BottomNav />
+    </>
   );
 }

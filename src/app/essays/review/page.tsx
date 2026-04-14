@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { PLANS } from "@/lib/plans";
 import { Card } from "@/components/ui/card";
@@ -11,6 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { BottomNav } from "@/components/BottomNav";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
+import { db } from "@/lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
+import { fetchWithAuth, ApiError } from "@/lib/api-client";
 import {
   ArrowLeft, Loader2, CheckCircle2, AlertCircle, Lightbulb, Sparkles,
   Target, MessageCircle,
@@ -27,6 +30,32 @@ interface ReviewResult {
   keyChange: string;
   admissionNote: string;
   revisedOpening: string;
+}
+
+interface EssayReview extends ReviewResult {
+  id: string;
+  createdAt: string;
+}
+
+interface Essay {
+  id: string;
+  university: string;
+  prompt: string;
+  content: string;
+  lastSaved: string;
+  wordLimit?: number;
+  versions?: any[];
+  reviews?: EssayReview[];
+}
+
+const ESSAYS_KEY = "prism_essays";
+
+function loadEssays(): Essay[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const saved = localStorage.getItem(ESSAYS_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch { return []; }
 }
 
 function ScoreCircle({ score }: { score: number }) {
@@ -74,12 +103,25 @@ function ScoreCircle({ score }: { score: number }) {
 
 export default function EssayReviewPage() {
   const router = useRouter();
-  const { profile, saveProfile } = useAuth();
+  const searchParams = useSearchParams();
+  const essayId = searchParams.get("essayId");
+  const { profile, saveProfile, user } = useAuth();
   const currentPlan = profile?.plan || "free";
   const canReview = PLANS[currentPlan].limits.essayReview;
   const reviewUsed = profile?.essayReviewUsed || 0;
-  const canUseReview = canReview || reviewUsed < 1; // 1 free trial
+  const canUseReview = canReview || reviewUsed < 1;
 
+  const [essays, setEssays] = useState<Essay[]>(() => loadEssays());
+  // The essay this review is being attached to. If essayId is in URL, fixed to that essay.
+  // Otherwise user picks from a dropdown (or skips → review-only mode without persistence).
+  const [selectedEssayId, setSelectedEssayId] = useState<string | null>(essayId);
+
+  const selectedEssay = useMemo(
+    () => essays.find(e => e.id === selectedEssayId) ?? null,
+    [essays, selectedEssayId]
+  );
+
+  // Form state — prefilled from the selected essay
   const [essay, setEssay] = useState("");
   const [prompt, setPrompt] = useState("");
   const [university, setUniversity] = useState("");
@@ -87,28 +129,19 @@ export default function EssayReviewPage() {
   const [result, setResult] = useState<ReviewResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Persist & restore review state (essay + result)
-  const REVIEW_KEY = "prism_essay_review";
+  // Prefill when user picks a different essay (id 변경 시에만).
+  // selectedEssay의 content/prompt 등을 deps에 넣으면 사용자가 review 입력 중인 textarea를
+  // 외부 essay 변경(다른 탭에서 동기화 등)이 덮어쓰게 됨 → id 기준만 트리거.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(REVIEW_KEY);
-      if (saved) {
-        const data = JSON.parse(saved);
-        if (data.essay) setEssay(data.essay);
-        if (data.prompt) setPrompt(data.prompt);
-        if (data.university) setUniversity(data.university);
-        if (data.result) setResult(data.result);
-      }
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    if (essay || result) {
-      try {
-        localStorage.setItem(REVIEW_KEY, JSON.stringify({ essay, prompt, university, result }));
-      } catch {}
+    if (selectedEssay) {
+      setEssay(selectedEssay.content);
+      setPrompt(selectedEssay.prompt);
+      setUniversity(selectedEssay.university);
+      setResult(null);
+      setError(null);
     }
-  }, [essay, prompt, university, result]);
+  }, [selectedEssay?.id]);
 
   const handleReview = async () => {
     if (!essay.trim()) return;
@@ -117,38 +150,60 @@ export default function EssayReviewPage() {
     setResult(null);
 
     try {
-      const res = await fetch("/api/essay-review", {
+      const data = await fetchWithAuth<{ review: ReviewResult }>("/api/essay-review", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          essay,
-          prompt,
-          university,
-          grade: profile?.grade,
-          gpa: profile?.gpa,
-          sat: profile?.sat,
-          major: profile?.major,
+          essay, prompt, university,
+          grade: profile?.grade, gpa: profile?.gpa, sat: profile?.sat, major: profile?.major,
         }),
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "리뷰 생성에 실패했습니다.");
+      if (!data.review) {
+        setError("AI 응답을 파싱할 수 없습니다. 다시 시도해주세요.");
         return;
       }
 
-      if (data.review) {
-        setResult(data.review);
-        // Track free trial usage
-        if (!canReview) {
-          await saveProfile({ essayReviewUsed: (profile?.essayReviewUsed || 0) + 1 });
-        }
-      } else {
-        setError("AI 응답을 파싱할 수 없습니다. 다시 시도해주세요.");
+      setResult(data.review);
+
+      // Attach to the selected essay's reviews array — per-essay Firestore subcollection write
+      if (selectedEssayId) {
+        const newReview: EssayReview = {
+          ...data.review,
+          id: `r-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          createdAt: new Date().toISOString(),
+        };
+        setEssays(prev => {
+          const target = prev.find(e => e.id === selectedEssayId);
+          if (!target) return prev;
+          const updatedEssay = {
+            ...target,
+            reviews: [...(target.reviews ?? []), newReview],
+            updatedAt: new Date().toISOString(),
+          };
+          const updated = prev.map(e => e.id === selectedEssayId ? updatedEssay : e);
+          try { localStorage.setItem(ESSAYS_KEY, JSON.stringify(updated)); } catch {}
+          // Per-essay Firestore write — race-free
+          if (user) {
+            setDoc(
+              doc(db, "users", user.uid, "essays", selectedEssayId),
+              updatedEssay,
+              { merge: true }
+            ).catch((e) => console.error("[review] essay write failed:", e));
+          }
+          return updated;
+        });
       }
-    } catch {
-      setError("네트워크 오류가 발생했습니다. 다시 시도해주세요.");
+
+      // Track free trial usage
+      if (!canReview) {
+        await saveProfile({ essayReviewUsed: (profile?.essayReviewUsed || 0) + 1 });
+      }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError("네트워크 오류가 발생했습니다. 다시 시도해주세요.");
+      }
     } finally {
       setLoading(false);
     }
@@ -173,6 +228,34 @@ export default function EssayReviewPage() {
       </header>
 
       <div className="px-6 space-y-4">
+        {/* Essay picker — shown when no essayId is provided */}
+        {!essayId && (
+          <Card className="p-4 bg-primary/5 border border-primary/20 space-y-2">
+            <label className="text-xs font-semibold text-primary">첨삭 결과를 저장할 에세이</label>
+            {essays.length === 0 ? (
+              <p className="text-xs text-muted-foreground">저장된 에세이가 없어요. 먼저 에세이를 작성해주세요.</p>
+            ) : (
+              <select
+                value={selectedEssayId ?? ""}
+                onChange={(e) => setSelectedEssayId(e.target.value || null)}
+                className="w-full h-10 rounded-xl bg-white dark:bg-card px-3 text-sm border border-input"
+              >
+                <option value="">— 에세이 선택 (선택하지 않으면 결과가 저장되지 않아요) —</option>
+                {essays.map(e => (
+                  <option key={e.id} value={e.id}>{e.university} · {e.prompt.slice(0, 40)}{e.prompt.length > 40 ? "…" : ""}</option>
+                ))}
+              </select>
+            )}
+          </Card>
+        )}
+
+        {essayId && selectedEssay && (
+          <Card className="p-3 bg-primary/5 border border-primary/20 flex items-center gap-2 text-xs">
+            <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
+            <span className="text-muted-foreground">첨삭 결과는 <strong className="text-foreground">{selectedEssay.university}</strong> 에세이에 저장돼요.</span>
+          </Card>
+        )}
+
         {/* University input */}
         <div className="space-y-2">
           <label className="text-sm font-semibold">대학교</label>
@@ -268,6 +351,11 @@ export default function EssayReviewPage() {
                   입학사정관 첫인상: {result.firstImpression}
                 </p>
               )}
+              {selectedEssayId && (
+                <Badge variant="secondary" className="text-xs">
+                  ✓ {selectedEssay?.university} 에세이에 저장됨
+                </Badge>
+              )}
             </Card>
 
             {/* Tone */}
@@ -362,6 +450,17 @@ export default function EssayReviewPage() {
                 <p className="text-sm text-violet-800 dark:text-violet-200 leading-relaxed whitespace-pre-line">{result.admissionNote}</p>
               </Card>
             </div>
+            )}
+
+            {/* Back to essay button */}
+            {selectedEssayId && (
+              <Button
+                variant="outline"
+                onClick={() => router.push("/essays")}
+                className="w-full rounded-xl"
+              >
+                에세이 목록으로 돌아가기
+              </Button>
             )}
           </div>
         )}
