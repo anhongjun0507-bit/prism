@@ -41,6 +41,20 @@ export function SchoolModal({ school, open, onClose, specs }: { school: School |
   const [aiDetailLoading, setAiDetailLoading] = useState(false);
   const [aiDetailError, setAiDetailError] = useState(false);
 
+  // /api/match 응답은 payload 경량화를 위해 prompts 를 포함하지 않음.
+  // 모달이 열리면 /api/schools/{name} 으로 lazy-fetch 하여 에세이 탭에서 사용.
+  const [lazyPrompts, setLazyPrompts] = useState<string[] | null>(null);
+  useEffect(() => {
+    if (!school || !open) { setLazyPrompts(null); return; }
+    if (school.prompts && school.prompts.length > 0) return; // already included
+    let cancelled = false;
+    fetchWithAuth<{ school?: { prompts?: string[] } }>(`/api/schools/${encodeURIComponent(school.n)}`)
+      .then(d => { if (!cancelled) setLazyPrompts(d.school?.prompts ?? []); })
+      .catch(() => { if (!cancelled) setLazyPrompts([]); });
+    return () => { cancelled = true; };
+  }, [school?.n, open]);
+  const displayPrompts = school?.prompts && school.prompts.length > 0 ? school.prompts : lazyPrompts;
+
   const specsKey = `${specs.gpaUW || specs.gpaW}_${specs.sat}_${specs.major}`;
 
   // Load AI admission detail
@@ -58,7 +72,7 @@ export function SchoolModal({ school, open, onClose, specs }: { school: School |
 
     setAiDetailLoading(true);
     setAiDetailError(false);
-    fetchWithAuth<{ detail: any }>("/api/admission-detail", {
+    fetchWithAuth<{ detail: AdmissionDetail | null }>("/api/admission-detail", {
       method: "POST",
       body: JSON.stringify({
         school: {
@@ -131,19 +145,19 @@ export function SchoolModal({ school, open, onClose, specs }: { school: School |
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent hideClose className="max-w-md p-0 rounded-2xl max-h-[90vh] flex flex-col border-none overflow-hidden">
-        {/* Hero header — shrink-0 so it never collapses */}
+        {/* Hero header — extra bottom padding leaves room for the overlapping card */}
         <div className="shrink-0">
-          <CampusPhoto schoolName={school.n} color={school.c} className="p-6 pb-8">
-            <button onClick={onClose} aria-label="모달 닫기" className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/20 flex items-center justify-center text-white hover:bg-black/30 transition">
+          <CampusPhoto schoolName={school.n} color={school.c} className="p-6 pb-14">
+            <button onClick={onClose} aria-label="모달 닫기" className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/25 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/40 transition">
               <X className="w-4 h-4" />
             </button>
             <DialogHeader className="text-white">
-              <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
                 <SchoolLogo domain={school.d} color={school.c} name={school.n} size="sm" className="border-white/20" />
                 {school.rk > 0 && (
-                <Badge className="bg-white/20 text-white border-none text-xs">
-                  #{school.rk} US News
-                </Badge>
+                  <Badge className="bg-white/20 text-white border-none text-xs">
+                    #{school.rk} US News
+                  </Badge>
                 )}
                 {school.tg.map((t) => (
                   <Badge key={t} className="bg-white/10 text-white/80 border-none text-xs">{t}</Badge>
@@ -152,46 +166,47 @@ export function SchoolModal({ school, open, onClose, specs }: { school: School |
                   <Badge className="bg-amber-500/30 text-amber-100 border-amber-300/30 text-xs">추정치</Badge>
                 )}
               </div>
-              <DialogTitle className="text-2xl font-headline font-bold text-white">{school.n}</DialogTitle>
-              <DialogDescription className="text-white/70 text-sm flex items-center gap-1.5 mt-1">
-                <MapPin className="w-3.5 h-3.5" /> {school.loc || "미국"} · {school.setting || ""}
+              <DialogTitle className="text-2xl font-headline font-bold text-white leading-tight">{school.n}</DialogTitle>
+              <DialogDescription className="text-white/75 text-sm flex items-center gap-1.5 mt-1.5">
+                <MapPin className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{[school.loc, school.setting].filter(Boolean).join(" · ") || "미국"}</span>
               </DialogDescription>
             </DialogHeader>
           </CampusPhoto>
         </div>
 
-        {/* Scrollable body — floating card + tabs all scroll together */}
-        <div className="flex-1 overflow-y-auto">
-          {/* Floating probability card — inside scroll area, overlaps header via negative margin */}
-          <div className="relative -mt-8 mx-6 z-10 mb-4">
-            <div className="bg-white dark:bg-card rounded-2xl shadow-xl p-4 flex items-center gap-4">
-              <div className="relative w-16 h-16 shrink-0">
-                <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
-                  <circle cx="32" cy="32" r="28" fill="none" stroke="#e5e7eb" strokeWidth="6" />
-                  <circle cx="32" cy="32" r="28" fill="none" stroke={school.c} strokeWidth="6"
-                    strokeDasharray={`${(school.prob || 0) / 100 * 175.9} 175.9`}
-                    strokeLinecap="round" />
-                </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-lg font-bold">
-                  {school.prob}%
-                </span>
+        {/* Floating probability card — sibling of hero (NOT inside scroll container) so its negative margin isn't clipped */}
+        <div className="shrink-0 relative -mt-10 mx-6 z-10">
+          <div className="bg-white dark:bg-card rounded-2xl shadow-xl ring-1 ring-black/5 dark:ring-white/5 p-4 flex items-center gap-4">
+            <div className="relative w-16 h-16 shrink-0">
+              <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
+                <circle cx="32" cy="32" r="28" fill="none" className="stroke-muted" strokeWidth="6" />
+                <circle cx="32" cy="32" r="28" fill="none" stroke={school.c} strokeWidth="6"
+                  strokeDasharray={`${(school.prob || 0) / 100 * 175.9} 175.9`}
+                  strokeLinecap="round" />
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center text-base font-bold">
+                {school.prob}%
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full ${style.dot}`} />
+                <span className={`text-xs font-bold ${style.bg} px-2 py-0.5 rounded-full`}>{school.cat}</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${style.dot}`} />
-                  <span className={`text-xs font-bold ${style.bg} px-2 py-0.5 rounded-full`}>{school.cat}</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  예상 범위: {school.lo}% ~ {school.hi}%
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  공식 합격률: {school.r}%
-                </p>
-              </div>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                예상 범위 {school.lo}%–{school.hi}%
+              </p>
+              <p className="text-xs text-muted-foreground">
+                공식 합격률 {school.r}%
+              </p>
             </div>
           </div>
+        </div>
 
-          <Tabs defaultValue="overview" className="px-6 pb-6">
+        {/* Scrollable body — only tabs scroll now, probability card stays pinned at top edge */}
+        <div className="flex-1 overflow-y-auto">
+          <Tabs defaultValue="overview" className="px-6 pt-5 pb-6">
             <TabsList className="w-full bg-muted/50 rounded-xl h-11 p-1">
               <TabsTrigger value="overview" className="flex-1 rounded-lg text-sm">개요</TabsTrigger>
               <TabsTrigger value="cost" className="flex-1 rounded-lg text-sm">학비</TabsTrigger>
@@ -403,7 +418,7 @@ export function SchoolModal({ school, open, onClose, specs }: { school: School |
                         <p className="text-sm leading-relaxed text-foreground blur-[5px] select-none" aria-hidden>
                           {story.split(/[.!?]/).slice(1).join(".")}
                         </p>
-                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-white/40 to-white rounded-lg">
+                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-card/40 to-card rounded-lg">
                           <button onClick={() => window.location.href = "/pricing"} className="text-xs font-semibold text-primary bg-primary/10 rounded-full px-3 py-1.5 hover:bg-primary/20 transition-colors">
                             프리미엄으로 전체 보기
                           </button>
@@ -586,10 +601,15 @@ export function SchoolModal({ school, open, onClose, specs }: { school: School |
             <TabsContent value="essays" className="space-y-3 mt-4">
               <div className="flex items-center gap-2 mb-1">
                 <FileText className="w-4 h-4 text-primary" />
-                <h4 className="text-sm font-bold">{school.prompts?.length || 0}개의 에세이 프롬프트</h4>
+                <h4 className="text-sm font-bold">{displayPrompts?.length ?? "…"}개의 에세이 프롬프트</h4>
               </div>
-              {school.prompts && school.prompts.length > 0 ? (
-                school.prompts.map((prompt, i) => (
+              {displayPrompts === null ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Loader2 className="w-5 h-5 mx-auto mb-2 animate-spin opacity-60" />
+                  <p className="text-xs">에세이 프롬프트를 불러오는 중...</p>
+                </div>
+              ) : displayPrompts.length > 0 ? (
+                displayPrompts.map((prompt, i) => (
                   <div key={i} className="bg-white dark:bg-card border rounded-xl p-4 space-y-2">
                     <div className="flex items-start gap-2">
                       <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">

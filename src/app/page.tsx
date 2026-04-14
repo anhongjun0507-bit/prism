@@ -10,6 +10,19 @@ import { useAuth } from "@/lib/auth-context";
 
 type AuthView = "main" | "email-login" | "email-signup" | "reset-password";
 
+/** Firebase Auth 에러는 { code: string, message: string } 구조. */
+function authErrorCode(err: unknown): string | undefined {
+  if (err && typeof err === "object" && "code" in err) {
+    const code = (err as { code: unknown }).code;
+    return typeof code === "string" ? code : undefined;
+  }
+  return undefined;
+}
+function errMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error) return err.message;
+  return fallback;
+}
+
 export default function WelcomePage() {
   const router = useRouter();
   const { user, profile, loading, loginWithGoogle, loginWithEmail, signUpWithEmail, resetPassword, loginWithKakao, loginWithApple } = useAuth();
@@ -35,7 +48,7 @@ export default function WelcomePage() {
     setError("");
     try {
       await loginWithGoogle();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError("Google 로그인에 실패했습니다.");
       setAuthLoading(null);
     }
@@ -46,8 +59,8 @@ export default function WelcomePage() {
     setError("");
     try {
       await loginWithKakao();
-    } catch (e: any) {
-      setError(e.message || "카카오 로그인에 실패했습니다.");
+    } catch (e: unknown) {
+      setError(errMessage(e, "카카오 로그인에 실패했습니다."));
       setAuthLoading(null);
     }
   };
@@ -57,8 +70,8 @@ export default function WelcomePage() {
     setError("");
     try {
       await loginWithApple();
-    } catch (e: any) {
-      if (e?.code !== "auth/popup-closed-by-user") {
+    } catch (e: unknown) {
+      if (authErrorCode(e) !== "auth/popup-closed-by-user") {
         setError("Apple 로그인에 실패했습니다.");
       }
       setAuthLoading(null);
@@ -72,8 +85,8 @@ export default function WelcomePage() {
     setError("");
     try {
       await loginWithEmail(email, password);
-    } catch (err: any) {
-      const code = err?.code;
+    } catch (err: unknown) {
+      const code = authErrorCode(err);
       if (code === "auth/user-not-found") setError("등록되지 않은 이메일입니다.");
       else if (code === "auth/wrong-password" || code === "auth/invalid-credential") setError("비밀번호가 올바르지 않습니다.");
       else if (code === "auth/too-many-requests") setError("로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.");
@@ -92,8 +105,8 @@ export default function WelcomePage() {
     setError("");
     try {
       await signUpWithEmail(email, password, name.trim());
-    } catch (err: any) {
-      const code = err?.code;
+    } catch (err: unknown) {
+      const code = authErrorCode(err);
       if (code === "auth/email-already-in-use") setError("이미 사용 중인 이메일입니다.");
       else if (code === "auth/invalid-email") setError("올바른 이메일 형식이 아닙니다.");
       else if (code === "auth/weak-password") setError("비밀번호가 너무 약합니다.");
@@ -110,7 +123,7 @@ export default function WelcomePage() {
     try {
       await resetPassword(email);
       setResetSent(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError("비밀번호 재설정 이메일 발송에 실패했습니다.");
     }
     setAuthLoading(null);
@@ -127,23 +140,30 @@ export default function WelcomePage() {
     <span className="w-5 h-5 border-2 border-current/20 border-t-current rounded-full animate-spin" />
   );
 
-  const inputClass = "h-[52px] rounded-[14px] bg-white dark:bg-card border border-[#E2E8F0] dark:border-border text-foreground placeholder:text-muted-foreground text-[15px] px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors";
+  const inputClass = "h-[52px] rounded-xl bg-card border border-border text-foreground placeholder:text-muted-foreground text-[15px] px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors";
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-b from-[#F8FAFC] to-[#EEF2FF] dark:from-background dark:to-background flex flex-col items-center justify-center px-6 overflow-y-auto">
-      <div className="w-full max-w-[380px] flex flex-col items-center py-12">
+    <div className="fixed inset-0 z-50 bg-gradient-to-b from-muted/40 to-accent/30 dark:from-background dark:to-background flex flex-col items-center justify-center px-6 overflow-y-auto overflow-x-hidden">
+      {/* Floating prismatic orbs — full-page background */}
+      <div className="brand-orb brand-orb-primary -top-24 -left-24 w-72 h-72 opacity-30 dark:opacity-20" aria-hidden="true" />
+      <div className="brand-orb brand-orb-violet top-1/3 -right-32 w-80 h-80 opacity-25 dark:opacity-15" aria-hidden="true" />
+      <div className="brand-orb brand-orb-amber -bottom-20 left-1/4 w-72 h-72 opacity-20 dark:opacity-12" aria-hidden="true" />
+
+      <div className="relative w-full max-w-[380px] flex flex-col items-center py-12">
 
         {/* === Branding Section === */}
         <div className="flex flex-col items-center text-center mb-10">
 
-          {/* Prism Logo */}
+          {/* Prism Logo with halo */}
           <div
-            className="animate-welcome-logo mb-7"
+            className="animate-welcome-logo mb-7 relative"
             style={{ animationDelay: "0.1s" }}
           >
-            <div className="w-[68px] h-[68px] rounded-[22px] prism-logo-spectrum flex items-center justify-center shadow-xl shadow-indigo-500/15 relative">
+            {/* Animated halo behind logo */}
+            <div className="absolute inset-0 rounded-[22px] prism-logo-spectrum blur-2xl opacity-50 scale-150" aria-hidden="true" />
+            <div className="relative w-[68px] h-[68px] rounded-[22px] prism-logo-spectrum flex items-center justify-center shadow-xl shadow-indigo-500/25 ring-1 ring-white/30">
               {/* Inner prism triangle */}
-              <svg className="w-8 h-8 text-white drop-shadow-sm" viewBox="0 0 32 32" fill="none">
+              <svg className="w-8 h-8 text-white drop-shadow-md" viewBox="0 0 32 32" fill="none">
                 <path d="M16 4L28 26H4L16 4Z" fill="white" fillOpacity="0.95"/>
                 <path d="M16 4L28 26H4L16 4Z" stroke="white" strokeWidth="1" strokeOpacity="0.3"/>
               </svg>
@@ -152,7 +172,7 @@ export default function WelcomePage() {
 
           {/* Title */}
           <h1
-            className="animate-welcome-item text-[34px] font-extrabold text-[#0F172A] tracking-tight"
+            className="animate-welcome-item text-[34px] font-extrabold text-foreground tracking-tight"
             style={{ fontFamily: "'Outfit', 'Plus Jakarta Sans', sans-serif", animationDelay: "0.2s" }}
           >
             PRISM
@@ -160,7 +180,7 @@ export default function WelcomePage() {
 
           {/* Emotional value prop */}
           <p
-            className="animate-welcome-item mt-3 text-[17px] text-[#0F172A] font-semibold leading-snug"
+            className="animate-welcome-item mt-3 text-[17px] text-foreground font-semibold leading-snug"
             style={{ animationDelay: "0.3s" }}
           >
             내 스펙으로 갈 수 있는 대학,<br />
@@ -169,7 +189,7 @@ export default function WelcomePage() {
 
           {/* Subtitle */}
           <p
-            className="animate-welcome-item mt-2 text-[13px] text-[#94A3B8] leading-relaxed"
+            className="animate-welcome-item mt-2 text-[13px] text-muted-foreground leading-relaxed"
             style={{ animationDelay: "0.4s" }}
           >
             1,000개 미국 대학 합격 확률 AI 분석
@@ -202,7 +222,7 @@ export default function WelcomePage() {
               <button
                 onClick={handleKakao}
                 disabled={!!authLoading || !process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID}
-                className="w-full h-[54px] rounded-[14px] bg-[#FEE500] text-[#191919] font-bold text-[15px] flex items-center justify-center gap-3 hover:brightness-[0.97] active:scale-[0.98] transition-all disabled:opacity-30 shadow-sm shadow-yellow-500/10"
+                className="w-full h-[54px] rounded-xl bg-[#FEE500] text-[#191919] font-bold text-[15px] flex items-center justify-center gap-3 hover:brightness-[0.97] hover:shadow-lg hover:shadow-yellow-500/25 active:scale-[0.98] transition-all disabled:opacity-30 shadow-md shadow-yellow-500/15"
               >
                 {authLoading === "kakao" ? <Spinner /> : (
                   <svg className="w-[20px] h-[20px]" viewBox="0 0 24 24">
@@ -216,7 +236,7 @@ export default function WelcomePage() {
               <button
                 onClick={handleGoogle}
                 disabled={!!authLoading}
-                className="w-full h-[54px] rounded-[14px] bg-white dark:bg-card text-foreground font-semibold text-[15px] flex items-center justify-center gap-3 border border-[#E2E8F0] dark:border-border hover:bg-[#F8FAFC] dark:hover:bg-muted active:scale-[0.98] transition-all disabled:opacity-40 shadow-sm mt-2.5"
+                className="w-full h-[54px] rounded-xl bg-card text-foreground font-semibold text-[15px] flex items-center justify-center gap-3 border border-border hover:bg-muted/50 hover:border-primary/40 hover:shadow-md active:scale-[0.98] transition-all disabled:opacity-40 shadow-sm mt-2.5"
               >
                 {authLoading === "google" ? <Spinner /> : (
                   <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24">
@@ -231,16 +251,16 @@ export default function WelcomePage() {
 
               {/* Divider */}
               <div className="flex items-center gap-4 py-3">
-                <div className="flex-1 h-px bg-[#E2E8F0]" />
-                <span className="text-[12px] text-[#94A3B8] font-medium">또는</span>
-                <div className="flex-1 h-px bg-[#E2E8F0]" />
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-[12px] text-muted-foreground font-medium">또는</span>
+                <div className="flex-1 h-px bg-border" />
               </div>
 
               {/* Apple */}
               <button
                 onClick={handleApple}
                 disabled={!!authLoading}
-                className="w-full h-[50px] rounded-[14px] bg-[#0F172A] text-white font-semibold text-[15px] flex items-center justify-center gap-3 hover:bg-[#1E293B] active:scale-[0.98] transition-all disabled:opacity-40"
+                className="w-full h-[50px] rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-semibold text-[15px] flex items-center justify-center gap-3 hover:bg-slate-800 dark:hover:bg-white active:scale-[0.98] transition-all disabled:opacity-40"
               >
                 {authLoading === "apple" ? <Spinner /> : (
                   <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="currentColor">
@@ -253,19 +273,19 @@ export default function WelcomePage() {
               {/* Email */}
               <button
                 onClick={() => { setView("email-login"); setError(""); }}
-                className="w-full h-[50px] rounded-[14px] bg-[#F1F5F9] text-[#475569] font-semibold text-[15px] flex items-center justify-center gap-2 hover:bg-[#E2E8F0] active:scale-[0.98] transition-all mt-2.5"
+                className="w-full h-[50px] rounded-xl bg-muted text-muted-foreground font-semibold text-[15px] flex items-center justify-center gap-2 hover:bg-border active:scale-[0.98] transition-all mt-2.5"
               >
                 이메일로 계속하기
               </button>
 
               {error && (
-                <p className="text-[13px] text-[#EF4444] text-center pt-3">{error}</p>
+                <p className="text-[13px] text-destructive text-center pt-3">{error}</p>
               )}
 
-              <p className="text-[#94A3B8] text-[11px] text-center pt-6 leading-relaxed">
+              <p className="text-muted-foreground text-[11px] text-center pt-6 leading-relaxed">
                 계속 진행하면{" "}
-                <Link href="/terms" className="underline underline-offset-2 hover:text-[#64748B]">이용약관</Link> 및{" "}
-                <Link href="/privacy" className="underline underline-offset-2 hover:text-[#64748B]">개인정보 처리방침</Link>에 동의하게 됩니다.
+                <Link href="/terms" className="underline underline-offset-2 hover:text-foreground">이용약관</Link> 및{" "}
+                <Link href="/privacy" className="underline underline-offset-2 hover:text-foreground">개인정보 처리방침</Link>에 동의하게 됩니다.
               </p>
             </div>
           )}
@@ -273,10 +293,10 @@ export default function WelcomePage() {
           {/* Email Login */}
           {view === "email-login" && (
             <form onSubmit={handleEmailLogin} className="animate-view-enter space-y-3">
-              <button type="button" onClick={goBack} className="flex items-center gap-1.5 text-[#94A3B8] text-[13px] hover:text-[#64748B] transition-colors mb-3">
+              <button type="button" onClick={goBack} className="flex items-center gap-1.5 text-muted-foreground text-[13px] hover:text-foreground transition-colors mb-3">
                 <ArrowLeft className="w-4 h-4" /> 뒤로
               </button>
-              <h2 className="text-[22px] font-bold text-[#0F172A] mb-1">이메일 로그인</h2>
+              <h2 className="text-[22px] font-bold text-foreground mb-1">이메일 로그인</h2>
 
               <Input
                 type="email"
@@ -298,29 +318,29 @@ export default function WelcomePage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#64748B] transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
                 </button>
               </div>
 
-              {error && <p className="text-[#EF4444] text-[13px]">{error}</p>}
+              {error && <p className="text-destructive text-[13px]">{error}</p>}
 
               <button
                 type="submit"
                 disabled={!!authLoading}
-                className="w-full h-[52px] rounded-[14px] bg-[#2563EB] text-white font-semibold text-[15px] hover:bg-[#1D4ED8] active:scale-[0.98] transition-all disabled:opacity-40 mt-1"
+                className="w-full h-[52px] rounded-xl bg-blue-600 text-white font-semibold text-[15px] hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-40 mt-1"
               >
                 {authLoading === "email" ? <Spinner /> : "로그인"}
               </button>
 
               <div className="flex justify-between pt-2">
                 <button type="button" onClick={() => { setView("email-signup"); setError(""); }}
-                  className="text-[13px] text-[#94A3B8] hover:text-[#2563EB] transition-colors">
+                  className="text-[13px] text-muted-foreground hover:text-blue-600 transition-colors">
                   회원가입
                 </button>
                 <button type="button" onClick={() => { setView("reset-password"); setError(""); }}
-                  className="text-[13px] text-[#94A3B8] hover:text-[#2563EB] transition-colors">
+                  className="text-[13px] text-muted-foreground hover:text-blue-600 transition-colors">
                   비밀번호 찾기
                 </button>
               </div>
@@ -330,10 +350,10 @@ export default function WelcomePage() {
           {/* Email Signup */}
           {view === "email-signup" && (
             <form onSubmit={handleEmailSignup} className="animate-view-enter space-y-3">
-              <button type="button" onClick={goBack} className="flex items-center gap-1.5 text-[#94A3B8] text-[13px] hover:text-[#64748B] transition-colors mb-3">
+              <button type="button" onClick={goBack} className="flex items-center gap-1.5 text-muted-foreground text-[13px] hover:text-foreground transition-colors mb-3">
                 <ArrowLeft className="w-4 h-4" /> 뒤로
               </button>
-              <h2 className="text-[22px] font-bold text-[#0F172A] mb-1">회원가입</h2>
+              <h2 className="text-[22px] font-bold text-foreground mb-1">회원가입</h2>
 
               <Input type="text" placeholder="이름" value={name}
                 onChange={(e) => setName(e.target.value)} className={inputClass} autoComplete="name" />
@@ -349,30 +369,30 @@ export default function WelcomePage() {
                   autoComplete="new-password"
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#64748B] transition-colors">
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                   {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
                 </button>
               </div>
 
               <label className="flex items-start gap-3 cursor-pointer pt-2">
                 <input type="checkbox" checked={ageConfirmed} onChange={(e) => setAgeConfirmed(e.target.checked)}
-                  className="mt-0.5 w-[18px] h-[18px] rounded accent-[#2563EB]" />
-                <span className="text-[13px] text-[#94A3B8] leading-relaxed">
+                  className="mt-0.5 w-[18px] h-[18px] rounded accent-blue-600" />
+                <span className="text-[13px] text-muted-foreground leading-relaxed">
                   만 14세 이상이며,{" "}
-                  <Link href="/terms" className="underline underline-offset-2 text-[#64748B]">이용약관</Link>과{" "}
-                  <Link href="/privacy" className="underline underline-offset-2 text-[#64748B]">개인정보 처리방침</Link>에 동의합니다.
+                  <Link href="/terms" className="underline underline-offset-2 text-muted-foreground">이용약관</Link>과{" "}
+                  <Link href="/privacy" className="underline underline-offset-2 text-muted-foreground">개인정보 처리방침</Link>에 동의합니다.
                 </span>
               </label>
 
-              {error && <p className="text-[#EF4444] text-[13px]">{error}</p>}
+              {error && <p className="text-destructive text-[13px]">{error}</p>}
 
               <button type="submit" disabled={!!authLoading || !ageConfirmed}
-                className="w-full h-[52px] rounded-[14px] bg-[#2563EB] text-white font-semibold text-[15px] flex items-center justify-center gap-1.5 hover:bg-[#1D4ED8] active:scale-[0.98] transition-all disabled:opacity-30 mt-1">
+                className="w-full h-[52px] rounded-xl bg-blue-600 text-white font-semibold text-[15px] flex items-center justify-center gap-1.5 hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-30 mt-1">
                 {authLoading === "email" ? <Spinner /> : (<>가입하기 <ArrowRight className="w-4 h-4" /></>)}
               </button>
 
               <button type="button" onClick={() => { setView("email-login"); setError(""); }}
-                className="text-[13px] text-[#94A3B8] hover:text-[#2563EB] transition-colors w-full text-center pt-1">
+                className="text-[13px] text-muted-foreground hover:text-blue-600 transition-colors w-full text-center pt-1">
                 이미 계정이 있으신가요? 로그인
               </button>
             </form>
@@ -382,24 +402,24 @@ export default function WelcomePage() {
           {view === "reset-password" && (
             <form onSubmit={handleResetPassword} className="animate-view-enter space-y-3">
               <button type="button" onClick={() => { setView("email-login"); setError(""); setResetSent(false); }}
-                className="flex items-center gap-1.5 text-[#94A3B8] text-[13px] hover:text-[#64748B] transition-colors mb-3">
+                className="flex items-center gap-1.5 text-muted-foreground text-[13px] hover:text-foreground transition-colors mb-3">
                 <ArrowLeft className="w-4 h-4" /> 뒤로
               </button>
-              <h2 className="text-[22px] font-bold text-[#0F172A]">비밀번호 찾기</h2>
-              <p className="text-[13px] text-[#94A3B8] pb-1">가입한 이메일을 입력하면 재설정 링크를 보내드립니다.</p>
+              <h2 className="text-[22px] font-bold text-foreground">비밀번호 찾기</h2>
+              <p className="text-[13px] text-muted-foreground pb-1">가입한 이메일을 입력하면 재설정 링크를 보내드립니다.</p>
 
               {resetSent ? (
-                <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-[14px] p-5 text-center">
-                  <p className="text-[15px] text-[#2563EB] font-semibold">이메일을 보냈습니다</p>
-                  <p className="text-[13px] text-[#64748B] mt-1.5">받은편지함을 확인해주세요.</p>
+                <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-xl p-5 text-center">
+                  <p className="text-[15px] text-blue-600 dark:text-blue-400 font-semibold">이메일을 보냈습니다</p>
+                  <p className="text-[13px] text-muted-foreground mt-1.5">받은편지함을 확인해주세요.</p>
                 </div>
               ) : (
                 <>
                   <Input type="email" placeholder="이메일" value={email}
                     onChange={(e) => setEmail(e.target.value)} className={inputClass} autoComplete="email" />
-                  {error && <p className="text-[#EF4444] text-[13px]">{error}</p>}
+                  {error && <p className="text-destructive text-[13px]">{error}</p>}
                   <button type="submit" disabled={!!authLoading}
-                    className="w-full h-[52px] rounded-[14px] bg-[#2563EB] text-white font-semibold text-[15px] hover:bg-[#1D4ED8] active:scale-[0.98] transition-all disabled:opacity-40">
+                    className="w-full h-[52px] rounded-xl bg-blue-600 text-white font-semibold text-[15px] hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-40">
                     {authLoading === "email" ? <Spinner /> : "재설정 링크 보내기"}
                   </button>
                 </>

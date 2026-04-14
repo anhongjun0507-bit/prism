@@ -33,6 +33,8 @@ import { SchoolModal } from "@/components/analysis/SchoolModal";
 import { SchoolRow } from "@/components/analysis/SchoolRow";
 import { FormField, TierSelector, ToggleRow, PillButton } from "@/components/analysis/form-helpers";
 import { List } from "react-window";
+import { readJSON, writeJSON, readString, writeString } from "@/lib/storage";
+import { PrismLoader } from "@/components/PrismLoader";
 import Link from "next/link";
 
 // 분리된 모듈:
@@ -61,16 +63,14 @@ export default function AnalysisPage() {
   const [sortBy, setSortBy] = useState<SortMode>("probDesc");
   // Hydrate from localStorage on mount
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(SORT_KEY);
-      if (saved === "probDesc" || saved === "probAsc" || saved === "rank") {
-        setSortBy(saved);
-      }
-    } catch {}
+    const saved = readString(SORT_KEY);
+    if (saved === "probDesc" || saved === "probAsc" || saved === "rank") {
+      setSortBy(saved);
+    }
   }, []);
   // Persist on change
   useEffect(() => {
-    try { localStorage.setItem(SORT_KEY, sortBy); } catch {}
+    writeString(SORT_KEY, sortBy);
   }, [sortBy]);
   const [specsSaveStatus, setSpecsSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
 
@@ -91,32 +91,18 @@ export default function AnalysisPage() {
 
   const [specs, setSpecs] = useState<Specs>(() => {
     // Try loading saved specs from localStorage (prefer new key, fall back to legacy)
-    try {
-      if (typeof window !== "undefined") {
-        const saved = localStorage.getItem("prism_specs") || localStorage.getItem("prism_saved_specs");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          return { ...defaultSpecs, ...parsed };
-        }
-      }
-    } catch {}
+    const saved = readJSON<Partial<Specs>>("prism_specs") ?? readJSON<Partial<Specs>>("prism_saved_specs");
+    if (saved) return { ...defaultSpecs, ...saved };
     return defaultSpecs;
   });
 
   // On mount: if saved specs have meaningful data, skip form and jump to result
   useEffect(() => {
-    try {
-      const saved = typeof window !== "undefined"
-        ? (localStorage.getItem("prism_specs") || localStorage.getItem("prism_saved_specs"))
-        : null;
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && (parsed.gpaUW || parsed.gpaW || parsed.sat || parsed.act)) {
-          setStep("result");
-        }
-      }
-    } catch {}
-     
+    const parsed = readJSON<Partial<Specs>>("prism_specs") ?? readJSON<Partial<Specs>>("prism_saved_specs");
+    if (parsed && (parsed.gpaUW || parsed.gpaW || parsed.sat || parsed.act)) {
+      setStep("result");
+    }
+
   }, []);
 
   // When Firestore profile arrives, hydrate specs from it — but ONLY ONCE.
@@ -142,7 +128,7 @@ export default function AnalysisPage() {
     if (specsSaveTimer.current) clearTimeout(specsSaveTimer.current);
     setSpecsSaveStatus("saving");
     // Write localStorage immediately for snappy reload
-    try { localStorage.setItem("prism_specs", JSON.stringify(specs)); } catch {}
+    writeJSON("prism_specs", specs);
     specsSaveTimer.current = setTimeout(() => {
       // Persist to Firestore (cross-device sync)
       if (profile && (specs.gpaUW || specs.sat)) {
@@ -178,7 +164,7 @@ export default function AnalysisPage() {
 
   const startAnalysis = useCallback(() => {
     // Flush specs to localStorage + Firestore immediately on submit (don't wait for debounce)
-    try { localStorage.setItem("prism_specs", JSON.stringify(specs)); } catch {}
+    writeJSON("prism_specs", specs);
     if (profile && (specs.gpaUW || specs.sat)) {
       saveProfile({ specs, specLastUpdated: new Date().toISOString() }).catch(() => {});
     }
@@ -277,10 +263,14 @@ export default function AnalysisPage() {
   /* ── ANALYZING VIEW ── */
   if (step === "analyzing") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <div className="max-w-xs w-full text-center space-y-6 animate-scale-in">
-          <div className="w-20 h-20 rounded-2xl dark-hero-gradient flex items-center justify-center mx-auto shadow-xl">
-            <BarChart3 className="w-10 h-10 text-white animate-pulse" />
+      <div className="min-h-screen bg-background flex items-center justify-center p-6 relative overflow-hidden">
+        {/* Floating prismatic orbs background */}
+        <div className="brand-orb brand-orb-primary -top-10 -left-10 w-64 h-64 opacity-30" aria-hidden="true" />
+        <div className="brand-orb brand-orb-violet -bottom-16 -right-12 w-72 h-72 opacity-25" aria-hidden="true" />
+
+        <div className="relative max-w-xs w-full text-center space-y-6 animate-scale-in">
+          <div className="flex justify-center">
+            <PrismLoader size={88} />
           </div>
           <div className="space-y-2">
             <h2 className="font-headline text-xl font-bold">{analyzeMsg}</h2>
@@ -288,7 +278,7 @@ export default function AnalysisPage() {
           </div>
           <div className="space-y-2">
             <Progress value={analyzeProgress} className="h-2" />
-            <p className="text-xs text-muted-foreground">{analyzeProgress}%</p>
+            <p className="text-xs text-muted-foreground tabular-nums">{analyzeProgress}%</p>
           </div>
         </div>
       </div>
@@ -551,7 +541,7 @@ export default function AnalysisPage() {
               </Card>
             ))}
           </div>
-          <div className="absolute inset-0 flex items-center justify-center bg-white/30">
+          <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-[2px]">
             <div className="text-center">
               <Sparkles className="w-8 h-8 text-primary mx-auto mb-2" />
               <p className="text-sm font-bold">스펙을 입력하면</p>
@@ -658,7 +648,7 @@ export default function AnalysisPage() {
             {/* Expandable detailed EC */}
             <button
               onClick={() => setShowDetailedEC(!showDetailedEC)}
-              className="w-full flex items-center justify-between bg-white rounded-2xl shadow-sm p-4 text-sm font-semibold"
+              className="w-full flex items-center justify-between bg-white dark:bg-card rounded-2xl shadow-sm p-4 text-sm font-semibold"
             >
               <span className="flex items-center gap-2">
                 <Briefcase className="w-4 h-4 text-primary" />
@@ -772,7 +762,7 @@ export default function AnalysisPage() {
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">지망 전공</Label>
                   <select value={specs.major} onChange={(e) => updateSpec("major", e.target.value)}
-                    className="w-full h-11 rounded-xl border px-3 text-sm bg-white">
+                    className="w-full h-11 rounded-xl border px-3 text-sm bg-white dark:bg-card">
                     {MAJOR_LIST.map((m) => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>

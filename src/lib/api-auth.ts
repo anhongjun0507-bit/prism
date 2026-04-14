@@ -140,6 +140,12 @@ function currentPeriodKey(period: "daily" | "monthly" | "lifetime"): string {
  * 사용자의 현재 플랜과 쿼터 사용량을 확인하여 한도 초과면 429 반환.
  * 통과 시 카운터를 +1 증가시키고 undefined 반환.
  *
+ * 실패 정책 (fail-closed):
+ *   - 한도 초과: 429 QUOTA_EXCEEDED
+ *   - 트랜잭션 실패 (Firestore 오류/네트워크 등): 1회 재시도 후에도 실패면 503 QUOTA_CHECK_FAILED
+ *   - 이유: 이 쿼터는 Claude API 같은 유료 리소스를 보호함. 검사 실패 시 통과시키면 악의적
+ *     재시도로 무제한 과금 가능. 사용자는 잠시 후 재시도하면 복구됨.
+ *
  * 마스터 계정은 모든 쿼터 우회.
  */
 export async function enforceQuota(
@@ -153,8 +159,8 @@ export async function enforceQuota(
   const db = getAdminDb();
   const userRef = db.collection("users").doc(session.uid);
 
-  try {
-    const result = await db.runTransaction(async (tx) => {
+  const runOnce = () =>
+    db.runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
       const data = snap.exists ? snap.data() : {};
       const plan = ((data?.plan as PlanType) || "free") as PlanType;
@@ -167,7 +173,7 @@ export async function enforceQuota(
       const used = sameWindow ? (cur.count || 0) : 0;
 
       if (limit !== Infinity && used >= limit) {
-        return { ok: false, plan, limit, used };
+        return { ok: false as const, plan, limit, used };
       }
 
       const newCount = used + 1;
@@ -181,31 +187,52 @@ export async function enforceQuota(
         },
         { merge: true }
       );
-      return { ok: true, plan, limit, used: newCount };
+      return { ok: true as const, plan, limit, used: newCount };
     });
 
-    if (!result.ok) {
-      const periodLabel =
-        spec.period === "daily" ? "오늘" :
-        spec.period === "monthly" ? "이번 달" : "총";
+  let result: Awaited<ReturnType<typeof runOnce>>;
+  try {
+    result = await runOnce();
+  } catch (err1) {
+    // Firestore commit contention은 transient — 한 번만 더 시도.
+    console.warn(`[quota] ${key} tx retry after error:`, err1);
+    try {
+      result = await runOnce();
+    } catch (err2) {
+      // 구조화된 에러 로그 (향후 log aggregator에서 code 기반 알람 가능).
+      console.error(JSON.stringify({
+        level: "error",
+        event: "quota_check_failed",
+        key,
+        uid: session.uid,
+        message: err2 instanceof Error ? err2.message : String(err2),
+      }));
       return NextResponse.json(
         {
-          error: `${periodLabel} 사용 한도를 초과했어요. (${result.used}/${result.limit})`,
-          code: "QUOTA_EXCEEDED",
-          plan: result.plan,
-          limit: result.limit,
-          used: result.used,
+          error: "일시적인 문제로 요청을 처리할 수 없어요. 잠시 후 다시 시도해주세요.",
+          code: "QUOTA_CHECK_FAILED",
         },
-        { status: 429 }
+        { status: 503 }
       );
     }
-    return undefined;
-  } catch (err) {
-    console.error(`[quota] ${key} transaction failed:`, err);
-    // 쿼터 검사 실패는 사용자 차단보다는 통과 (서비스 가용성 우선).
-    // 단, 로그를 남겨 모니터링 가능하게 함.
-    return undefined;
   }
+
+  if (!result.ok) {
+    const periodLabel =
+      spec.period === "daily" ? "오늘" :
+      spec.period === "monthly" ? "이번 달" : "총";
+    return NextResponse.json(
+      {
+        error: `${periodLabel} 사용 한도를 초과했어요. (${result.used}/${result.limit})`,
+        code: "QUOTA_EXCEEDED",
+        plan: result.plan,
+        limit: result.limit,
+        used: result.used,
+      },
+      { status: 429 }
+    );
+  }
+  return undefined;
 }
 
 /** 트랜잭션 외부에서 사용 — counter 증가 없이 현재 사용량만 조회 */

@@ -91,8 +91,8 @@ export function PillButton({
       onClick={onClick}
       className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
         active
-          ? "bg-primary text-white shadow-sm"
-          : "bg-white border text-foreground hover:bg-accent/50"
+          ? "bg-primary text-white shadow-glow-sm scale-105"
+          : "bg-card border text-foreground hover:bg-accent/50 hover:border-primary/30"
       }`}
     >
       {children}

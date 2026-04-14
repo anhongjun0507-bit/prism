@@ -234,8 +234,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const loginWithKakao = async () => {
-    // Kakao login via REST API → Firebase custom token
-    // For now, open Kakao OAuth in popup, get code, exchange for Firebase token
+    // Kakao login via REST API → Firebase custom token.
+    // 팝업으로 Kakao OAuth 열고, callback 라우트가 postMessage로 customToken 전달 → signInWithCustomToken.
     const KAKAO_CLIENT_ID = process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID;
     if (!KAKAO_CLIENT_ID) {
       throw new Error("카카오 로그인이 아직 설정되지 않았습니다.");
@@ -244,39 +244,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const redirectUri = `${window.location.origin}/api/auth/kakao/callback`;
     const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;
 
-    // Open popup for Kakao login
     const popup = window.open(kakaoAuthUrl, "kakao-login", "width=480,height=700");
+    if (!popup) {
+      throw new Error("팝업이 차단되었어요. 팝업 차단을 해제하고 다시 시도해주세요.");
+    }
 
     // 같은 origin의 콜백 페이지만 신뢰 — 다른 origin의 위장 메시지 차단
     const expectedOrigin = window.location.origin;
 
-    // Listen for callback message from popup
     return new Promise<void>((resolve, reject) => {
+      let settled = false;
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      let popupWatchId: ReturnType<typeof setInterval> | null = null;
+
+      // Single cleanup path — 성공/실패/타임아웃/취소 모든 경로에서 호출.
+      // settled 가드로 멱등성 보장 → 여러 번 호출돼도 안전.
+      const cleanup = () => {
+        if (settled) return;
+        settled = true;
+        window.removeEventListener("message", handleMessage);
+        if (timeoutId !== null) { clearTimeout(timeoutId); timeoutId = null; }
+        if (popupWatchId !== null) { clearInterval(popupWatchId); popupWatchId = null; }
+        if (popup && !popup.closed) {
+          try { popup.close(); } catch { /* cross-origin 접근 등 */ }
+        }
+      };
+
       const handleMessage = async (event: MessageEvent) => {
-        // Origin 검증 — 우리 callback 라우트가 보낸 메시지만 처리
+        if (settled) return;
         if (event.origin !== expectedOrigin) return;
 
         if (event.data?.type === "kakao-login-success" && event.data.customToken) {
-          window.removeEventListener("message", handleMessage);
-          popup?.close();
+          const token = event.data.customToken;
+          cleanup();
           try {
-            await signInWithCustomToken(auth, event.data.customToken);
+            await signInWithCustomToken(auth, token);
             resolve();
           } catch (e) {
             reject(e);
           }
         } else if (event.data?.type === "kakao-login-error") {
-          window.removeEventListener("message", handleMessage);
-          popup?.close();
+          cleanup();
           reject(new Error(event.data.error || "카카오 로그인 실패"));
         }
       };
       window.addEventListener("message", handleMessage);
 
-      // Timeout after 2 minutes
-      setTimeout(() => {
-        window.removeEventListener("message", handleMessage);
-        popup?.close();
+      // 사용자가 팝업을 수동으로 닫았을 때 감지 — 500ms 폴링.
+      // 이 가드 없으면 사용자 취소 시 2분 타임아웃까지 대기.
+      popupWatchId = setInterval(() => {
+        if (popup.closed && !settled) {
+          cleanup();
+          reject(new Error("카카오 로그인이 취소되었어요."));
+        }
+      }, 500);
+
+      // 2분 후에도 응답이 없으면 타임아웃.
+      timeoutId = setTimeout(() => {
+        if (settled) return;
+        cleanup();
         reject(new Error("카카오 로그인 시간 초과"));
       }, 120000);
     });

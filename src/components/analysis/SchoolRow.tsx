@@ -26,25 +26,43 @@ export const SchoolRow = ({
   const school = filtered[index];
   if (!school) return null;
   const catStyle = CAT_STYLE[school.cat || "Reach"];
+  const fav = isFavorite(school.n);
   return (
     <div style={style} className="px-6 pb-2.5">
       <button className="w-full text-left" onClick={() => onSelect(school)} aria-label={`${school.n} 상세 보기`}>
-        <Card className="bg-white dark:bg-card border-none shadow-sm hover:shadow-md transition-all p-0 overflow-hidden group relative">
-          <div className="flex items-center gap-3 p-4">
+        <Card
+          variant="elevated"
+          interactive
+          className="p-0 overflow-hidden group relative"
+        >
+          {/* Left edge accent — school 색 띠로 brand identity */}
+          <div
+            className="absolute left-0 top-0 bottom-0 w-1 transition-all group-hover:w-1.5"
+            style={{ backgroundColor: school.c }}
+            aria-hidden="true"
+          />
+          <div className="flex items-center gap-3 p-4 pl-5">
             <SchoolLogo domain={school.d} color={school.c} name={school.n} rank={school.rk} size="md" />
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1.5">
                 <p className="font-bold text-sm truncate">{school.n}</p>
-                <Badge className={`${catStyle.bg} border-none text-xs shrink-0 px-1.5`}>{school.cat}</Badge>
+                <Badge className={`${catStyle.bg} border-none text-xs shrink-0 px-1.5 font-bold`}>{school.cat}</Badge>
               </div>
+              {/* Probability bar with depth — track shows muted, fill is school color gradient */}
               <div className="flex items-center gap-2">
-                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="relative flex-1 h-2.5 bg-muted rounded-full overflow-hidden ring-1 ring-inset ring-black/5 dark:ring-white/5">
                   <div
-                    className={`h-full rounded-full bg-gradient-to-r ${probGradient(school.prob || 0)} transition-all`}
+                    className={`h-full rounded-full bg-gradient-to-r ${probGradient(school.prob || 0)} transition-all duration-500`}
                     style={{ width: `${school.prob || 0}%` }}
                   />
+                  {/* subtle highlight for glossy feel */}
+                  <div
+                    className="absolute top-0 left-0 h-1/2 rounded-t-full bg-white/20 transition-all duration-500"
+                    style={{ width: `${school.prob || 0}%` }}
+                    aria-hidden="true"
+                  />
                 </div>
-                <span className="text-xs font-bold tabular-nums w-8 text-right" style={{ color: school.c }}>
+                <span className="text-xs font-bold tabular-nums w-9 text-right" style={{ color: school.c }}>
                   {school.prob}%
                 </span>
               </div>
@@ -56,12 +74,13 @@ export const SchoolRow = ({
             </div>
             <button
               onClick={(e) => { e.stopPropagation(); onToggleFavorite(school.n); }}
-              className="shrink-0 p-1"
-              aria-label="즐겨찾기"
+              className="shrink-0 p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+              aria-label={fav ? `${school.n} 즐겨찾기 해제` : `${school.n} 즐겨찾기 추가`}
+              aria-pressed={fav}
             >
-              <Heart className={`w-4 h-4 ${isFavorite(school.n) ? "fill-red-500 text-red-500" : "text-muted-foreground/30"}`} />
+              <Heart className={`w-4 h-4 transition-all ${fav ? "fill-red-500 text-red-500 scale-110" : "text-muted-foreground/40"}`} />
             </button>
-            <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-primary transition-colors shrink-0" />
+            <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
           </div>
         </Card>
       </button>

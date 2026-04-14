@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
 import { ArrowLeft, BarChart3, AlertCircle, CheckCircle2, Lightbulb, Download, Sparkles, Loader2, Eye, Zap } from "lucide-react";
+import { PrismLoader } from "@/components/PrismLoader";
 
 interface AnalysisItem {
   category: string;
@@ -97,7 +98,7 @@ export default function SpecAnalysisPage() {
             맞춤형 강점/약점/다음 단계를 제시합니다
           </p>
           {hasMinSpecs ? (
-            <Button onClick={runAnalysis} className="rounded-xl px-6 h-12 gap-2">
+            <Button onClick={runAnalysis} size="xl" className="rounded-xl gap-2">
               <Sparkles className="w-4 h-4" /> AI 분석 시작
             </Button>
           ) : (
@@ -112,8 +113,10 @@ export default function SpecAnalysisPage() {
       )}
 
       {loading && (
-        <Card className="p-12 text-center bg-white dark:bg-card border-none shadow-sm">
-          <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
+        <Card variant="elevated" className="p-12 text-center">
+          <div className="flex justify-center mb-4">
+            <PrismLoader size={56} />
+          </div>
           <p className="font-bold mb-1">AI가 분석 중입니다</p>
           <p className="text-xs text-muted-foreground">10-15초 정도 소요됩니다</p>
         </Card>

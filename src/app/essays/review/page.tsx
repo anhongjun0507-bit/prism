@@ -12,50 +12,31 @@ import { Input } from "@/components/ui/input";
 import { BottomNav } from "@/components/BottomNav";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import { db } from "@/lib/firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
+import { readJSON, writeJSON, removeKey } from "@/lib/storage";
 import {
   ArrowLeft, Loader2, CheckCircle2, AlertCircle, Lightbulb, Sparkles,
-  Target, MessageCircle,
+  Target, MessageCircle, RotateCcw, X,
 } from "lucide-react";
+import type { Essay, EssayReview } from "@/types/essay";
+import { slimEssaysForCache } from "@/types/essay";
 
-interface ReviewResult {
-  score: number;
-  summary: string;
-  firstImpression: string;
-  tone: string;
-  strengths: string[];
-  weaknesses: string[];
-  suggestions: string[];
-  keyChange: string;
-  admissionNote: string;
-  revisedOpening: string;
-}
-
-interface EssayReview extends ReviewResult {
-  id: string;
-  createdAt: string;
-}
-
-interface Essay {
-  id: string;
-  university: string;
-  prompt: string;
-  content: string;
-  lastSaved: string;
-  wordLimit?: number;
-  versions?: any[];
-  reviews?: EssayReview[];
-}
+/**
+ * /api/essay-review 응답 스키마 — id/createdAt 없이 생성된 raw 분석 결과.
+ * 저장 시점에 id/createdAt을 붙여 EssayReview로 승격.
+ */
+type ReviewResult = Omit<EssayReview, "id" | "createdAt">;
 
 const ESSAYS_KEY = "prism_essays";
+const DRAFT_KEY = "prism_review_draft";
 
 function loadEssays(): Essay[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const saved = localStorage.getItem(ESSAYS_KEY);
-    return saved ? JSON.parse(saved) : [];
-  } catch { return []; }
+  return readJSON<Essay[]>(ESSAYS_KEY) ?? [];
+}
+
+function saveEssaysCache(list: Essay[]) {
+  writeJSON(ESSAYS_KEY, slimEssaysForCache(list));
 }
 
 function ScoreCircle({ score }: { score: number }) {
@@ -112,16 +93,12 @@ export default function EssayReviewPage() {
   const canUseReview = canReview || reviewUsed < 1;
 
   const [essays, setEssays] = useState<Essay[]>(() => loadEssays());
-  // The essay this review is being attached to. If essayId is in URL, fixed to that essay.
-  // Otherwise user picks from a dropdown (or skips → review-only mode without persistence).
-  const [selectedEssayId, setSelectedEssayId] = useState<string | null>(essayId);
-
-  const selectedEssay = useMemo(
-    () => essays.find(e => e.id === selectedEssayId) ?? null,
-    [essays, selectedEssayId]
+  const linkedEssay = useMemo(
+    () => (essayId ? essays.find(e => e.id === essayId) ?? null : null),
+    [essays, essayId]
   );
 
-  // Form state — prefilled from the selected essay
+  // Form state
   const [essay, setEssay] = useState("");
   const [prompt, setPrompt] = useState("");
   const [university, setUniversity] = useState("");
@@ -129,19 +106,96 @@ export default function EssayReviewPage() {
   const [result, setResult] = useState<ReviewResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Prefill when user picks a different essay (id 변경 시에만).
-  // selectedEssay의 content/prompt 등을 deps에 넣으면 사용자가 review 입력 중인 textarea를
-  // 외부 essay 변경(다른 탭에서 동기화 등)이 덮어쓰게 됨 → id 기준만 트리거.
+  // New-essay mode: whether to persist the typed essay as a new Essay
+  const [saveNewEssay, setSaveNewEssay] = useState(true);
+  const [savedAsNew, setSavedAsNew] = useState<{ id: string; university: string } | null>(null);
+
+  // Draft state (autosave + restore banner)
+  const [draftPrompt, setDraftPrompt] = useState<{ school: string; prompt: string; content: string; savedAt: number } | null>(null);
+  const [draftDirty, setDraftDirty] = useState(false);
+
+  // Prefill from linked essay (only when essayId is in URL).
+  // Triggered only on id change — not on content/prompt/university — so live edits aren't clobbered.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (selectedEssay) {
-      setEssay(selectedEssay.content);
-      setPrompt(selectedEssay.prompt);
-      setUniversity(selectedEssay.university);
-      setResult(null);
-      setError(null);
+    if (!linkedEssay) return;
+    setEssay(linkedEssay.content);
+    setPrompt(linkedEssay.prompt);
+    setUniversity(linkedEssay.university);
+    setResult(null);
+    setError(null);
+  }, [linkedEssay?.id]);
+
+  // If essayId is present but not found in localStorage cache, try Firestore once.
+  useEffect(() => {
+    if (!essayId || !user) return;
+    if (essays.some(e => e.id === essayId)) return; // already have it
+    let cancelled = false;
+    getDoc(doc(db, "users", user.uid, "essays", essayId))
+      .then(snap => {
+        if (cancelled || !snap.exists()) return;
+        const fetched = { id: snap.id, ...(snap.data() as Omit<Essay, "id">) };
+        setEssays(prev => {
+          if (prev.some(e => e.id === fetched.id)) return prev;
+          const next = [fetched, ...prev];
+          saveEssaysCache(next);
+          return next;
+        });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [essayId, user, essays]);
+
+  // Load draft — only in new-essay mode, on initial mount.
+  useEffect(() => {
+    if (essayId) return;
+    const d = readJSON<{ school: string; prompt: string; content: string; savedAt: number }>(DRAFT_KEY);
+    if (d && (d.school || d.prompt || d.content)) {
+      setDraftPrompt(d);
     }
-  }, [selectedEssay?.id]);
+    // Intentionally run once per essayId presence change only.
+
+  }, [essayId]);
+
+  // Autosave draft (500ms debounce) — only in new-essay mode, before review completion.
+  useEffect(() => {
+    if (essayId) return;
+    if (result) return;
+    if (!university && !prompt && !essay) return;
+    setDraftDirty(true);
+    const timer = setTimeout(() => {
+      writeJSON(DRAFT_KEY, {
+        school: university, prompt, content: essay, savedAt: Date.now(),
+      });
+      setDraftDirty(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [university, prompt, essay, essayId, result]);
+
+  // Warn before unload when work is unsaved.
+  // Fires during loading (API in-flight) or when content is dirty (debounce hasn't fired).
+  useEffect(() => {
+    const shouldWarn = loading || (draftDirty && !result && (university.trim() || prompt.trim() || essay.trim()));
+    if (!shouldWarn) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [loading, draftDirty, result, university, prompt, essay]);
+
+  const handleLoadDraft = () => {
+    if (!draftPrompt) return;
+    setUniversity(draftPrompt.school || "");
+    setPrompt(draftPrompt.prompt || "");
+    setEssay(draftPrompt.content || "");
+    setDraftPrompt(null);
+  };
+  const handleDiscardDraft = () => {
+    removeKey(DRAFT_KEY);
+    setDraftPrompt(null);
+  };
 
   const handleReview = async () => {
     if (!essay.trim()) return;
@@ -165,36 +219,60 @@ export default function EssayReviewPage() {
 
       setResult(data.review);
 
-      // Attach to the selected essay's reviews array — per-essay Firestore subcollection write
-      if (selectedEssayId) {
-        const newReview: EssayReview = {
-          ...data.review,
-          id: `r-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          createdAt: new Date().toISOString(),
-        };
+      const newReview: EssayReview = {
+        ...data.review,
+        id: `r-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Branch 1 — linked to existing essay: append review to its reviews array.
+      if (essayId) {
         setEssays(prev => {
-          const target = prev.find(e => e.id === selectedEssayId);
+          const target = prev.find(e => e.id === essayId);
           if (!target) return prev;
-          const updatedEssay = {
+          const updated: Essay = {
             ...target,
             reviews: [...(target.reviews ?? []), newReview],
             updatedAt: new Date().toISOString(),
           };
-          const updated = prev.map(e => e.id === selectedEssayId ? updatedEssay : e);
-          try { localStorage.setItem(ESSAYS_KEY, JSON.stringify(updated)); } catch {}
-          // Per-essay Firestore write — race-free
+          const next = prev.map(e => e.id === essayId ? updated : e);
+          saveEssaysCache(next);
           if (user) {
-            setDoc(
-              doc(db, "users", user.uid, "essays", selectedEssayId),
-              updatedEssay,
-              { merge: true }
-            ).catch((e) => console.error("[review] essay write failed:", e));
+            setDoc(doc(db, "users", user.uid, "essays", essayId), updated, { merge: true })
+              .catch((e) => console.error("[review] essay write failed:", e));
           }
-          return updated;
+          return next;
         });
       }
+      // Branch 2 — new essay mode with auto-save: create Essay + attach review in one go.
+      else if (saveNewEssay) {
+        const newEssayId = Date.now().toString();
+        const limitMatch = prompt.match(/(\d+)자/);
+        const newEssay: Essay = {
+          id: newEssayId,
+          university: university.trim() || "(대학 미지정)",
+          prompt: prompt.trim(),
+          content: essay,
+          lastSaved: new Date().toISOString().split("T")[0],
+          updatedAt: new Date().toISOString(),
+          wordLimit: limitMatch ? parseInt(limitMatch[1]) : undefined,
+          reviews: [newReview],
+        };
+        const next = [newEssay, ...loadEssays()];
+        saveEssaysCache(next);
+        setEssays(next);
+        setSavedAsNew({ id: newEssayId, university: newEssay.university });
+        if (user) {
+          setDoc(doc(db, "users", user.uid, "essays", newEssayId), newEssay, { merge: true })
+            .catch((e) => console.error("[review] essay create failed:", e));
+        }
+      }
+      // Branch 3 — new essay mode with saveNewEssay=false: review result is shown but not persisted.
 
-      // Track free trial usage
+      // Clear draft once a review completes, regardless of persistence branch.
+      removeKey(DRAFT_KEY);
+      setDraftDirty(false);
+
       if (!canReview) {
         await saveProfile({ essayReviewUsed: (profile?.essayReviewUsed || 0) + 1 });
       }
@@ -208,6 +286,9 @@ export default function EssayReviewPage() {
       setLoading(false);
     }
   };
+
+  const hasEssayPrefill = essayId && linkedEssay;
+  const isLinkedLoading = essayId && !linkedEssay;
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -223,36 +304,55 @@ export default function EssayReviewPage() {
         </Button>
         <h1 className="font-headline text-2xl font-bold">AI 에세이 첨삭</h1>
         <p className="text-sm text-muted-foreground">
-          AI가 에세이를 분석하고 구체적인 피드백을 제공합니다.
+          {hasEssayPrefill
+            ? <>선택한 에세이의 내용이 자동으로 채워져 있어요.</>
+            : <>작성한 에세이를 바로 첨삭받고, 원하면 '내 에세이'에도 저장해드려요.</>
+          }
         </p>
       </header>
 
       <div className="px-6 space-y-4">
-        {/* Essay picker — shown when no essayId is provided */}
-        {!essayId && (
-          <Card className="p-4 bg-primary/5 border border-primary/20 space-y-2">
-            <label className="text-xs font-semibold text-primary">첨삭 결과를 저장할 에세이</label>
-            {essays.length === 0 ? (
-              <p className="text-xs text-muted-foreground">저장된 에세이가 없어요. 먼저 에세이를 작성해주세요.</p>
-            ) : (
-              <select
-                value={selectedEssayId ?? ""}
-                onChange={(e) => setSelectedEssayId(e.target.value || null)}
-                className="w-full h-10 rounded-xl bg-white dark:bg-card px-3 text-sm border border-input"
-              >
-                <option value="">— 에세이 선택 (선택하지 않으면 결과가 저장되지 않아요) —</option>
-                {essays.map(e => (
-                  <option key={e.id} value={e.id}>{e.university} · {e.prompt.slice(0, 40)}{e.prompt.length > 40 ? "…" : ""}</option>
-                ))}
-              </select>
-            )}
+        {/* Draft restore banner — only in new-essay mode */}
+        {!essayId && draftPrompt && (
+          <Card className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 flex items-start gap-3">
+            <RotateCcw className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">이전에 작성 중이던 내용이 있어요</p>
+              <p className="text-xs text-amber-700 dark:text-amber-300/80 mt-0.5">
+                {new Date(draftPrompt.savedAt).toLocaleString("ko-KR")} · 불러올까요?
+              </p>
+              <div className="flex gap-2 mt-2">
+                <Button size="sm" className="h-8 rounded-lg text-xs" onClick={handleLoadDraft}>
+                  불러오기
+                </Button>
+                <Button size="sm" variant="outline" className="h-8 rounded-lg text-xs" onClick={handleDiscardDraft}>
+                  버리기
+                </Button>
+              </div>
+            </div>
+            <button
+              onClick={() => setDraftPrompt(null)}
+              aria-label="배너 닫기"
+              className="shrink-0 text-amber-700/60 dark:text-amber-300/50 hover:text-amber-900 dark:hover:text-amber-100"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </Card>
         )}
 
-        {essayId && selectedEssay && (
+        {/* Linked-mode info banner */}
+        {hasEssayPrefill && (
           <Card className="p-3 bg-primary/5 border border-primary/20 flex items-center gap-2 text-xs">
             <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
-            <span className="text-muted-foreground">첨삭 결과는 <strong className="text-foreground">{selectedEssay.university}</strong> 에세이에 저장돼요.</span>
+            <span className="text-muted-foreground">
+              첨삭 결과는 <strong className="text-foreground">{linkedEssay!.university}</strong> 에세이에 저장돼요.
+            </span>
+          </Card>
+        )}
+        {isLinkedLoading && (
+          <Card className="p-3 bg-muted/30 border border-border flex items-center gap-2 text-xs">
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground shrink-0" />
+            <span className="text-muted-foreground">에세이 불러오는 중...</span>
           </Card>
         )}
 
@@ -293,6 +393,24 @@ export default function EssayReviewPage() {
             </p>
           )}
         </div>
+
+        {/* "Save as new essay" checkbox — only in new-essay mode */}
+        {!essayId && !result && (
+          <label className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/30 border border-border cursor-pointer hover:bg-muted/50 transition-colors">
+            <input
+              type="checkbox"
+              checked={saveNewEssay}
+              onChange={(e) => setSaveNewEssay(e.target.checked)}
+              className="w-4 h-4 rounded accent-primary shrink-0"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">이 에세이도 '내 에세이'에 저장하기</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                첨삭 결과와 함께 에세이 목록에 추가돼요.
+              </p>
+            </div>
+          </label>
+        )}
 
         {/* Review button or upgrade CTA */}
         {!canUseReview ? (
@@ -351,9 +469,14 @@ export default function EssayReviewPage() {
                   입학사정관 첫인상: {result.firstImpression}
                 </p>
               )}
-              {selectedEssayId && (
+              {essayId && linkedEssay && (
                 <Badge variant="secondary" className="text-xs">
-                  ✓ {selectedEssay?.university} 에세이에 저장됨
+                  ✓ {linkedEssay.university} 에세이에 저장됨
+                </Badge>
+              )}
+              {!essayId && savedAsNew && (
+                <Badge variant="secondary" className="text-xs">
+                  ✓ 새 에세이로 저장됨 · {savedAsNew.university}
                 </Badge>
               )}
             </Card>
@@ -452,8 +575,8 @@ export default function EssayReviewPage() {
             </div>
             )}
 
-            {/* Back to essay button */}
-            {selectedEssayId && (
+            {/* Back to essay list */}
+            {(essayId || savedAsNew) && (
               <Button
                 variant="outline"
                 onClick={() => router.push("/essays")}

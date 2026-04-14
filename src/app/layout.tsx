@@ -63,12 +63,28 @@ export default function RootLayout({
   return (
     <html lang="ko" suppressHydrationWarning className={inter.variable}>
       <head>
-        {/* Pretendard는 한국어 웹폰트 (next/font가 한글 미지원이라 CDN 유지) — preconnect로 RTT 축소 */}
+        {/*
+          Pretendard 한글 폰트 — CDN 사용.
+          - 자체 호스팅 옵션은 검토했으나 비현실적:
+            · npm `pretendard` 패키지는 unpacked 97MB
+            · 단일 woff2(`PretendardVariable.woff2`)는 2MB → 모든 페이지에서 강제 로드 시 비효율
+            · `next/font/local`은 한글 subset 자동화 없음
+          - CDN의 `dynamic-subset.min.css`는 unicode-range로 페이지에 실제 사용되는
+            글리프 범위만 ~30KB woff2로 동적 로드 → 한국어 앱에 최적.
+          - preconnect + dns-prefetch로 cross-browser RTT 최소화. (Safari < 14는 preconnect
+            지원 불완전하나 dns-prefetch는 보편 지원)
+          - crossOrigin="anonymous"는 font CORS 요구사항과 정합 (preconnect와 동일).
+        */}
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+        <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+          crossOrigin="anonymous"
+        />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("prism_theme")||"system";var d=t==="dark"||(t==="system"&&window.matchMedia("(prefers-color-scheme:dark)").matches);document.documentElement.classList.toggle("dark",d)}catch(e){}})()`,
+            __html: `(function(){try{var t=localStorage.getItem("prism_theme")||"light";var d=t==="dark";document.documentElement.classList.toggle("dark",d)}catch(e){}})()`,
           }}
         />
       </head>

@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Check, Crown, ArrowUpRight, Download, Upload, Sun, Moon, Monitor } from "lucide-react";
+import { ArrowLeft, Check, Crown, ArrowUpRight, Download, Upload, Sun, Moon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
 
@@ -93,7 +93,7 @@ export default function SubscriptionPage() {
         </Card>
 
         {/* Features */}
-        <Card className="bg-white border-none shadow-sm p-5">
+        <Card className="bg-white dark:bg-card border-none shadow-sm p-5">
           <h3 className="font-bold text-sm mb-4">포함된 기능</h3>
           <ul className="space-y-3">
             {plan.features.map((f) => (
@@ -152,7 +152,6 @@ export default function SubscriptionPage() {
             {([
               { value: "light" as const, icon: Sun, label: "라이트" },
               { value: "dark" as const, icon: Moon, label: "다크" },
-              { value: "system" as const, icon: Monitor, label: "시스템" },
             ]).map(({ value, icon: Icon, label }) => (
               <button
                 key={value}
@@ -171,7 +170,7 @@ export default function SubscriptionPage() {
         </Card>
 
         {/* Data Management */}
-        <Card className="bg-white border-none shadow-sm p-5 space-y-4">
+        <Card className="bg-white dark:bg-card border-none shadow-sm p-5 space-y-4">
           <h3 className="font-bold text-sm">데이터 관리</h3>
           <p className="text-xs text-muted-foreground">에세이, 플래너, 성장 기록을 다른 기기로 옮기거나 백업할 수 있어요.</p>
           <div className="flex gap-3">

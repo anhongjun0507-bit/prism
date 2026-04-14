@@ -96,12 +96,20 @@ export async function POST(req: NextRequest) {
       results = allResults;
     }
 
-    return NextResponse.json({
-      results,
-      plan,
-      totalAvailable,
-      lockedCount,
-    });
+    // 목록 응답에서 `prompts` 제거 — 이 필드는 모달의 "에세이" 탭에서만 쓰이고
+    // /api/schools/{name} 로 별도 조회 가능. 200개 결과 기준 ~15KB raw 절감.
+    const leanResults = results.map(({ prompts: _prompts, ...rest }) => rest);
+
+    return NextResponse.json(
+      { results: leanResults, plan, totalAvailable, lockedCount },
+      {
+        headers: {
+          // 개인화된 응답이므로 공유 캐시 금지. Next.js/Vercel 엣지가 자동으로 gzip/brotli 적용.
+          "Cache-Control": "private, no-cache, no-store, must-revalidate",
+          "Vary": "Authorization",
+        },
+      }
+    );
   } catch (error) {
     console.error("[match] unexpected error:", error);
     return NextResponse.json({ error: "분석 중 오류가 발생했습니다." }, { status: 500 });

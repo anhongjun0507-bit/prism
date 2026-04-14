@@ -24,6 +24,9 @@ import type { Specs, School } from "@/lib/matching";
 import { fetchWithAuth } from "@/lib/api-client";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { SchoolLogo } from "@/components/SchoolLogo";
+import { EmptyState } from "@/components/EmptyState";
+import { Sparkline } from "@/components/Sparkline";
+import { useCountUp } from "@/hooks/use-count-up";
 
 function getDDay(dateStr: string): number {
   const now = new Date();
@@ -163,7 +166,7 @@ export default function DashboardPage() {
         )}
       </header>
 
-      <div className="p-6 space-y-6 md:grid md:grid-cols-2 md:gap-6 md:space-y-0">
+      <div className="p-6 space-y-8 md:grid md:grid-cols-2 md:gap-8 md:space-y-0">
         {/* Quick Search */}
         <div className="relative">
           <div className="relative">
@@ -172,11 +175,11 @@ export default function DashboardPage() {
               placeholder="대학 검색..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-10 rounded-xl bg-white border-none shadow-sm text-sm"
+              className="pl-9 h-10 rounded-xl bg-white dark:bg-card border-none shadow-sm text-sm"
             />
           </div>
           {searchResults.length > 0 && (
-            <div className="absolute top-12 left-0 right-0 bg-white rounded-xl shadow-lg border z-50 overflow-hidden">
+            <div className="absolute top-12 left-0 right-0 bg-white dark:bg-card rounded-xl shadow-lg border z-50 overflow-hidden">
               {searchResults.map(s => (
                 <Link key={s.n} href="/analysis" onClick={() => setSearchQuery("")} className="flex items-center gap-3 p-3 hover:bg-accent/50 transition-colors">
                   <SchoolLogo domain={s.d} color={s.c} name={s.n} size="sm" />
@@ -205,32 +208,74 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* D-day Card */}
-        <Card ref={heroAnim.ref} style={stripStops} className={`dark-hero-gradient p-6 text-white relative isolate rounded-2xl rounded-t-2xl overflow-hidden border-none shadow-2xl prism-strip-reactive mt-4 ${heroAnim.isVisible ? "animate-fade-up" : "opacity-0"}`}>
-          <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-primary/20 rounded-full blur-[60px]" />
-          <div className="relative z-10 space-y-1">
-            <Badge variant="secondary" className="bg-white/10 text-white border-white/20 mb-2">
-              {dreamSchoolData?.ea ? "조기 지원 마감까지" : "정시 지원 마감까지"}
-            </Badge>
-            <div className="flex items-baseline gap-2">
-              <span className="text-5xl font-bold font-headline animate-count-pulse">
-                D{nextDeadline > 0 ? `-${nextDeadline}` : nextDeadline === 0 ? "-Day" : `+${Math.abs(nextDeadline)}`}
-              </span>
-              <span className="text-white/70">남음</span>
-            </div>
-            <p className="text-white/70 text-sm mt-4">
-              {profile?.dreamSchool || "목표 대학"} 지원 마감이 다가오고 있어요.
-            </p>
-            {hasSpecs && (
-              <div className="flex gap-2 mt-3 flex-wrap">
-                {profile?.gpa && <Badge className="bg-white/20 text-white border-none text-xs">GPA {profile.gpa}</Badge>}
-                {profile?.sat && <Badge className="bg-white/20 text-white border-none text-xs">SAT {profile.sat}</Badge>}
-                {profile?.toefl && <Badge className="bg-white/20 text-white border-none text-xs">TOEFL {profile.toefl}</Badge>}
-                {profile?.major && <Badge className="bg-white/20 text-white border-none text-xs">{profile.major}</Badge>}
+        {/* D-day Hero — prismatic glow + progress ring */}
+        {(() => {
+          const isCountdown = nextDeadline > 0;
+          const isToday = nextDeadline === 0;
+          const ddayValue = isToday ? 0 : Math.abs(nextDeadline);
+          // Progress ring: 365일 cycle 기준으로 남은 비율 (시각적 긴박감 유도)
+          const ringPct = isCountdown ? Math.max(8, Math.min(100, (nextDeadline / 365) * 100)) : 100;
+          const C = 2 * Math.PI * 38; // circumference of r=38
+          const offset = C - (ringPct / 100) * C;
+          const ringColor = nextDeadline <= 30 ? "stroke-red-300" : nextDeadline <= 90 ? "stroke-amber-300" : "stroke-emerald-300";
+          return (
+          <Card
+            ref={heroAnim.ref}
+            variant="hero"
+            style={stripStops}
+            className={`dark-hero-gradient p-6 pb-7 text-white prism-strip-reactive ${heroAnim.isVisible ? "animate-fade-up" : "opacity-0"}`}
+          >
+            {/* Floating prismatic orbs */}
+            <div className="brand-orb brand-orb-primary -top-12 -right-8 w-44 h-44" />
+            <div className="brand-orb brand-orb-violet -bottom-16 -left-12 w-40 h-40 opacity-30" />
+            <div className="brand-orb brand-orb-amber top-1/3 right-1/4 w-24 h-24 opacity-20" />
+
+            <div className="relative z-10">
+              <Badge variant="secondary" className="bg-white/10 text-white border-white/20 mb-3 backdrop-blur-sm">
+                {dreamSchoolData?.ea ? "조기 지원 마감까지" : "정시 지원 마감까지"}
+              </Badge>
+
+              <div className="flex items-center gap-5">
+                {/* D-day with circular progress ring */}
+                <div className="relative w-24 h-24 shrink-0">
+                  <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96" aria-hidden="true">
+                    <circle cx="48" cy="48" r="38" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="4" />
+                    <circle
+                      cx="48" cy="48" r="38" fill="none"
+                      strokeWidth="4" strokeLinecap="round"
+                      className={`${ringColor} transition-all duration-700`}
+                      strokeDasharray={C}
+                      strokeDashoffset={offset}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <DDayDisplay value={ddayValue} prefix={isCountdown ? "D-" : isToday ? "" : "D+"} suffix={isToday ? "Day" : ""} />
+                    {isCountdown && <span className="text-[10px] text-white/60 mt-0.5">남음</span>}
+                  </div>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-bold leading-tight truncate">
+                    {profile?.dreamSchool || "목표 대학"}
+                  </p>
+                  <p className="text-white/65 text-xs mt-1 leading-relaxed">
+                    {isToday ? "오늘이 마감일이에요!" : isCountdown ? "지원 마감이 다가오고 있어요." : "마감일이 지났어요."}
+                  </p>
+                </div>
               </div>
-            )}
-          </div>
-        </Card>
+
+              {hasSpecs && (
+                <div className="flex gap-1.5 mt-4 flex-wrap">
+                  {profile?.gpa && <Badge className="bg-white/15 text-white border-white/10 text-xs backdrop-blur-sm font-medium">GPA {profile.gpa}</Badge>}
+                  {profile?.sat && <Badge className="bg-white/15 text-white border-white/10 text-xs backdrop-blur-sm font-medium">SAT {profile.sat}</Badge>}
+                  {profile?.toefl && <Badge className="bg-white/15 text-white border-white/10 text-xs backdrop-blur-sm font-medium">TOEFL {profile.toefl}</Badge>}
+                  {profile?.major && <Badge className="bg-white/15 text-white border-white/10 text-xs backdrop-blur-sm font-medium">{profile.major}</Badge>}
+                </div>
+              )}
+            </div>
+          </Card>
+          );
+        })()}
 
         {/* Admission result banner — shown March~May */}
         {isAdmissionSeason && (profile?.grade === "12학년" || profile?.grade === "졸업생/Gap Year") && (
@@ -290,29 +335,24 @@ export default function DashboardPage() {
           ) : null;
         })()}
 
-        {/* Quick Stats */}
-        <div ref={statsAnim.ref} className={`grid grid-cols-3 gap-3 ${statsAnim.isVisible ? "animate-fade-up" : "opacity-0"}`}>
-          <Card className="p-4 bg-white border-none shadow-sm text-center">
-            <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center mx-auto mb-2">
-              <Target className="w-4 h-4 text-red-500" />
-            </div>
-            <p className="text-xs text-muted-foreground">Reach</p>
-            <p className="text-lg font-bold">{reachCount}개</p>
-          </Card>
-          <Card className="p-4 bg-white border-none shadow-sm text-center">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center mx-auto mb-2">
-              <GraduationCap className="w-4 h-4 text-blue-500" />
-            </div>
-            <p className="text-xs text-muted-foreground">Target</p>
-            <p className="text-lg font-bold">{targetCount}개</p>
-          </Card>
-          <Card className="p-4 bg-white border-none shadow-sm text-center">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center mx-auto mb-2">
-              <BookOpen className="w-4 h-4 text-emerald-500" />
-            </div>
-            <p className="text-xs text-muted-foreground">Safety</p>
-            <p className="text-lg font-bold">{safetyCount}개</p>
-          </Card>
+        {/* Quick Stats — stagger entry + count-up */}
+        <div ref={statsAnim.ref} className="grid grid-cols-3 gap-3">
+          {[
+            { label: "Reach", count: reachCount, Icon: Target, color: "text-red-500", bg: "bg-red-50 dark:bg-red-950/30" },
+            { label: "Target", count: targetCount, Icon: GraduationCap, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-950/30" },
+            { label: "Safety", count: safetyCount, Icon: BookOpen, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
+          ].map(({ label, count, Icon, color, bg }, i) => (
+            <StatCard
+              key={label}
+              label={label}
+              count={count}
+              Icon={Icon}
+              color={color}
+              bg={bg}
+              index={i}
+              visible={statsAnim.isVisible}
+            />
+          ))}
         </div>
 
         {/* School List Preview — user's saved schools */}
@@ -326,19 +366,19 @@ export default function DashboardPage() {
             )}
           </div>
           {savedSchoolResults.length === 0 ? (
-            <Card className="p-6 bg-white dark:bg-card border-none shadow-sm text-center relative overflow-hidden prism-strip-once">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <Heart className="w-8 h-8 text-primary/60" aria-hidden="true" />
-              </div>
-              <h3 className="font-bold text-base mb-1">아직 저장한 대학이 없어요</h3>
-              <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
-                분석 페이지에서 ♡를 눌러<br />관심 대학을 추가해보세요
-              </p>
-              <Link href="/analysis">
-                <Button className="rounded-xl px-6">
-                  대학 둘러보기 <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              </Link>
+            <Card variant="elevated" className="prism-strip-once overflow-hidden">
+              <EmptyState
+                illustration="school"
+                title="아직 저장한 대학이 없어요"
+                description={<>분석 페이지에서 ♡를 눌러<br />관심 대학을 추가해보세요</>}
+                action={
+                  <Link href="/analysis">
+                    <Button className="rounded-xl px-6">
+                      대학 둘러보기 <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </Link>
+                }
+              />
             </Card>
           ) : (
             savedSchoolResults.slice(0, 5).map((school) => {
@@ -384,10 +424,11 @@ export default function DashboardPage() {
                 </Badge>
                 <button
                   onClick={() => toggleFavorite(school.n)}
-                  className="shrink-0 p-1"
-                  aria-label="즐겨찾기 해제"
+                  className="shrink-0 p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                  aria-label={isFavorite(school.n) ? `${school.n} 즐겨찾기 해제` : `${school.n} 즐겨찾기 추가`}
+                  aria-pressed={isFavorite(school.n)}
                 >
-                  <Heart className={`w-4 h-4 ${isFavorite(school.n) ? "fill-red-500 text-red-500" : "text-muted-foreground/30"}`} />
+                  <Heart className={`w-4 h-4 transition-all ${isFavorite(school.n) ? "fill-red-500 text-red-500 scale-110" : "text-muted-foreground/60"}`} />
                 </button>
               </Card>
               );
@@ -398,25 +439,25 @@ export default function DashboardPage() {
         {/* Quick Actions — horizontal scrollable chips */}
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scroll-fade-right">
           <Link href="/analysis" className="shrink-0">
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl shadow-sm hover:bg-accent/30 transition-colors border border-border/50">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-card rounded-xl shadow-sm hover:bg-accent/30 transition-colors border border-border/50">
               <Sparkles className="w-4 h-4 text-primary" />
               <span className="font-semibold text-xs whitespace-nowrap">스펙 분석</span>
             </div>
           </Link>
           <Link href="/essays" className="shrink-0">
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl shadow-sm hover:bg-accent/30 transition-colors border border-border/50">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-card rounded-xl shadow-sm hover:bg-accent/30 transition-colors border border-border/50">
               <FileText className="w-4 h-4 text-orange-500" />
               <span className="font-semibold text-xs whitespace-nowrap">에세이 작성</span>
             </div>
           </Link>
           <Link href="/chat" className="shrink-0">
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl shadow-sm hover:bg-accent/30 transition-colors border border-border/50">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-card rounded-xl shadow-sm hover:bg-accent/30 transition-colors border border-border/50">
               <Sparkles className="w-4 h-4 text-green-500" />
               <span className="font-semibold text-xs whitespace-nowrap">AI 상담</span>
             </div>
           </Link>
           <Link href="/planner" className="shrink-0">
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl shadow-sm hover:bg-accent/30 transition-colors border border-border/50">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-card rounded-xl shadow-sm hover:bg-accent/30 transition-colors border border-border/50">
               <Target className="w-4 h-4 text-blue-500" />
               <span className="font-semibold text-xs whitespace-nowrap">플래너</span>
             </div>
@@ -450,7 +491,7 @@ export default function DashboardPage() {
         {/* Soft upgrade nudge — free users, shown after they've used the app */}
         {currentPlan === "free" && hasSpecs && (
           <Link href="/pricing">
-            <Card className="p-4 bg-white border-none shadow-sm flex items-center gap-3">
+            <Card className="p-4 bg-white dark:bg-card border-none shadow-sm flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                 <Crown className="w-5 h-5 text-primary" />
               </div>
@@ -465,7 +506,7 @@ export default function DashboardPage() {
 
         {/* Growth hint — first snapshot exists but only 1 */}
         {snapshots.length === 1 && (
-          <Card className="p-4 bg-white border-none shadow-sm flex items-center gap-3">
+          <Card className="p-4 bg-white dark:bg-card border-none shadow-sm flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
               <TrendingUp className="w-5 h-5 text-emerald-500" />
             </div>
@@ -493,6 +534,19 @@ export default function DashboardPage() {
                 <p className="text-sm font-bold">나의 성장 기록</p>
                 <span className="text-xs text-muted-foreground ml-auto">{snapshots.length}회 기록</span>
               </div>
+
+              {/* Sparkline — dreamSchoolProb 추세 (있는 경우만) */}
+              {(() => {
+                const probData = snapshots
+                  .filter((s) => s.dreamSchoolProb != null)
+                  .map((s) => ({ x: s.date, y: s.dreamSchoolProb as number }));
+                return probData.length >= 2 ? (
+                  <div className="mb-3 px-1">
+                    <p className="text-[10px] text-muted-foreground mb-1 font-medium">{current.dreamSchool} 합격 확률 추세</p>
+                    <Sparkline data={probData} height={48} showTooltip />
+                  </div>
+                ) : null;
+              })()}
 
               {/* First → Current comparison */}
               <div className="flex items-center gap-3">
@@ -597,5 +651,48 @@ export default function DashboardPage() {
 
       <BottomNav />
     </div>
+  );
+}
+
+/* ─── Sub-components ─── */
+
+interface StatCardProps {
+  label: string;
+  count: number;
+  Icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  bg: string;
+  index: number;
+  visible: boolean;
+}
+
+function DDayDisplay({ value, prefix, suffix }: { value: number; prefix: string; suffix: string }) {
+  const display = useCountUp(value, { duration: 1100 });
+  return (
+    <span className="text-[28px] font-bold font-headline leading-none tabular-nums">
+      {prefix}{suffix || display}
+    </span>
+  );
+}
+
+function StatCard({ label, count, Icon, color, bg, index, visible }: StatCardProps) {
+  // Count up only after the card is visible (preserves stagger entry feel)
+  const display = useCountUp(count, { duration: 900, disabled: !visible });
+  return (
+    <Card
+      variant="elevated"
+      interactive
+      className={`p-4 text-center ${visible ? "animate-stagger" : "opacity-0"}`}
+      style={visible ? ({ ["--i" as string]: index } as React.CSSProperties) : undefined}
+    >
+      <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center mx-auto mb-2`}>
+        <Icon className={`w-4 h-4 ${color}`} />
+      </div>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-lg font-bold tabular-nums">
+        {display}
+        <span className="text-xs font-normal text-muted-foreground ml-0.5">개</span>
+      </p>
+    </Card>
   );
 }

@@ -26,6 +26,8 @@ import {
   collection, doc, setDoc, deleteDoc, onSnapshot,
 } from "firebase/firestore";
 import { Calendar as CalendarIcon, CheckCircle2, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { readJSON, writeJSON } from "@/lib/storage";
+import { EmptyState } from "@/components/EmptyState";
 
 /* ─── Data model ─── */
 type TaskCategory = "시험" | "행정" | "에세이" | "추천서" | "지원" | "기타";
@@ -104,18 +106,12 @@ function getInitialTasks(): PlannerTask[] {
 }
 
 function loadLocalTasks(): PlannerTask[] {
-  if (typeof window === "undefined") return getInitialTasks();
-  try {
-    const saved = localStorage.getItem(TASKS_LS_KEY);
-    if (saved) return JSON.parse(saved);
-    // Migrate from legacy key
-    const legacy = localStorage.getItem(LEGACY_LS_KEY);
-    if (legacy) {
-      const parsed = JSON.parse(legacy);
-      if (Array.isArray(parsed)) return parsed.map(migrateLegacyTask);
-    }
-    return getInitialTasks();
-  } catch { return getInitialTasks(); }
+  const saved = readJSON<PlannerTask[]>(TASKS_LS_KEY);
+  if (saved) return saved;
+  // Migrate from legacy key
+  const legacy = readJSON<unknown[]>(LEGACY_LS_KEY);
+  if (Array.isArray(legacy)) return legacy.map(migrateLegacyTask);
+  return getInitialTasks();
 }
 
 /* ─── Sort: incomplete by dueDate asc, completed at bottom by dueDate asc ─── */
@@ -156,7 +152,7 @@ export default function PlannerPage() {
   // Logged-out: persist to localStorage
   useEffect(() => {
     if (user) return;
-    try { localStorage.setItem(TASKS_LS_KEY, JSON.stringify(tasks)); } catch {}
+    writeJSON(TASKS_LS_KEY, tasks);
   }, [tasks, user]);
 
   /* ─── CRUD ─── */
@@ -250,12 +246,17 @@ export default function PlannerPage() {
 
         {/* Empty state */}
         {tasks.length === 0 && (
-          <Card className="p-8 text-center border-dashed">
-            <CalendarIcon className="w-10 h-10 mx-auto text-muted-foreground/40 mb-3" />
-            <p className="text-sm text-muted-foreground mb-4">아직 등록된 일정이 없어요.</p>
-            <Button onClick={openAddDialog} className="rounded-xl">
-              <Plus className="w-4 h-4 mr-1" /> 첫 일정 추가하기
-            </Button>
+          <Card variant="elevated">
+            <EmptyState
+              illustration="task"
+              title="아직 등록된 일정이 없어요"
+              description="입시 일정·마감일을 추가해 한눈에 관리하세요."
+              action={
+                <Button onClick={openAddDialog} className="rounded-xl">
+                  <Plus className="w-4 h-4 mr-1" /> 첫 일정 추가하기
+                </Button>
+              }
+            />
           </Card>
         )}
 
@@ -264,12 +265,12 @@ export default function PlannerPage() {
           <div className="space-y-4 relative">
             <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-muted z-0" />
 
-            {incomplete.map((t) => {
+            {incomplete.map((t, i) => {
               const dday = getDDay(t.dueDate);
               const isOverdue = dday < 0;
               const isUrgent = dday >= 0 && dday <= 7;
               return (
-                <div key={t.id} className="flex gap-4 relative z-10">
+                <div key={t.id} className="flex gap-4 relative z-10 animate-stagger" style={{ ["--i" as string]: i } as React.CSSProperties}>
                   <div className={cn(
                     "w-8 h-8 rounded-full border-2 bg-background shrink-0 flex items-center justify-center",
                     isOverdue ? "border-red-300" : isUrgent ? "border-amber-300" : "border-muted"

@@ -62,7 +62,34 @@ const fetchCampusPhotoFromWiki = unstable_cache(
   { revalidate: 60 * 60 * 24 * 7 } // 7 days
 );
 
+/**
+ * Origin/Referer 검증 — 외부 도메인이 우리 endpoint를 Wikipedia 프록시로 남용하는 것을 차단.
+ * 인증과 별도의 defense-in-depth (인증 토큰만으로도 1차 차단되지만, 토큰 유출 시
+ * 다른 도메인의 페이지에서 호출되는 것까지 막음).
+ *
+ * 통과 조건:
+ *   - Origin 헤더 없음 (server-to-server, curl 등) → allow (인증으로만 보호)
+ *   - Origin이 self origin과 일치 → allow
+ *   - 그 외 → 403
+ */
+function isAllowedOrigin(req: NextRequest): boolean {
+  const origin = req.headers.get("origin");
+  if (!origin) return true; // no Origin = same-origin / non-browser
+  try {
+    const reqUrl = new URL(req.url);
+    const originUrl = new URL(origin);
+    return originUrl.host === reqUrl.host;
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(req: NextRequest) {
+  // Origin 검증 — 외부 도메인 호출 차단
+  if (!isAllowedOrigin(req)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   // 인증 필수 — 비로그인 사용자가 Wikipedia 프록시 남용 차단
   const session = await requireAuth(req);
   if (session instanceof NextResponse) return session;

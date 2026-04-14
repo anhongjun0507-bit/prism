@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, memo } from "react";
+import Image from "next/image";
 import { fetchWithAuth } from "@/lib/api-client";
 
 /* ─── Logo source cache (skip the failed-image fallback chain on remount) ─── */
@@ -41,6 +42,8 @@ const sizeMap = {
   md: "w-11 h-11 rounded-xl",
   lg: "w-14 h-14 rounded-2xl",
 } as const;
+
+const sizePx = { sm: 32, md: 44, lg: 56 } as const;
 
 /**
  * SchoolLogo — shows university logo with colored fallback.
@@ -83,15 +86,21 @@ function SchoolLogoBase({
     );
   }
 
+  // 작은 favicon(.ico)은 Next의 최적화 파이프라인을 거칠 필요가 없어 unoptimized.
+  // 그래도 next/Image를 쓰는 이유: layout shift 방지(width/height), 일관된 렌더링, loading/decoding 기본값.
+  const px = sizePx[size];
   return (
     <div
       className={`${sizeMap[size]} shrink-0 shadow-sm overflow-hidden bg-white flex items-center justify-center border border-gray-100 ${className}`}
     >
-      <img
+      <Image
         src={src}
         alt={`${name} logo`}
-        className="w-[70%] h-[70%] object-contain"
+        width={Math.round(px * 0.7)}
+        height={Math.round(px * 0.7)}
+        className="object-contain"
         loading="lazy"
+        unoptimized
         onLoad={() => {
           if (!cached) setCachedSource(domain, useFavicon ? "favicon" : "ddg");
         }}
@@ -201,10 +210,12 @@ function CampusPhotoBase({
   return (
     <div className={`relative overflow-hidden ${className}`} style={{ backgroundColor: color }}>
       {imageUrl && !error && (
-        <img
+        <Image
           src={imageUrl}
           alt={`${schoolName} campus`}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${loaded ? "opacity-30" : "opacity-0"}`}
+          fill
+          sizes="(max-width: 768px) 100vw, 768px"
+          className={`object-cover transition-opacity duration-500 ${loaded ? "opacity-30" : "opacity-0"}`}
           onLoad={() => setLoaded(true)}
           onError={() => setError(true)}
           loading="lazy"

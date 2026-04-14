@@ -24,14 +24,28 @@ const ToastViewport = React.forwardRef<
 ))
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
+// Toast — brand-tinted with category accent stripe.
+// 좌측 4px 색 띠 + soft shadow glow + spring-in motion으로 알림을 더 prominent 하게.
 const toastVariants = cva(
-  "group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border p-6 pr-8 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full",
+  [
+    "group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden",
+    "rounded-2xl border p-5 pl-6 pr-8 shadow-glow-lg backdrop-blur-sm",
+    // Left accent stripe — variant별로 색만 다름
+    "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:content-['']",
+    // Swipe handlers
+    "data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none",
+    // Animations
+    "data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out",
+    "data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full",
+    "data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full",
+    "data-[state=open]:zoom-in-95 data-[state=open]:duration-300",
+  ].join(" "),
   {
     variants: {
       variant: {
-        default: "border bg-background text-foreground",
-        destructive:
-          "destructive group border-destructive bg-destructive text-destructive-foreground",
+        default: "border-border/60 bg-card text-foreground before:bg-primary",
+        destructive: "destructive group border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 text-red-900 dark:text-red-100 before:bg-red-500",
+        success: "border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-100 before:bg-emerald-500",
       },
     },
     defaultVariants: {

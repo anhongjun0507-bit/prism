@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Save, Plus, FileText, ArrowLeft, Search, ChevronRight,
-  Sparkles, Loader2, Clock, Zap, TrendingUp, Trash2, GraduationCap, History, RotateCcw,
+  Sparkles, Loader2, Clock, Zap, TrendingUp, Trash2, GraduationCap, History, RotateCcw, PenLine,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
@@ -27,40 +27,10 @@ import { fetchWithAuth } from "@/lib/api-client";
 import { SCHOOLS_INDEX, schoolMatchesQuery } from "@/lib/schools-index";
 import { COMMON_APP_PROMPTS, COMMON_APP_PROMPTS_KO } from "@/lib/constants";
 import { SchoolLogo } from "@/components/SchoolLogo";
-
-interface EssayVersion {
-  version: number;
-  content: string;
-  savedAt: string;
-  wordCount: number;
-}
-
-interface EssayReview {
-  id: string;
-  score: number;            // 1–10
-  summary: string;          // one-line takeaway
-  firstImpression: string;  // 입학사정관 첫인상
-  tone?: string;
-  strengths: string[];
-  weaknesses: string[];
-  suggestions: string[];    // = improvements
-  keyChange?: string;
-  admissionNote?: string;
-  revisedOpening?: string;
-  createdAt: string;        // ISO
-}
-
-interface Essay {
-  id: string;
-  university: string;
-  prompt: string;
-  content: string;
-  lastSaved: string;       // YYYY-MM-DD (UI 표시용)
-  updatedAt?: string;      // ISO timestamp (race-resolution용)
-  wordLimit?: number;
-  versions?: EssayVersion[];
-  reviews?: EssayReview[];
-}
+import type { Essay, EssayReview, EssayVersion } from "@/types/essay";
+import { slimEssaysForCache } from "@/types/essay";
+import { readJSON, writeJSON, removeKey } from "@/lib/storage";
+import { EmptyState } from "@/components/EmptyState";
 
 interface OutlineSection {
   title: string;
@@ -92,11 +62,7 @@ type SchoolDetail = {
 const ESSAYS_KEY = "prism_essays";
 
 function loadEssays(): Essay[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const saved = localStorage.getItem(ESSAYS_KEY);
-    return saved ? JSON.parse(saved) : [];
-  } catch { return []; }
+  return readJSON<Essay[]>(ESSAYS_KEY) ?? [];
 }
 
 export default function EssaysPage() {
@@ -115,6 +81,11 @@ export default function EssaysPage() {
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<Essay | null>(null);
 
+  // General (non-school) essay creation dialog
+  const [showGeneralDialog, setShowGeneralDialog] = useState(false);
+  const [generalTitle, setGeneralTitle] = useState("");
+  const [generalPrompt, setGeneralPrompt] = useState("");
+
   // Review viewing / expansion state
   const [viewingReview, setViewingReview] = useState<{ essay: Essay; review: EssayReview } | null>(null);
   const [expandedReviewsFor, setExpandedReviewsFor] = useState<Set<string>>(new Set());
@@ -122,57 +93,53 @@ export default function EssaysPage() {
 
   // One-time migration: import legacy single-key review into matching essay's reviews array
   useEffect(() => {
-    try {
-      const legacy = localStorage.getItem("prism_essay_review");
-      if (!legacy) return;
-      const parsed = JSON.parse(legacy);
-      const r = parsed?.result;
-      if (!r) {
-        localStorage.removeItem("prism_essay_review");
-        return;
-      }
-      const targetUniversity = parsed.university;
-      const targetPrompt = parsed.prompt;
-      setEssays(prev => {
-        if (prev.length === 0) {
-          localStorage.removeItem("prism_essay_review");
-          return prev;
-        }
-        // Best match: same university + prompt; fallback: same university; fallback: first essay
-        let target = prev.find(e => e.university === targetUniversity && e.prompt === targetPrompt);
-        if (!target) target = prev.find(e => e.university === targetUniversity);
-        if (!target) target = prev[0];
-        // Skip if this review already migrated (idempotency)
-        const alreadyHasMigrated = target.reviews?.some(rev => rev.summary === r.summary && rev.score === r.score);
-        if (alreadyHasMigrated) {
-          localStorage.removeItem("prism_essay_review");
-          return prev;
-        }
-        const review: EssayReview = {
-          id: `migrated-${Date.now()}`,
-          score: r.score ?? 0,
-          summary: r.summary ?? "",
-          firstImpression: r.firstImpression ?? "",
-          tone: r.tone,
-          strengths: r.strengths ?? [],
-          weaknesses: r.weaknesses ?? [],
-          suggestions: r.suggestions ?? [],
-          keyChange: r.keyChange,
-          admissionNote: r.admissionNote,
-          revisedOpening: r.revisedOpening,
-          createdAt: new Date().toISOString(),
-        };
-        const updatedTarget = { ...target, reviews: [...(target.reviews ?? []), review] };
-        writeEssayDoc(updatedTarget); // Firestore 서브컬렉션에도 반영
-        const updated = prev.map(e => e.id === target!.id ? updatedTarget : e);
-        localStorage.removeItem("prism_essay_review");
-        return updated;
-      });
-    } catch {
-      try { localStorage.removeItem("prism_essay_review"); } catch {}
+    const LEGACY_KEY = "prism_essay_review";
+    const parsed = readJSON<{ result?: Partial<EssayReview>; university?: string; prompt?: string }>(LEGACY_KEY);
+    if (!parsed) return;
+    const r = parsed.result;
+    if (!r) {
+      removeKey(LEGACY_KEY);
+      return;
     }
+    const targetUniversity = parsed.university;
+    const targetPrompt = parsed.prompt;
+    setEssays(prev => {
+      if (prev.length === 0) {
+        removeKey(LEGACY_KEY);
+        return prev;
+      }
+      // Best match: same university + prompt; fallback: same university; fallback: first essay
+      let target = prev.find(e => e.university === targetUniversity && e.prompt === targetPrompt);
+      if (!target) target = prev.find(e => e.university === targetUniversity);
+      if (!target) target = prev[0];
+      // Skip if this review already migrated (idempotency)
+      const alreadyHasMigrated = target.reviews?.some(rev => rev.summary === r.summary && rev.score === r.score);
+      if (alreadyHasMigrated) {
+        removeKey(LEGACY_KEY);
+        return prev;
+      }
+      const review: EssayReview = {
+        id: `migrated-${Date.now()}`,
+        score: r.score ?? 0,
+        summary: r.summary ?? "",
+        firstImpression: r.firstImpression ?? "",
+        tone: r.tone,
+        strengths: r.strengths ?? [],
+        weaknesses: r.weaknesses ?? [],
+        suggestions: r.suggestions ?? [],
+        keyChange: r.keyChange,
+        admissionNote: r.admissionNote,
+        revisedOpening: r.revisedOpening,
+        createdAt: new Date().toISOString(),
+      };
+      const updatedTarget = { ...target, reviews: [...(target.reviews ?? []), review] };
+      writeEssayDoc(updatedTarget); // Firestore 서브컬렉션에도 반영
+      const updated = prev.map(e => e.id === target!.id ? updatedTarget : e);
+      removeKey(LEGACY_KEY);
+      return updated;
+    });
     // Run once on mount
-     
+
   }, []);
 
   const removeReview = (essayId: string, reviewId: string) => {
@@ -211,7 +178,7 @@ export default function EssaysPage() {
   // localStorage = read-only cache for fast initial paint;
   // Firestore subcollection (per-essay docs) = source of truth for logged-in users.
   useEffect(() => {
-    try { localStorage.setItem(ESSAYS_KEY, JSON.stringify(essays)); } catch {}
+    writeJSON(ESSAYS_KEY, slimEssaysForCache(essays));
   }, [essays]);
 
   // Real-time sync from Firestore subcollection (logged-in only).
@@ -314,7 +281,7 @@ export default function EssaysPage() {
               ? { ...activeEssayRef.current!, lastSaved: new Date().toISOString().split("T")[0] }
               : e
           );
-          try { localStorage.setItem(ESSAYS_KEY, JSON.stringify(updated)); } catch {}
+          writeJSON(ESSAYS_KEY, slimEssaysForCache(updated));
         }
       }
     };
@@ -798,7 +765,9 @@ export default function EssaysPage() {
           {!selectedSchool ? (
             <>
               <Card
-                className="bg-white dark:bg-card border-none shadow-sm cursor-pointer hover:bg-accent/30 transition-colors"
+                variant="elevated"
+                interactive
+                className="hover:bg-accent/30 transition-colors"
                 onClick={() => setSelectedSchool("Common App")}
               >
                 <CardContent className="p-4 flex items-center gap-3">
@@ -813,10 +782,38 @@ export default function EssaysPage() {
                 </CardContent>
               </Card>
 
+              <Card
+                variant="elevated"
+                interactive
+                className="hover:bg-accent/30 transition-colors"
+                onClick={() => {
+                  setGeneralTitle("");
+                  setGeneralPrompt("");
+                  setShowGeneralDialog(true);
+                }}
+              >
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+                    <PenLine className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-bold text-sm">일반 에세이</p>
+                    <p className="text-xs text-muted-foreground">연습용·자유 주제·활동 일지 등 자유 형식</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </CardContent>
+              </Card>
+
+              <div className="pt-2 pb-1">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">대학별 supplemental</p>
+              </div>
+
               {filteredSchools.map((school) => (
                 <Card
                   key={school.n}
-                  className="bg-white dark:bg-card border-none shadow-sm cursor-pointer hover:bg-accent/30 transition-colors"
+                  variant="elevated"
+                interactive
+                className="hover:bg-accent/30 transition-colors"
                   onClick={() => setSelectedSchool(school.n)}
                 >
                   <CardContent className="p-4 flex items-center gap-3">
@@ -841,7 +838,9 @@ export default function EssaysPage() {
               ).map((prompt: string, i: number) => (
                 <Card
                   key={i}
-                  className="bg-white dark:bg-card border-none shadow-sm cursor-pointer hover:bg-accent/30 transition-colors"
+                  variant="elevated"
+                interactive
+                className="hover:bg-accent/30 transition-colors"
                   onClick={() => handleCreateFromPrompt(selectedSchool, prompt)}
                 >
                   <CardContent className="p-4 space-y-1.5">
@@ -903,47 +902,53 @@ export default function EssaysPage() {
 
       <div className="px-6 space-y-3 md:grid md:grid-cols-2 md:gap-3">
         {essays.length === 0 ? (
-          <Card className="p-8 bg-white dark:bg-card dark:bg-card border-none shadow-sm text-center md:col-span-2">
-            {/* Decorative SVG illustration */}
-            <div className="relative w-24 h-24 mx-auto mb-5">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-100 to-orange-50 dark:from-orange-900/30 dark:to-orange-900/10 animate-pulse" />
-              <div className="absolute inset-2 rounded-full bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center">
-                <FileText className="w-10 h-10 text-orange-400" />
-              </div>
-              <Sparkles className="absolute top-0 right-0 w-5 h-5 text-amber-400 animate-pulse" />
-              <Sparkles className="absolute bottom-0 left-0 w-3 h-3 text-amber-300" />
-            </div>
-            <h3 className="font-headline font-bold text-lg mb-2">에세이를 시작해볼까요?</h3>
-            <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-              Common App 에세이 7개 주제 중<br />마음에 드는 하나를 골라보세요
-            </p>
-            <Button onClick={() => setView("picker")} className="rounded-xl px-8 h-11">
-              Common App 에세이 시작 <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
+          <Card variant="elevated" className="md:col-span-2">
+            <EmptyState
+              illustration="essay"
+              title="에세이를 시작해볼까요?"
+              description={<>Common App·대학 supplemental 뿐만 아니라<br />자유 주제의 일반 에세이도 작성할 수 있어요</>}
+              action={
+                <Button onClick={() => setView("picker")} size="lg" className="rounded-xl px-8">
+                  에세이 시작하기 <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              }
+            />
           </Card>
         ) : (
-          essays.map((essay) => {
+          essays.map((essay, idx) => {
             const reviews = (essay.reviews ?? []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
             const isExpanded = expandedReviewsFor.has(essay.id);
-            const visibleReviews = isExpanded ? reviews : reviews.slice(0, 1);
             return (
-              <div key={essay.id} className="space-y-2">
+              <div key={essay.id} className="space-y-2 animate-stagger" style={{ ["--i" as string]: idx } as React.CSSProperties}>
                 <Card
-                  className="bg-white dark:bg-card border-none shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+                  variant="elevated"
+                  interactive
+                  className="group"
                   onClick={() => { setActiveEssay(essay); setView("editor"); }}
                 >
                   <CardContent className="p-5 space-y-2">
-                    <div className="flex items-start justify-between">
-                      <h3 className="font-bold text-sm">{essay.university}</h3>
-                      <div className="flex items-center gap-1.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-bold text-sm flex-1 min-w-0 truncate">{essay.university}</h3>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {reviews.length > 0 && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleExpandedReviews(essay.id); }}
+                            aria-expanded={isExpanded}
+                            aria-label={isExpanded ? "첨삭 결과 접기" : "첨삭 결과 펼치기"}
+                            className="flex items-center gap-1 px-2 h-6 rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-semibold transition-colors"
+                          >
+                            <Sparkles className="w-3 h-3" />
+                            AI 첨삭 {reviews.length}개
+                          </button>
+                        )}
                         <button
                           onClick={(e) => { e.stopPropagation(); setDeleteTarget(essay); }}
                           aria-label="에세이 삭제"
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground/0 group-hover:text-muted-foreground hover:bg-red-50 hover:text-red-500 transition-all"
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground/0 group-hover:text-muted-foreground focus-visible:text-muted-foreground hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30 transition-all"
                         >
                           <Trash2 size={14} aria-hidden="true" />
                         </button>
-                        <Badge variant="secondary" className="text-xs shrink-0">
+                        <Badge variant="secondary" className="text-xs">
                           {essay.content.split(/\s+/).filter(Boolean).length} 단어
                         </Badge>
                       </div>
@@ -952,21 +957,27 @@ export default function EssaysPage() {
                     {essay.content && (
                       <p className="text-xs text-foreground/60 line-clamp-1 italic">{essay.content}</p>
                     )}
-                    <div className="flex items-center justify-between pt-1">
-                      <p className="text-xs text-primary font-medium">최종 수정: {essay.lastSaved}</p>
-                      <Link
-                        href={`/essays/review?essayId=${essay.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-xs text-primary font-semibold flex items-center gap-1 hover:underline"
+                    <div className="flex items-center justify-between pt-2 gap-2">
+                      <p className="text-xs text-muted-foreground">최종 수정: {essay.lastSaved}</p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        asChild
+                        className="h-8 rounded-lg px-3 gap-1.5 text-xs border-primary/30 text-primary hover:bg-primary/10"
                       >
-                        <Sparkles className="w-3 h-3" /> AI 첨삭
-                      </Link>
+                        <Link
+                          href={`/essays/review?essayId=${essay.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Sparkles className="w-3.5 h-3.5" /> AI 첨삭 받기
+                        </Link>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Reviews attached to this essay */}
-                {visibleReviews.map(review => (
+                {/* Reviews attached — shown only when the badge is clicked */}
+                {isExpanded && reviews.map(review => (
                   <ReviewSubCard
                     key={review.id}
                     review={review}
@@ -974,15 +985,6 @@ export default function EssaysPage() {
                     onDelete={() => setReviewDeleteTarget({ essayId: essay.id, reviewId: review.id })}
                   />
                 ))}
-                {reviews.length > 1 && (
-                  <button
-                    onClick={() => toggleExpandedReviews(essay.id)}
-                    className="ml-4 text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
-                  >
-                    <History className="w-3 h-3" />
-                    {isExpanded ? "최신 첨삭만 보기" : `이전 첨삭 ${reviews.length - 1}개 더보기`}
-                  </button>
-                )}
               </div>
             );
           })
@@ -1038,6 +1040,83 @@ export default function EssaysPage() {
         target={viewingReview}
         onClose={() => setViewingReview(null)}
       />
+
+      {/* General essay creation dialog */}
+      <Dialog open={showGeneralDialog} onOpenChange={setShowGeneralDialog}>
+        <DialogContent className="max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PenLine className="w-4 h-4 text-emerald-600" />
+              일반 에세이 시작
+            </DialogTitle>
+            <DialogDescription>
+              대학 supplemental이 아닌 자유 형식의 글을 작성할 수 있어요. 제목과 주제는 나중에 바꿀 수 있어요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground">종류</label>
+              <div className="flex flex-wrap gap-1.5">
+                {["연습 에세이", "자유 주제", "활동 일지", "Personal Statement", "장학금 에세이"].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setGeneralTitle(preset)}
+                    className={`px-3 h-7 rounded-full text-xs font-medium border transition-colors ${
+                      generalTitle === preset
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted/50 text-foreground border-border hover:bg-muted"
+                    }`}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground">제목</label>
+              <Input
+                placeholder="예: 연습 에세이, 나만의 성장 스토리"
+                value={generalTitle}
+                onChange={(e) => setGeneralTitle(e.target.value)}
+                className="h-11 rounded-xl"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground">주제 또는 프롬프트 <span className="font-normal opacity-60">(선택)</span></label>
+              <Textarea
+                placeholder="예: 내가 가장 몰입했던 순간에 대해"
+                value={generalPrompt}
+                onChange={(e) => setGeneralPrompt(e.target.value)}
+                className="min-h-[72px] rounded-xl text-sm"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 mt-2">
+            <Button
+              variant="outline"
+              className="flex-1 rounded-xl"
+              onClick={() => setShowGeneralDialog(false)}
+            >
+              취소
+            </Button>
+            <Button
+              className="flex-1 rounded-xl"
+              disabled={!generalTitle.trim()}
+              onClick={() => {
+                const title = generalTitle.trim() || "일반 에세이";
+                const promptText = generalPrompt.trim() || "자유 주제";
+                setShowGeneralDialog(false);
+                handleCreateFromPrompt(title, promptText);
+              }}
+            >
+              시작하기
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>

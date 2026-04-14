@@ -25,7 +25,7 @@ export class ApiError extends Error {
  * - 응답이 비-2xx면 ApiError 던짐 (status, code, message 포함)
  * - 응답 본문은 JSON으로 가정. 호출자가 .json()을 또 호출할 필요 없음.
  */
-export async function fetchWithAuth<T = any>(
+export async function fetchWithAuth<T = unknown>(
   url: string,
   init: RequestInit = {}
 ): Promise<T> {
@@ -64,14 +64,15 @@ export async function fetchWithAuth<T = any>(
     }
   }
 
-  // 응답 본문 한 번만 읽기 (JSON 우선, 실패 시 text)
+  // 응답 본문 한 번만 읽기 (JSON 우선, 실패 시 text로 fallback)
   const text = await res.text();
-  let data: any = null;
+  let data: unknown = null;
   try { data = text ? JSON.parse(text) : null; } catch { /* non-JSON */ }
 
   if (!res.ok) {
-    const message = data?.error || `요청 실패 (${res.status})`;
-    throw new ApiError(res.status, data?.code, message, data);
+    const errBody = (data && typeof data === "object" ? data : {}) as { error?: string; code?: string };
+    const message = errBody.error || `요청 실패 (${res.status})`;
+    throw new ApiError(res.status, errBody.code, message, data);
   }
   return data as T;
 }

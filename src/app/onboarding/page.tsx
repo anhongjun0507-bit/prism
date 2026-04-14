@@ -141,10 +141,55 @@ export default function OnboardingPage() {
   const step1Valid = formData.name && formData.grade && formData.dreamSchool && formData.major;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col p-8 pt-12">
-      <div className="space-y-4 mb-10">
-        <Progress value={progress} className="h-1.5 bg-muted rounded-full" />
-        <p className="text-sm font-medium text-primary">단계 {step} / 3</p>
+    <div className="min-h-screen bg-background flex flex-col p-8 pt-12 relative overflow-hidden">
+      {/* Floating prismatic orbs background */}
+      <div className="brand-orb brand-orb-primary -top-20 -right-16 w-64 h-64 opacity-25" aria-hidden="true" />
+      <div className="brand-orb brand-orb-violet -bottom-24 -left-20 w-72 h-72 opacity-20" aria-hidden="true" />
+
+      {/* Step indicator — prismatic gradient line + dot tracker */}
+      <div className="relative space-y-3 mb-10">
+        <div className="flex items-center justify-between gap-2">
+          {[1, 2, 3].map((s) => {
+            const reached = step >= s;
+            const current = step === s;
+            return (
+              <div key={s} className="flex items-center gap-2 flex-1 last:flex-none">
+                <div
+                  className={`relative flex items-center justify-center transition-all duration-500 shrink-0 ${
+                    current ? "w-8 h-8" : "w-6 h-6"
+                  }`}
+                >
+                  {current && (
+                    <div className="absolute inset-0 rounded-full bg-prismatic blur-md opacity-50 animate-pulse" />
+                  )}
+                  <div
+                    className={`relative rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-300 ${
+                      reached
+                        ? "bg-prismatic text-white shadow-glow-sm"
+                        : "bg-muted text-muted-foreground"
+                    } ${current ? "w-8 h-8 ring-4 ring-primary/15" : "w-6 h-6"}`}
+                  >
+                    {s}
+                  </div>
+                </div>
+                {s < 3 && (
+                  <div className="flex-1 h-0.5 rounded-full overflow-hidden bg-muted">
+                    <div
+                      className="h-full bg-prismatic transition-all duration-500 ease-out"
+                      style={{ width: step > s ? "100%" : "0%" }}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-xs font-medium text-muted-foreground">
+          단계 {step} / 3 ·{" "}
+          <span className="text-primary font-bold">
+            {step === 1 ? "기본 정보" : step === 2 ? "성적 입력" : "완료"}
+          </span>
+        </p>
       </div>
 
       {/* ── Step 1: 기본정보 ── */}
@@ -178,7 +223,7 @@ export default function OnboardingPage() {
                     "px-5 py-2.5 rounded-xl border-2 transition-all text-sm font-medium",
                     formData.grade === grade
                       ? "bg-primary border-primary text-white shadow-sm"
-                      : "bg-white border-border text-foreground hover:border-primary/50"
+                      : "bg-card border-border text-foreground hover:border-primary/50"
                   )}
                 >
                   {grade}
@@ -476,7 +521,7 @@ export default function OnboardingPage() {
       {/* Navigation buttons */}
       <div className="mt-auto pt-8 flex gap-3">
         {step > 1 && step < 3 && (
-          <Button variant="ghost" onClick={prevStep} className="h-14 px-8 rounded-2xl">
+          <Button variant="ghost" onClick={prevStep} size="2xl" className="rounded-2xl">
             이전
           </Button>
         )}

@@ -21,11 +21,22 @@ export function readString(key: string, kind: Storage = "local"): string | null 
   try { return s.getItem(key); } catch { return null; }
 }
 
-/** Read JSON-parsed value. Returns null on missing/invalid/unavailable. */
+/**
+ * Read JSON-parsed value. Returns null on missing/invalid/unavailable.
+ *
+ * Corrupted-JSON은 드물지만 디버깅 단서가 되므로 console.warn으로 남김.
+ * (missing 과 corrupt 를 구분 — missing은 조용히 null).
+ */
 export function readJSON<T = unknown>(key: string, kind: Storage = "local"): T | null {
   const raw = readString(key, kind);
   if (!raw) return null;
-  try { return JSON.parse(raw) as T; } catch { return null; }
+  try {
+    return JSON.parse(raw) as T;
+  } catch (err) {
+    console.warn(`[storage] corrupted JSON for "${key}" — clearing`, err);
+    removeKey(key, kind);
+    return null;
+  }
 }
 
 /** Write a string. Best-effort — silently ignores failures. */

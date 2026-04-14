@@ -29,7 +29,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-border/50 px-4 py-2 flex justify-between items-center z-50 max-w-md md:max-w-2xl lg:max-w-4xl mx-auto"
+      className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-xl border-t border-border/50 px-4 py-2 flex justify-between items-center z-50 max-w-md md:max-w-2xl lg:max-w-4xl mx-auto"
       style={{ paddingBottom: `calc(0.5rem + env(safe-area-inset-bottom))` }}
     >
       {navItems.map((item) => {

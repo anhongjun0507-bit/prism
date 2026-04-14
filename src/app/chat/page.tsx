@@ -6,13 +6,14 @@ import { BottomNav, BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 import { fetchWithAuth } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Send, Sparkles, Loader2, Bot, User, RotateCcw } from "lucide-react";
+import { Send, Sparkles, Loader2, Bot, User, RotateCcw, GraduationCap, PenLine, TrendingUp, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { PLANS } from "@/lib/plans";
 import { ChatLimitModal } from "@/components/UpgradeCTA";
+import { readJSON, writeJSON, removeKey } from "@/lib/storage";
+import { ApiError } from "@/lib/api-client";
 
 interface Message {
   role: "user" | "ai";
@@ -24,19 +25,48 @@ function getTodayKey() {
   return new Date().toISOString().slice(0, 10);
 }
 
-/** Maps a suggested-question category to a friendly color emoji. */
-const getQuestionEmoji = (category: string): string => {
-  const map: Record<string, string> = {
-    "지원준비": "🎓",
-    "에세이":   "✍️",
-    "시험":     "📈",
-    "활동":     "🏆",
-    "전공":     "📚",
-    "재정":     "💰",
-    "인터뷰":   "🎤",
-    "기타":     "💬",
-  };
-  return map[category] ?? "💬";
+type SuggestedCategory = "지원준비" | "에세이" | "시험" | "활동";
+
+const SUGGESTION_STYLES: Record<SuggestedCategory, {
+  icon: React.ComponentType<{ className?: string }>;
+  gradient: string;
+  iconBg: string;
+  iconColor: string;
+  accent: string;
+  label: string;
+}> = {
+  "지원준비": {
+    icon: GraduationCap,
+    gradient: "from-blue-500/10 to-blue-500/0 dark:from-blue-500/15",
+    iconBg: "bg-blue-500/15 dark:bg-blue-500/25",
+    iconColor: "text-blue-600 dark:text-blue-400",
+    accent: "border-blue-500/20 hover:border-blue-500/40",
+    label: "지원 준비",
+  },
+  "에세이": {
+    icon: PenLine,
+    gradient: "from-purple-500/10 to-purple-500/0 dark:from-purple-500/15",
+    iconBg: "bg-purple-500/15 dark:bg-purple-500/25",
+    iconColor: "text-purple-600 dark:text-purple-400",
+    accent: "border-purple-500/20 hover:border-purple-500/40",
+    label: "에세이",
+  },
+  "시험": {
+    icon: TrendingUp,
+    gradient: "from-emerald-500/10 to-emerald-500/0 dark:from-emerald-500/15",
+    iconBg: "bg-emerald-500/15 dark:bg-emerald-500/25",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
+    accent: "border-emerald-500/20 hover:border-emerald-500/40",
+    label: "시험 점수",
+  },
+  "활동": {
+    icon: Trophy,
+    gradient: "from-amber-500/10 to-amber-500/0 dark:from-amber-500/15",
+    iconBg: "bg-amber-500/15 dark:bg-amber-500/25",
+    iconColor: "text-amber-600 dark:text-amber-400",
+    accent: "border-amber-500/20 hover:border-amber-500/40",
+    label: "과외활동",
+  },
 };
 
 export default function ChatPage() {
@@ -73,26 +103,30 @@ export default function ChatPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(CHAT_KEY);
-      if (saved) setMessages(JSON.parse(saved));
-    } catch {}
+    const saved = readJSON<Message[]>(CHAT_KEY);
+    if (saved && saved.length > 0) setMessages(saved);
   }, []);
 
   useEffect(() => {
     if (messages.length > 0) {
-      try { localStorage.setItem(CHAT_KEY, JSON.stringify(messages.slice(-50))); } catch {}
+      writeJSON(CHAT_KEY, messages.slice(-50));
     }
   }, [messages]);
 
   const todayKey = getTodayKey();
   const chatCount = profile?.aiChatDate === todayKey ? (profile?.aiChatCount || 0) : 0;
   const remaining = dailyLimit === Infinity ? Infinity : dailyLimit - chatCount;
+  const limitRatio = dailyLimit === Infinity ? 1 : Math.max(0, remaining / dailyLimit);
+  const limitTone =
+    dailyLimit === Infinity ? "primary" :
+    remaining <= 0 ? "red" :
+    remaining <= 1 ? "red" :
+    remaining <= 2 ? "amber" :
+    "primary";
 
   const isInitialLoad = useRef(true);
   useEffect(() => {
     if (isInitialLoad.current) {
-      // Don't auto-scroll on initial load — start from the top
       isInitialLoad.current = false;
       return;
     }
@@ -101,7 +135,6 @@ export default function ChatPage() {
     }
   }, [messages]);
 
-  // Build student context for AI
   function buildStudentContext(): string {
     if (!profile) return "";
     const parts: string[] = [];
@@ -119,7 +152,6 @@ export default function ChatPage() {
     setLoading(true);
 
     try {
-      // Keep all messages except errors for API history (including AI greeting for context)
       const cleanHistory = messages.filter((m) => !m.error);
 
       const data = await fetchWithAuth<{ response: string }>("/api/chat", {
@@ -133,14 +165,18 @@ export default function ChatPage() {
 
       setMessages(prev => [...prev, { role: "ai", content: data.response }]);
 
-      // Only count on success — server-side counter is the source of truth, this is just for UI cache
       const newCount = (profile?.aiChatDate === todayKey ? (profile?.aiChatCount || 0) : 0) + 1;
       await saveProfile({ aiChatCount: newCount, aiChatDate: todayKey });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      const msg = error?.message?.includes("API 키")
-        ? error.message
-        : "연결에 실패했어요. 네트워크를 확인하고 다시 시도해주세요.";
+      // ApiError(서버에서 의미 있는 메시지) 또는 API 키 안내 메시지는 그대로 노출,
+      // 그 외(네트워크 오류 등)는 일반 안내로 통일.
+      let msg = "연결에 실패했어요. 네트워크를 확인하고 다시 시도해주세요.";
+      if (error instanceof ApiError) {
+        msg = error.message;
+      } else if (error instanceof Error && error.message.includes("API 키")) {
+        msg = error.message;
+      }
       setMessages(prev => [...prev, {
         role: "ai",
         content: msg,
@@ -165,121 +201,183 @@ export default function ChatPage() {
   };
 
   const handleRetry = () => {
-    // Find last user message before the error
     const lastUserMsg = [...messages].reverse().find(m => m.role === "user");
     if (!lastUserMsg) return;
-    // Remove error message
     setMessages(prev => prev.filter(m => !m.error));
     sendMessage(lastUserMsg.content);
   };
+
+  const suggestions: { category: SuggestedCategory; text: string }[] = [
+    { category: "지원준비", text: `${profile?.dreamSchool || "Harvard"} 지원 준비, 뭐부터?` },
+    { category: "에세이",   text: "Common App 에세이 주제 추천" },
+    { category: "시험",     text: "SAT 점수 올리는 가장 빠른 방법" },
+    { category: "활동",     text: "경쟁력 있는 과외활동 추천" },
+  ];
+
+  const showSuggestions = !loading && messages.every(m => m.role === "ai");
 
   return (
     <>
     <div
       className="flex flex-col bg-background"
       style={{
-        // h-[100dvh] avoids iOS Safari 100vh bug; padding-bottom reserves
-        // space for the fixed BottomNav + iOS home indicator safe-area.
         height: "100dvh",
         paddingBottom: `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom))`,
       }}
     >
-      <header className="p-4 px-6 bg-white dark:bg-card border-b border-border flex items-center justify-between z-10 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-primary" aria-hidden="true" />
+      {/* ── Header ── */}
+      <header className="relative shrink-0 overflow-hidden border-b border-border/60">
+        {/* Decorative gradient + blurred orb */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-background to-background dark:from-primary/15" aria-hidden="true" />
+        <div className="absolute -top-10 -right-6 w-40 h-40 bg-primary/20 rounded-full blur-3xl opacity-60" aria-hidden="true" />
+        <div className="relative p-4 px-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-2xl bg-primary/30 blur-md animate-pulse" aria-hidden="true" />
+              <div className="relative w-11 h-11 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/30 ring-1 ring-white/20">
+                <Sparkles className="w-5 h-5 text-white" aria-hidden="true" />
+              </div>
+            </div>
+            <div>
+              <h1 className="font-headline font-bold text-lg flex items-center gap-1.5">
+                AI 카운슬러
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-primary/10 text-primary border-none font-bold tracking-wide">
+                  PRO
+                </Badge>
+              </h1>
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <span className="relative inline-flex w-1.5 h-1.5">
+                  <span className="absolute inset-0 rounded-full bg-emerald-500" />
+                  <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-75" />
+                </span>
+                실시간 상담 중
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="font-headline font-bold text-lg">AI 카운슬러</h1>
-            <p className="text-xs text-green-500 font-bold flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> 실시간 상담 중
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => { setMessages([]); localStorage.removeItem(CHAT_KEY); }} className="text-xs text-muted-foreground">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { setMessages([{ role: "ai", content: getGreeting() }]); removeKey(CHAT_KEY); }}
+            aria-label="대화 초기화"
+            className="gap-1.5 text-xs text-muted-foreground hover:text-foreground rounded-full"
+          >
+            <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
             초기화
           </Button>
-          {dailyLimit !== Infinity && (
-            <Badge variant="secondary" className={`text-xs ${remaining <= 0 ? "bg-red-100 text-red-600 dark:bg-red-950/30 dark:text-red-400" : ""}`}>
-              {remaining > 0 ? `오늘 ${remaining}회 남음` : "내일 다시 이용 가능"}
-            </Badge>
-          )}
         </div>
       </header>
 
-      {/* Messages area - grows to fill, scroll internally */}
-      <div className="flex-1 overflow-y-auto p-6 pb-4">
-        <div className="space-y-6" aria-live="polite" aria-relevant="additions">
+      {/* ── Messages area ── */}
+      <div className="flex-1 overflow-y-auto px-6 pt-6 pb-4">
+        <div className="space-y-5" aria-live="polite" aria-relevant="additions">
           {messages.map((m, i) => {
             const isNew = i >= messages.length - 2;
+            const isAi = m.role === "ai";
             return (
-            <div key={i} className={cn(
-              "flex gap-3",
-              m.role === "user" ? "flex-row-reverse" : "flex-row",
-              isNew && (m.role === "user" ? "animate-msg-user" : "animate-msg-ai")
-            )}>
-              <div className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-                m.role === "ai" ? "bg-primary text-white" : "bg-muted text-muted-foreground"
-              )}>
-                {m.role === "ai" ? <Bot size={16} aria-hidden="true" /> : <User size={16} aria-hidden="true" />}
-              </div>
-              <div className="max-w-[80%] space-y-2">
-                <div className={cn(
-                  "p-4 rounded-2xl text-sm leading-relaxed",
-                  m.role === "ai"
-                    ? m.error
-                      ? "bg-red-50 text-red-700 rounded-tl-none"
-                      : "bg-white dark:bg-card border-none shadow-sm text-foreground rounded-tl-none"
-                    : "bg-primary text-white rounded-tr-none"
-                )}>
-                  {m.content}
-                </div>
-                {m.error && (
-                  <Button variant="ghost" size="sm" onClick={handleRetry} className="text-xs text-red-600 gap-1 h-7 px-2">
-                    <RotateCcw className="w-3 h-3" /> 다시 시도
-                  </Button>
+              <div
+                key={i}
+                className={cn(
+                  "flex gap-2.5",
+                  isAi ? "flex-row" : "flex-row-reverse",
+                  isNew && (isAi ? "animate-msg-ai" : "animate-msg-user")
                 )}
+              >
+                <div className="shrink-0 pt-0.5">
+                  {isAi ? (
+                    <div className="relative w-8 h-8">
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-primary/60 blur-[2px] opacity-40" aria-hidden="true" />
+                      <div className="relative w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center ring-2 ring-background shadow-sm">
+                        <Bot size={15} className="text-white" aria-hidden="true" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center ring-2 ring-background">
+                      <User size={15} aria-hidden="true" />
+                    </div>
+                  )}
+                </div>
+                <div className="max-w-[82%] space-y-1.5">
+                  <div
+                    className={cn(
+                      "px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap",
+                      isAi
+                        ? m.error
+                          ? "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 rounded-2xl rounded-tl-md border border-red-200 dark:border-red-900"
+                          : "bg-card text-foreground rounded-2xl rounded-tl-md shadow-sm ring-1 ring-border/50"
+                        : "bg-gradient-to-br from-primary to-primary/85 text-white rounded-2xl rounded-tr-md shadow-md shadow-primary/20"
+                    )}
+                  >
+                    {m.content}
+                  </div>
+                  {m.error && (
+                    <Button variant="ghost" size="sm" onClick={handleRetry} className="text-xs text-red-600 gap-1 h-7 px-2 rounded-lg">
+                      <RotateCcw className="w-3 h-3" aria-hidden="true" /> 다시 시도
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
             );
           })}
-          {/* Example questions — shown only when no user messages yet */}
-          {!loading && messages.every(m => m.role === "ai") && (
-            <div className="flex flex-col items-center gap-2.5 pt-2 pb-4">
-              <p className="text-xs text-muted-foreground mb-1">이런 질문을 해보세요</p>
-              {[
-                { category: "지원준비", text: `${profile?.dreamSchool || "Harvard"}에 지원하려면 어떤 준비가 필요해요?` },
-                { category: "에세이",   text: "Common App 에세이 주제 추천해주세요" },
-                { category: "시험",     text: "SAT 점수를 올리는 가장 효과적인 방법은?" },
-                { category: "활동",     text: "과외활동 추천해주세요" },
-              ].map((q) => {
-                const emoji = getQuestionEmoji(q.category);
-                return (
-                  <button
-                    key={q.text}
-                    onClick={() => {
-                      setInput("");
-                      setMessages(prev => [...prev, { role: "user", content: `${emoji} ${q.text}` }]);
-                      sendMessage(`${emoji} ${q.text}`);
-                    }}
-                    className="w-full max-w-sm text-left px-4 py-3 rounded-2xl border border-primary/20 bg-primary/5 hover:bg-primary/10 active:scale-[0.98] transition-all text-sm text-foreground"
-                  >
-                    <span className="text-xl mr-2">{emoji}</span>{q.text}
-                  </button>
-                );
-              })}
+
+          {/* Suggested questions — shown only when conversation hasn't started */}
+          {showSuggestions && (
+            <div className="pt-2 pb-2 animate-fade-up">
+              <div className="flex items-center gap-2 mb-3 px-1">
+                <div className="h-px flex-1 bg-border/60" />
+                <p className="text-[11px] font-bold text-muted-foreground tracking-wider uppercase">이런 질문 어때요</p>
+                <div className="h-px flex-1 bg-border/60" />
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                {suggestions.map((q) => {
+                  const style = SUGGESTION_STYLES[q.category];
+                  const Icon = style.icon;
+                  return (
+                    <button
+                      key={q.text}
+                      onClick={() => {
+                        setInput("");
+                        setMessages(prev => [...prev, { role: "user", content: q.text }]);
+                        sendMessage(q.text);
+                      }}
+                      className={cn(
+                        "group relative text-left p-3 rounded-2xl border bg-gradient-to-br transition-all",
+                        "hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98]",
+                        style.gradient,
+                        style.accent,
+                        "bg-card"
+                      )}
+                    >
+                      <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center mb-2", style.iconBg)}>
+                        <Icon className={cn("w-4 h-4", style.iconColor)} />
+                      </div>
+                      <p className={cn("text-[11px] font-bold uppercase tracking-wider mb-0.5", style.iconColor)}>
+                        {style.label}
+                      </p>
+                      <p className="text-xs text-foreground leading-snug line-clamp-2">{q.text}</p>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
+
           {loading && (
-            <div className="flex gap-3 animate-msg-ai" role="status" aria-label="AI 응답 대기 중">
-              <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center">
-                <Bot size={16} aria-hidden="true" />
+            <div className="flex gap-2.5 animate-msg-ai" role="status" aria-label="AI 응답 대기 중">
+              <div className="shrink-0 pt-0.5">
+                <div className="relative w-8 h-8">
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-primary/60 blur-[2px] opacity-40 animate-pulse" aria-hidden="true" />
+                  <div className="relative w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center ring-2 ring-background shadow-sm">
+                    <Bot size={15} className="text-white" aria-hidden="true" />
+                  </div>
+                </div>
               </div>
-              <div className="bg-white dark:bg-card p-4 rounded-2xl text-sm rounded-tl-none shadow-sm flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-primary" aria-hidden="true" />
-                AI가 생각 중입니다...
+              <div className="bg-card px-4 py-3 rounded-2xl rounded-tl-md shadow-sm ring-1 ring-border/50 flex items-center gap-2">
+                <div className="flex gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary/70 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary/70 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary/70 animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+                <span className="text-xs text-muted-foreground">생각 중</span>
               </div>
             </div>
           )}
@@ -287,56 +385,76 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Input — sits at the bottom of the flex column, directly above BottomNav */}
-      <div className="shrink-0 p-4 px-6 bg-gradient-to-t from-background via-background to-transparent">
-        {/* Remaining chat progress bar */}
-        {dailyLimit !== Infinity && (
-          remaining > 0 ? (
-            <div className="flex items-center gap-2 mb-2 px-1">
-              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${remaining <= 1 ? "bg-red-500" : remaining <= 2 ? "bg-amber-500" : "bg-primary"}`}
-                  style={{ width: `${(remaining / dailyLimit) * 100}%` }}
-                />
-              </div>
-              <span className={`text-xs font-medium shrink-0 ${remaining <= 1 ? "text-red-500" : "text-muted-foreground"}`}>
-                오늘 {remaining}회 남음
-              </span>
+      {/* ── Input ── */}
+      <div className="shrink-0 px-4 pt-2 pb-3 bg-gradient-to-t from-background via-background to-transparent">
+        <div className={cn(
+          "relative flex items-end gap-2 p-2 pl-4 rounded-[22px] bg-card shadow-[0_4px_20px_-6px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_-6px_rgba(0,0,0,0.6)] ring-1 transition-all",
+          "ring-border/60 focus-within:ring-primary/40 focus-within:shadow-[0_6px_28px_-6px_rgba(154,60,18,0.25)]"
+        )}>
+          {/* Remaining-count pill — floats in top-right of the input shell */}
+          {dailyLimit !== Infinity && (
+            <div className={cn(
+              "absolute -top-2 right-4 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-sm ring-1 ring-background",
+              limitTone === "red" && "bg-red-500 text-white",
+              limitTone === "amber" && "bg-amber-500 text-white",
+              limitTone === "primary" && "bg-primary text-primary-foreground",
+            )}>
+              {remaining > 0 ? (
+                <>
+                  <span className="w-1 h-1 rounded-full bg-current opacity-80" />
+                  오늘 {remaining}회 남음
+                </>
+              ) : (
+                "내일 다시 이용 가능"
+              )}
             </div>
-          ) : (
-            <div className="flex items-center gap-2 mb-2 px-1 py-2 bg-red-50 dark:bg-red-950/20 rounded-xl">
-              <div className="flex-1 h-1.5 bg-red-200 dark:bg-red-900 rounded-full" />
-              <span className="text-xs font-medium text-red-500 shrink-0">
-                오늘 {dailyLimit}회 모두 사용했어요
-              </span>
-            </div>
-          )
-        )}
-        <div className="glass-card p-2 rounded-2xl flex gap-2 shadow-xl border border-white/50">
+          )}
+
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder={remaining <= 0 ? "오늘 무료 상담을 모두 사용했어요" : "상담하고 싶은 내용을 입력하세요..."}
+            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
+            placeholder={remaining <= 0 ? "오늘 무료 상담을 모두 사용했어요" : "무엇이든 물어보세요..."}
             disabled={remaining <= 0}
             aria-label="상담 메시지 입력"
-            className="border-none bg-transparent focus-visible:ring-0 text-sm h-12"
+            className="flex-1 border-none bg-transparent focus-visible:ring-0 text-sm h-11 px-0 placeholder:text-muted-foreground/70"
           />
           <Button
             onClick={handleSend}
             disabled={loading || !input.trim() || remaining <= 0}
             aria-label="메시지 전송"
-            className="w-12 h-12 rounded-xl shrink-0 p-0"
+            className={cn(
+              "shrink-0 w-11 h-11 rounded-2xl p-0 bg-gradient-to-br from-primary to-primary/80 shadow-md shadow-primary/30",
+              "hover:shadow-lg hover:shadow-primary/40 hover:brightness-110 transition-all",
+              "disabled:from-muted disabled:to-muted disabled:shadow-none disabled:opacity-50"
+            )}
           >
-            <Send className="w-5 h-5" aria-hidden="true" />
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
+            ) : (
+              <Send className="w-[18px] h-[18px]" aria-hidden="true" />
+            )}
           </Button>
         </div>
+
+        {/* Limit progress bar — subtle, only when close to limit */}
+        {dailyLimit !== Infinity && remaining <= 2 && remaining > 0 && (
+          <div className="mt-2 px-2">
+            <div className="h-1 bg-muted rounded-full overflow-hidden">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  limitTone === "red" ? "bg-red-500" : "bg-amber-500"
+                )}
+                style={{ width: `${limitRatio * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <ChatLimitModal open={showLimitModal} onClose={() => setShowLimitModal(false)} />
     </div>
-    {/* BottomNav rendered as sibling so its fixed positioning is independent
-        of the chat flex column. Column already reserves BOTTOM_NAV_HEIGHT below. */}
     <BottomNav />
     </>
   );

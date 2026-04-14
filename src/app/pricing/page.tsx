@@ -73,8 +73,11 @@ export default function PricingPage() {
           return (
             <Card
               key={plan.type}
-              className={`relative p-6 border-2 transition-all ${
-                isPopular ? "border-primary shadow-lg" : "border-transparent bg-white dark:bg-card shadow-sm"
+              variant={isPopular ? "elevated" : "default"}
+              className={`relative p-6 border-2 transition-all hover-lift ${
+                isPopular
+                  ? "border-primary shadow-glow-lg"
+                  : "border-transparent shadow-sm"
               }`}
             >
               {isPopular && (
@@ -222,7 +225,7 @@ export default function PricingPage() {
             </div>
 
             <div className="space-y-2">
-              <Button className="w-full h-12 rounded-xl gap-2" disabled>
+              <Button size="xl" className="w-full rounded-xl gap-2" disabled>
                 <ExternalLink className="w-4 h-4" />
                 앱 다운로드 (출시 예정)
               </Button>

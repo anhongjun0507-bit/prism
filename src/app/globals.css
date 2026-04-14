@@ -120,11 +120,12 @@ body {
     @apply bg-background text-foreground;
   }
 
-  /* Global focus ring consistency */
+  /* Global focus ring — brand-tinted halo. Outline + soft shadow extension. */
   *:focus-visible {
     outline: 2px solid hsl(var(--ring));
     outline-offset: 2px;
     border-radius: inherit;
+    box-shadow: 0 0 0 4px hsl(var(--primary) / 0.15);
   }
 }
 
@@ -138,6 +139,140 @@ body {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   BRAND DESIGN TOKENS — shadows · gradients · focus
+   ─────────────────────────────────────────────────────────────────────── */
+
+/* Brand-tinted shadow scale — primary 색조의 부드러운 글로우.
+   neutral 그림자(black) 대신 사용해 카드가 단순히 "떠있다"가 아니라 "빛난다" 느낌.
+   다크모드는 더 강한 alpha + glow 확장. */
+.shadow-glow-sm {
+  box-shadow: 0 2px 8px -2px hsl(var(--primary) / 0.12), 0 1px 3px -1px hsl(var(--primary) / 0.08);
+}
+.shadow-glow-md {
+  box-shadow: 0 8px 24px -8px hsl(var(--primary) / 0.20), 0 4px 8px -4px hsl(var(--primary) / 0.10);
+}
+.shadow-glow-lg {
+  box-shadow: 0 16px 40px -12px hsl(var(--primary) / 0.28), 0 6px 16px -6px hsl(var(--primary) / 0.14);
+}
+.dark .shadow-glow-sm {
+  box-shadow: 0 2px 12px -2px hsl(var(--primary) / 0.30), 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.dark .shadow-glow-md {
+  box-shadow: 0 8px 32px -8px hsl(var(--primary) / 0.40), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+.dark .shadow-glow-lg {
+  box-shadow: 0 20px 50px -12px hsl(var(--primary) / 0.50), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* Brand gradient utilities — hero 카드/배지/액센트에 사용 */
+.bg-brand-warm {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(19, 79%, 48%) 50%, hsl(28, 85%, 52%) 100%);
+}
+.bg-brand-warm-soft {
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.10) 0%, hsl(28, 85%, 52% / 0.05) 100%);
+}
+.dark .bg-brand-warm-soft {
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.20) 0%, hsl(28, 85%, 52% / 0.08) 100%);
+}
+
+/* Prismatic — 입시 브랜드 메타포 (빛이 굴절되어 spectrum이 되는 PRISM) */
+.bg-prismatic {
+  background: linear-gradient(135deg,
+    hsl(217, 91%, 60%) 0%,
+    hsl(265, 84%, 65%) 25%,
+    hsl(330, 81%, 60%) 50%,
+    hsl(19, 79%, 50%) 75%,
+    hsl(38, 92%, 52%) 100%);
+}
+.bg-prismatic-soft {
+  background: linear-gradient(135deg,
+    hsl(217, 91%, 60% / 0.10) 0%,
+    hsl(265, 84%, 65% / 0.08) 25%,
+    hsl(330, 81%, 60% / 0.10) 50%,
+    hsl(19, 79%, 50% / 0.10) 75%,
+    hsl(38, 92%, 52% / 0.08) 100%);
+}
+
+/* Floating gradient orbs — hero 배경 장식.
+   부모는 relative + overflow-hidden 필요. */
+.brand-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(40px);
+  pointer-events: none;
+  opacity: 0.4;
+}
+.brand-orb-primary { background: hsl(var(--primary)); }
+.brand-orb-violet { background: hsl(265, 84%, 65%); }
+.brand-orb-amber { background: hsl(38, 92%, 52%); }
+.dark .brand-orb { opacity: 0.25; }
+
+/* Focus glow — 입력창/버튼 focus-visible 시 brand-tinted halo.
+   기본 outline은 globals @layer base에 정의됨; 이 클래스는 추가 글로우. */
+.focus-glow:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px hsl(var(--background)),
+    0 0 0 4px hsl(var(--primary) / 0.40),
+    0 4px 16px -4px hsl(var(--primary) / 0.30);
+  border-color: hsl(var(--primary));
+}
+
+/* Hover lift — 카드/버튼이 들어올린 듯한 미세 움직임.
+   transform-gpu로 GPU 가속, transition 빠르게. */
+.hover-lift {
+  transition: transform 0.18s ease-out, box-shadow 0.18s ease-out;
+  will-change: transform;
+}
+@media (hover: hover) {
+  .hover-lift:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* Stagger entry — CSS variable로 delay 조절. inline style로 --i 설정.
+   사용: <div className="animate-stagger" style={{"--i": index}} /> */
+.animate-stagger {
+  animation: fade-up 0.45s ease-out both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+/* Brand shimmer — skeleton/loading 표면에 brand-tinted sweep.
+   기본 muted 배경 위에 70deg primary 그라디언트가 좌→우로 흐름.
+   animate-pulse보다 "premium loading" 느낌. */
+@keyframes shimmer-sweep {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 0%,
+    hsl(var(--muted)) 40%,
+    hsl(var(--primary) / 0.12) 50%,
+    hsl(var(--muted)) 60%,
+    hsl(var(--muted)) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-sweep 1.8s ease-in-out infinite;
+}
+.dark .shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 0%,
+    hsl(var(--muted)) 40%,
+    hsl(var(--primary) / 0.20) 50%,
+    hsl(var(--muted)) 60%,
+    hsl(var(--muted)) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-sweep 1.8s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PAGE-SPECIFIC LEGACY
+   ─────────────────────────────────────────────────────────────────────── */
 .dark-hero-gradient {
   background: linear-gradient(135deg, #1a1714 0%, #2c2620 100%);
 }
@@ -174,31 +309,8 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-/* Entrance animations */
-@keyframes fade-up {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes scale-in {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes slide-right {
-  from { opacity: 0; transform: translateX(-8px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes count-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.15); }
-}
+/* Entrance animations: fade-up, fade-in, scale-in, slide-right, count-pulse 는
+   tailwind.config.ts의 keyframes/animation에 정의됨 (animate-fade-up 등으로 사용). */
 
 /* Step transition animations */
 @keyframes step-slide-left {
