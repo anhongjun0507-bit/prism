@@ -6,18 +6,20 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Search, X, Plus, GraduationCap, Loader2 } from "lucide-react";
+import { Search, X, Plus, GraduationCap } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
 import { SCHOOLS_INDEX, schoolMatchesQuery } from "@/lib/schools-index";
 import { SchoolLogo } from "@/components/SchoolLogo";
 import { useAuth } from "@/lib/auth-context";
 import type { Specs, School } from "@/lib/matching";
 import { fetchWithAuth } from "@/lib/api-client";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
-import Link from "next/link";
+import type { UserProfile } from "@/lib/auth-context";
 
 const MAX_SCHOOLS = 3;
 
-function buildSpecs(profile: any): Specs | null {
+function buildSpecs(profile: UserProfile | null): Specs | null {
   if (!profile?.gpa && !profile?.sat) return null;
   return {
     gpaUW: profile.gpa || "",
@@ -74,7 +76,6 @@ export default function ComparePage() {
   const specs = useMemo(() => buildSpecs(profile), [profile]);
   // Match 결과는 서버에서 가져옴 (specs 있을 때만). 없으면 인덱스만 표시.
   const [matchedSchools, setMatchedSchools] = useState<School[]>([]);
-  const [matchLoading, setMatchLoading] = useState(false);
   useEffect(() => {
     if (!specs) {
       // specs 없으면 빈 매치 결과로, 학교 picker는 SCHOOLS_INDEX로 채움 (아래 fallback)
@@ -82,16 +83,14 @@ export default function ComparePage() {
       return;
     }
     let cancelled = false;
-    setMatchLoading(true);
     fetchWithAuth<{ results: School[] }>("/api/match", {
       method: "POST",
       body: JSON.stringify({ specs }),
     })
       .then((d) => { if (!cancelled) setMatchedSchools(d.results || []); })
-      .catch((e) => { if (!cancelled) showApiError(e, { title: "비교 데이터 불러오기 실패" }); })
-      .finally(() => { if (!cancelled) setMatchLoading(false); });
+      .catch((e) => { if (!cancelled) showApiError(e, { title: "비교 데이터 불러오기 실패" }); });
     return () => { cancelled = true; };
-  }, [specs]);
+  }, [specs, showApiError]);
 
   // specs 없을 때는 인덱스로 학교 picker만 채우기 (prob/cat 등은 빈 값)
   const effectiveSchools = useMemo<School[]>(() => {
@@ -105,11 +104,6 @@ export default function ComparePage() {
     } as School));
   }, [matchedSchools]);
 
-  const schoolMap = useMemo(() => {
-    const map = new Map<string, School>();
-    effectiveSchools.forEach((s) => map.set(s.n, s));
-    return map;
-  }, [effectiveSchools]);
 
   const filteredSchools = useMemo(() => {
     if (!searchQ.trim()) return effectiveSchools.slice(0, 10);
@@ -241,19 +235,9 @@ export default function ComparePage() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border/50">
-        <div className="max-w-2xl mx-auto flex items-center gap-3 px-5 py-4">
-          <Link href="/analysis">
-            <button className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-          </Link>
-          <h1 className="text-lg font-bold">대학 비교</h1>
-        </div>
-      </div>
+      <PageHeader title="대학 비교" backHref="/analysis" sticky />
 
-      <div className="max-w-2xl mx-auto px-5 py-6 space-y-6">
+      <div className="max-w-2xl mx-auto px-gutter py-6 space-y-6">
         {/* School selector slots */}
         <div className="space-y-3">
           <p className="text-sm font-semibold text-foreground">
@@ -410,11 +394,12 @@ export default function ComparePage() {
                         {selected.map((s, i) => (
                           <td
                             key={s.n}
-                            className={`text-sm font-medium text-center p-3 ${
+                            className={`text-sm font-medium text-center p-3 tabular-nums ${
                               bestIdx === i
-                                ? "text-emerald-600 font-bold"
+                                ? "text-emerald-700 dark:text-emerald-300 font-bold bg-emerald-50 dark:bg-emerald-950/30"
                                 : "text-foreground"
                             }`}
+                            aria-label={bestIdx === i ? `${row.label} 최적 값` : undefined}
                           >
                             {row.getValue(s)}
                           </td>
@@ -438,15 +423,11 @@ export default function ComparePage() {
         )}
 
         {selected.length === 0 && (
-          <div className="text-center py-12">
-            <GraduationCap className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-            <p className="text-sm font-semibold text-muted-foreground mb-1">
-              대학을 선택해 비교를 시작하세요
-            </p>
-            <p className="text-xs text-muted-foreground">
-              2~3개 대학의 정보를 나란히 비교할 수 있습니다
-            </p>
-          </div>
+          <EmptyState
+            illustration="school"
+            title="대학을 선택해 비교를 시작하세요"
+            description="2~3개 대학의 정보를 나란히 비교할 수 있습니다"
+          />
         )}
       </div>
 

@@ -5,19 +5,37 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Copy, Check, Mail } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { PrismLoader } from "@/components/PrismLoader";
 import type { PlanType } from "@/lib/plans";
 import { PLANS } from "@/lib/plans";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
+
+const SUPPORT_EMAIL = "support@prism-app.com";
 
 function PaymentSuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { saveProfile } = useAuth();
+  const { toast } = useToast();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [plan, setPlan] = useState<PlanType | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [recoveryId, setRecoveryId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const copyRecoveryId = async () => {
+    if (!recoveryId) return;
+    try {
+      await navigator.clipboard.writeText(recoveryId);
+      setCopied(true);
+      toast({ title: "복구 ID가 복사되었어요" });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({ title: "복사 실패", description: "ID를 직접 선택해 복사해주세요.", variant: "destructive" });
+    }
+  };
 
   useEffect(() => {
     const paymentKey = searchParams.get("paymentKey");
@@ -78,10 +96,7 @@ function PaymentSuccessContent() {
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
-          <p className="text-muted-foreground">결제를 확인하고 있습니다...</p>
-        </div>
+        <PrismLoader size={48} label="결제를 확인하고 있습니다..." />
       </div>
     );
   }
@@ -90,15 +105,42 @@ function PaymentSuccessContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
         <Card className="p-6 text-center max-w-sm w-full">
-          <p className="text-4xl mb-4">😥</p>
+          <p className="text-4xl mb-4" aria-hidden="true">😥</p>
           <h2 className="font-bold text-lg mb-2">결제 확인 실패</h2>
           <p className="text-sm text-muted-foreground mb-4">
             {errorMessage || "결제 확인 중 문제가 발생했습니다."}
           </p>
           {recoveryId && (
-            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 mb-4 text-left">
-              <p className="text-xs font-bold text-amber-800 dark:text-amber-200 mb-1">고객센터 문의 시 복구 ID</p>
-              <p className="text-xs font-mono text-amber-900 dark:text-amber-100 break-all">{recoveryId}</p>
+            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-4 text-left space-y-3">
+              <div>
+                <p className="text-xs font-bold text-amber-800 dark:text-amber-200 mb-1">결제는 승인됐지만 플랜 적용에 실패했어요</p>
+                <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+                  아래 복구 ID로 문의 주시면 빠르게 플랜을 활성화해드려요. 중복 결제되지 않으니 안심하세요.
+                </p>
+              </div>
+              <div className="bg-white dark:bg-amber-900/30 rounded-lg p-2.5 flex items-center gap-2">
+                <p className="text-xs font-mono text-amber-900 dark:text-amber-100 break-all flex-1 select-all">{recoveryId}</p>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={copyRecoveryId}
+                  className="shrink-0 h-7 gap-1 text-xs"
+                  aria-label="복구 ID 복사"
+                >
+                  {copied ? (
+                    <><Check className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" /> 복사됨</>
+                  ) : (
+                    <><Copy className="w-3.5 h-3.5" aria-hidden="true" /> 복사</>
+                  )}
+                </Button>
+              </div>
+              <a
+                href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("결제 복구 요청")}&body=${encodeURIComponent(`복구 ID: ${recoveryId}\n\n결제 승인 후 플랜 적용에 실패했습니다. 확인 부탁드립니다.`)}`}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300 hover:underline"
+              >
+                <Mail className="w-3.5 h-3.5" aria-hidden="true" />
+                {SUPPORT_EMAIL}로 메일 보내기
+              </a>
             </div>
           )}
           <Button onClick={() => router.push("/pricing")} className="w-full rounded-xl">
@@ -112,7 +154,7 @@ function PaymentSuccessContent() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-6">
       <Card className="p-8 text-center max-w-sm w-full relative overflow-hidden prism-strip-once">
-        <div className="w-20 h-20 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center mx-auto mb-5">
+        <div className="w-20 h-20 rounded-full bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center mx-auto mb-5">
           <CheckCircle2 className="w-10 h-10 text-emerald-500" aria-hidden="true" />
         </div>
         <h2 className="font-headline font-bold text-2xl mb-2">환영합니다!</h2>
@@ -124,7 +166,7 @@ function PaymentSuccessContent() {
         <p className="text-xs text-primary font-medium mb-6">
           이제 모든 AI 기능을 자유롭게 이용하세요
         </p>
-        <Button onClick={() => router.push("/dashboard")} className="w-full h-12 rounded-xl text-base font-bold">
+        <Button size="xl" onClick={() => router.push("/dashboard")} className="w-full rounded-xl font-bold">
           대시보드로 이동
         </Button>
       </Card>
@@ -136,7 +178,7 @@ export default function PaymentSuccessPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <PrismLoader size={36} />
       </div>
     }>
       <PaymentSuccessContent />

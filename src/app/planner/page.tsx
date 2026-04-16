@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { BottomNav } from "@/components/BottomNav";
+import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,13 +44,15 @@ interface PlannerTask {
 
 const CATEGORIES: TaskCategory[] = ["시험", "행정", "에세이", "추천서", "지원", "기타"];
 
+// 플래너 task 카테고리 색 — 입시 Safety/Target/Reach와는 다른 도메인(작업 유형 분류)이라
+// cat-* 토큰과 별도 유지. 50-level bg는 globals.css에 dark override 있음, text는 명시적.
 const CATEGORY_COLORS: Record<TaskCategory, string> = {
-  시험:   "bg-blue-50 text-blue-600",
-  행정:   "bg-emerald-50 text-emerald-600",
-  에세이: "bg-amber-50 text-amber-600",
-  추천서: "bg-violet-50 text-violet-600",
-  지원:   "bg-red-50 text-red-600",
-  기타:   "bg-slate-50 text-slate-600",
+  시험:   "bg-blue-50 text-blue-600 dark:text-blue-300",
+  행정:   "bg-emerald-50 text-emerald-600 dark:text-emerald-300",
+  에세이: "bg-amber-50 text-amber-600 dark:text-amber-300",
+  추천서: "bg-violet-50 dark:bg-violet-950/20 text-violet-600 dark:text-violet-300",
+  지원:   "bg-red-50 text-red-600 dark:text-red-300",
+  기타:   "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300",
 };
 
 /* ─── Helpers ─── */
@@ -80,11 +83,11 @@ const LEGACY_CAT_MAP: Record<string, TaskCategory> = {
   rec: "추천서", deadline: "지원", interview: "기타", other: "기타",
 };
 
-function migrateLegacyTask(m: any): PlannerTask {
+function migrateLegacyTask(m: Record<string, unknown>): PlannerTask {
   return {
     id: String(m.id ?? newId()),
     title: String(m.title ?? ""),
-    category: LEGACY_CAT_MAP[m.category] ?? "기타",
+    category: LEGACY_CAT_MAP[String(m.category ?? "")] ?? "기타",
     dueDate: String(m.dueDate ?? m.date ?? new Date().toISOString().split("T")[0]),
     completed: Boolean(m.completed),
     notes: m.notes ? String(m.notes) : undefined,
@@ -109,7 +112,7 @@ function loadLocalTasks(): PlannerTask[] {
   const saved = readJSON<PlannerTask[]>(TASKS_LS_KEY);
   if (saved) return saved;
   // Migrate from legacy key
-  const legacy = readJSON<unknown[]>(LEGACY_LS_KEY);
+  const legacy = readJSON<Record<string, unknown>[]>(LEGACY_LS_KEY);
   if (Array.isArray(legacy)) return legacy.map(migrateLegacyTask);
   return getInitialTasks();
 }
@@ -159,7 +162,7 @@ export default function PlannerPage() {
   const upsertTask = async (task: PlannerTask) => {
     if (user) {
       // Strip undefined fields (Firestore rejects them)
-      const payload: Record<string, any> = {
+      const payload: Record<string, unknown> = {
         title: task.title, category: task.category,
         dueDate: task.dueDate, completed: task.completed,
       };
@@ -176,12 +179,24 @@ export default function PlannerPage() {
 
   const removeTask = async (id: string) => {
     const target = tasks.find(t => t.id === id);
+    if (!target) return;
+    // Optimistic UI + 서버 실패 시 복구. 이전엔 silent catch로 서버에 남아 재로그인 시 부활.
+    setTasks(prev => prev.filter(t => t.id !== id));
     if (user) {
-      try { await deleteDoc(doc(db, "users", user.uid, "tasks", id)); } catch {}
-    } else {
-      setTasks(prev => prev.filter(t => t.id !== id));
+      try {
+        await deleteDoc(doc(db, "users", user.uid, "tasks", id));
+      } catch (err) {
+        console.error("[planner] delete failed:", err);
+        setTasks(prev => [...prev, target]);
+        toast({
+          title: "삭제 실패",
+          description: "서버 동기화에 실패했어요. 네트워크를 확인하고 다시 시도해주세요.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
-    if (target) toast({ title: "삭제됨", description: `"${target.title}" 일정이 삭제되었어요.` });
+    toast({ title: "삭제됨", description: `"${target.title}" 일정이 삭제되었어요.` });
   };
 
   const toggleComplete = async (task: PlannerTask) => {
@@ -203,17 +218,18 @@ export default function PlannerPage() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <header className="p-6 flex justify-between items-start">
-        <div>
-          <h1 className="font-headline text-2xl font-bold">입시 플래너</h1>
-          <p className="text-sm text-muted-foreground">합격을 향한 중요한 일정을 관리하세요.</p>
-        </div>
-        <Button onClick={openAddDialog} size="icon" className="rounded-full w-10 h-10 shadow-lg shrink-0" aria-label="일정 추가">
-          <Plus className="w-4 h-4" />
-        </Button>
-      </header>
+      <PageHeader
+        title="입시 플래너"
+        subtitle="합격을 향한 중요한 일정을 관리하세요."
+        hideBack
+        action={
+          <Button onClick={openAddDialog} size="icon" className="rounded-full w-10 h-10 shadow-lg shrink-0" aria-label="일정 추가">
+            <Plus className="w-4 h-4" />
+          </Button>
+        }
+      />
 
-      <div className="px-6 space-y-6">
+      <div className="px-gutter space-y-6">
         {/* Urgent deadlines banner */}
         {urgent.length > 0 && (
           <Card className="p-4 bg-red-50 border-red-200 space-y-2">
@@ -389,7 +405,7 @@ export default function PlannerPage() {
       <AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>이 일정을 삭제하시겠습니까?</AlertDialogTitle>
+            <AlertDialogTitle>이 일정을 삭제할까요?</AlertDialogTitle>
             <AlertDialogDescription>이 작업은 되돌릴 수 없습니다.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -464,7 +480,7 @@ function TaskDialog({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-md rounded-2xl">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "일정 수정" : "새 일정 추가"}</DialogTitle>
+          <DialogTitle>{isEdit ? "일정 수정" : "일정 추가"}</DialogTitle>
           <DialogDescription>제목, 카테고리, 마감일을 입력해주세요.</DialogDescription>
         </DialogHeader>
 

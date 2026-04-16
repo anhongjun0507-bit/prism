@@ -29,7 +29,8 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-xl border-t border-border/50 px-4 py-2 flex justify-between items-center z-50 max-w-md md:max-w-2xl lg:max-w-4xl mx-auto"
+      aria-label="주요 메뉴"
+      className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-xl border-t border-border/50 px-gutter py-2 flex justify-between items-center z-50 max-w-md md:max-w-2xl lg:hidden mx-auto"
       style={{ paddingBottom: `calc(0.5rem + env(safe-area-inset-bottom))` }}
     >
       {navItems.map((item) => {
@@ -45,7 +46,12 @@ export function BottomNav() {
             )}
           >
             <item.icon className={cn("w-5 h-5", isActive && "stroke-[2.5px]")} aria-hidden="true" />
-            {isActive && <span className="w-1 h-1 rounded-full bg-primary absolute top-1 right-2" aria-hidden="true" />}
+            {isActive && (
+              <>
+                <span className="w-1 h-1 rounded-full bg-primary absolute top-1 right-2" aria-hidden="true" />
+                <span className="sr-only">현재 페이지: </span>
+              </>
+            )}
             <span className="text-xs font-medium">{item.label}</span>
           </Link>
         );

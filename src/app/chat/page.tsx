@@ -70,9 +70,9 @@ const SUGGESTION_STYLES: Record<SuggestedCategory, {
 };
 
 export default function ChatPage() {
-  const { profile, saveProfile } = useAuth();
+  const { profile, saveProfile, isMaster } = useAuth();
   const currentPlan = profile?.plan || "free";
-  const dailyLimit = PLANS[currentPlan].limits.aiChatPerDay;
+  const dailyLimit = isMaster ? Infinity : PLANS[currentPlan].limits.aiChatPerDay;
 
   function getGreeting(): string {
     const name = profile?.name;
@@ -165,10 +165,23 @@ export default function ChatPage() {
 
       setMessages(prev => [...prev, { role: "ai", content: data.response }]);
 
-      const newCount = (profile?.aiChatDate === todayKey ? (profile?.aiChatCount || 0) : 0) + 1;
-      await saveProfile({ aiChatCount: newCount, aiChatDate: todayKey });
+      if (!isMaster) {
+        const newCount = (profile?.aiChatDate === todayKey ? (profile?.aiChatCount || 0) : 0) + 1;
+        await saveProfile({ aiChatCount: newCount, aiChatDate: todayKey });
+      }
     } catch (error: unknown) {
       console.error(error);
+      // 서버에서 429 QUOTA_EXCEEDED면 한도 초과 모달 + 로컬 카운트를 서버 값으로 강제 동기화.
+      // 이전엔 클라가 "여유 있음"으로 판단한 요청을 서버가 거부하면 에러 버블만 생기고
+      // "오늘 X회 남음" UI가 여전히 남는 문제가 있었음.
+      if (error instanceof ApiError && error.status === 429) {
+        const details = (error.details as { used?: number; limit?: number } | undefined) || {};
+        const serverUsed = typeof details.used === "number" ? details.used : dailyLimit;
+        // 로컬 상태를 서버 used 값으로 override → remaining 표시 즉시 정정.
+        await saveProfile({ aiChatCount: serverUsed, aiChatDate: todayKey });
+        setShowLimitModal(true);
+        return;
+      }
       // ApiError(서버에서 의미 있는 메시지) 또는 API 키 안내 메시지는 그대로 노출,
       // 그 외(네트워크 오류 등)는 일반 안내로 통일.
       let msg = "연결에 실패했어요. 네트워크를 확인하고 다시 시도해주세요.";
@@ -222,6 +235,9 @@ export default function ChatPage() {
       className="flex flex-col bg-background"
       style={{
         height: "100dvh",
+        // BottomNav + iOS 안전 영역 만큼 내부 padding으로 확보.
+        // 이전엔 body에 pb-20이 있어 chat이 double-padding으로 오버플로 나던 문제가 있었으나,
+        // body의 전역 pb를 제거한 뒤부턴 chat 자체가 자기 영역 clearance를 책임짐.
         paddingBottom: `calc(${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom))`,
       }}
     >
@@ -241,7 +257,7 @@ export default function ChatPage() {
             <div>
               <h1 className="font-headline font-bold text-lg flex items-center gap-1.5">
                 AI 카운슬러
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-primary/10 text-primary border-none font-bold tracking-wide">
+                <Badge variant="secondary" className="text-2xs px-1.5 py-0 h-4 bg-primary/10 text-primary border-none font-bold tracking-wide">
                   PRO
                 </Badge>
               </h1>
@@ -269,6 +285,14 @@ export default function ChatPage() {
 
       {/* ── Messages area ── */}
       <div className="flex-1 overflow-y-auto px-6 pt-6 pb-4">
+        {/* 50개 저장 한도 근접 시 주의문 — 이전엔 조용히 잘려 사용자가 "이전 대화가 왜 사라졌지" 혼란 */}
+        {messages.length >= 40 && (
+          <div className="mb-4 mx-auto max-w-md rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 px-3 py-2 text-xs text-amber-800 dark:text-amber-300 text-center">
+            {messages.length >= 50
+              ? "최근 50개 메시지만 기기에 저장됩니다. 중요한 내용은 따로 메모해두세요."
+              : `기기에는 최근 50개 메시지만 저장돼요 (현재 ${messages.length}개).`}
+          </div>
+        )}
         <div className="space-y-5" aria-live="polite" aria-relevant="additions">
           {messages.map((m, i) => {
             const isNew = i >= messages.length - 2;
@@ -319,48 +343,6 @@ export default function ChatPage() {
             );
           })}
 
-          {/* Suggested questions — shown only when conversation hasn't started */}
-          {showSuggestions && (
-            <div className="pt-2 pb-2 animate-fade-up">
-              <div className="flex items-center gap-2 mb-3 px-1">
-                <div className="h-px flex-1 bg-border/60" />
-                <p className="text-[11px] font-bold text-muted-foreground tracking-wider uppercase">이런 질문 어때요</p>
-                <div className="h-px flex-1 bg-border/60" />
-              </div>
-              <div className="grid grid-cols-2 gap-2.5">
-                {suggestions.map((q) => {
-                  const style = SUGGESTION_STYLES[q.category];
-                  const Icon = style.icon;
-                  return (
-                    <button
-                      key={q.text}
-                      onClick={() => {
-                        setInput("");
-                        setMessages(prev => [...prev, { role: "user", content: q.text }]);
-                        sendMessage(q.text);
-                      }}
-                      className={cn(
-                        "group relative text-left p-3 rounded-2xl border bg-gradient-to-br transition-all",
-                        "hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98]",
-                        style.gradient,
-                        style.accent,
-                        "bg-card"
-                      )}
-                    >
-                      <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center mb-2", style.iconBg)}>
-                        <Icon className={cn("w-4 h-4", style.iconColor)} />
-                      </div>
-                      <p className={cn("text-[11px] font-bold uppercase tracking-wider mb-0.5", style.iconColor)}>
-                        {style.label}
-                      </p>
-                      <p className="text-xs text-foreground leading-snug line-clamp-2">{q.text}</p>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           {loading && (
             <div className="flex gap-2.5 animate-msg-ai" role="status" aria-label="AI 응답 대기 중">
               <div className="shrink-0 pt-0.5">
@@ -385,8 +367,53 @@ export default function ChatPage() {
         </div>
       </div>
 
+      {/* ── Suggested questions — 입력창 바로 위에 pin.
+           이전엔 메시지 영역 안쪽이라 화면 하단에 빈 공간이 커 보였음. */}
+      {showSuggestions && (
+        <div className="shrink-0 px-4 pt-1 pb-2 animate-fade-up">
+          <div className="flex items-center gap-2 mb-2 px-2">
+            <div className="h-px flex-1 bg-border/60" />
+            <p className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase">이런 질문 어때요</p>
+            <div className="h-px flex-1 bg-border/60" />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {suggestions.map((q) => {
+              const style = SUGGESTION_STYLES[q.category];
+              const Icon = style.icon;
+              return (
+                <button
+                  key={q.text}
+                  onClick={() => {
+                    setInput("");
+                    setMessages(prev => [...prev, { role: "user", content: q.text }]);
+                    sendMessage(q.text);
+                  }}
+                  className={cn(
+                    "group relative text-left p-2.5 rounded-2xl border bg-gradient-to-br transition-all",
+                    "hover:shadow-md active:scale-[0.98]",
+                    style.gradient,
+                    style.accent,
+                    "bg-card"
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center shrink-0", style.iconBg)}>
+                      <Icon className={cn("w-3.5 h-3.5", style.iconColor)} />
+                    </div>
+                    <p className={cn("text-[10px] font-bold uppercase tracking-wider truncate", style.iconColor)}>
+                      {style.label}
+                    </p>
+                  </div>
+                  <p className="text-xs text-foreground leading-snug line-clamp-2">{q.text}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── Input ── */}
-      <div className="shrink-0 px-4 pt-2 pb-3 bg-gradient-to-t from-background via-background to-transparent">
+      <div className="shrink-0 px-4 pt-1 pb-1 bg-background">
         <div className={cn(
           "relative flex items-end gap-2 p-2 pl-4 rounded-[22px] bg-card shadow-[0_4px_20px_-6px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_-6px_rgba(0,0,0,0.6)] ring-1 transition-all",
           "ring-border/60 focus-within:ring-primary/40 focus-within:shadow-[0_6px_28px_-6px_rgba(154,60,18,0.25)]"
@@ -394,7 +421,7 @@ export default function ChatPage() {
           {/* Remaining-count pill — floats in top-right of the input shell */}
           {dailyLimit !== Infinity && (
             <div className={cn(
-              "absolute -top-2 right-4 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-sm ring-1 ring-background",
+              "absolute -top-2 right-4 px-2 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 shadow-sm ring-1 ring-background",
               limitTone === "red" && "bg-red-500 text-white",
               limitTone === "amber" && "bg-amber-500 text-white",
               limitTone === "primary" && "bg-primary text-primary-foreground",

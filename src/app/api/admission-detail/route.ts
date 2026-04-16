@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
     const textBlock = response.content.find((b) => b.type === "text");
     const raw = textBlock?.text || "";
 
-    let parsed: any = null;
+    let parsed: unknown = null;
     try {
       parsed = JSON.parse(raw);
     } catch {

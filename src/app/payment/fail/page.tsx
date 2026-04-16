@@ -4,7 +4,8 @@ import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { XCircle, Loader2 } from "lucide-react";
+import { XCircle } from "lucide-react";
+import { PrismLoader } from "@/components/PrismLoader";
 
 function PaymentFailContent() {
   const searchParams = useSearchParams();
@@ -42,7 +43,7 @@ export default function PaymentFailPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <PrismLoader size={36} />
       </div>
     }>
       <PaymentFailContent />

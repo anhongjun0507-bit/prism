@@ -120,18 +120,23 @@ ${prompt}`;
       const parsed = JSON.parse(cleaned);
       // Normalize: ensure every section exposes both legacy (hint/starter)
       // and new (korean_guide/english_starter) fields so older consumers keep working.
-      const normalize = (s: any) => s && typeof s === "object" ? {
-        title: s.title,
-        korean_guide: s.korean_guide ?? s.hint ?? "",
-        english_starter: s.english_starter ?? s.starter ?? "",
-        hint: s.korean_guide ?? s.hint ?? "",
-        starter: s.english_starter ?? s.starter ?? "",
-      } : s;
+      const normalize = (s: unknown) => {
+        if (!s || typeof s !== "object") return s;
+        const obj = s as Record<string, unknown>;
+        return {
+          title: obj.title,
+          korean_guide: obj.korean_guide ?? obj.hint ?? "",
+          english_starter: obj.english_starter ?? obj.starter ?? "",
+          hint: obj.korean_guide ?? obj.hint ?? "",
+          starter: obj.english_starter ?? obj.starter ?? "",
+        };
+      };
+      const p = parsed as Record<string, unknown>;
       const outline = {
-        past: normalize(parsed.past),
-        turning: normalize(parsed.turning),
-        growth: normalize(parsed.growth),
-        connection: normalize(parsed.connection),
+        past: normalize(p.past),
+        turning: normalize(p.turning),
+        growth: normalize(p.growth),
+        connection: normalize(p.connection),
       };
       return NextResponse.json({ outline });
     } catch (parseErr) {
@@ -141,9 +146,9 @@ ${prompt}`;
         { status: 502 }
       );
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Essay outline error:", error);
-    const message = error?.message || "에세이 구조 생성에 실패했어요";
+    const message = error instanceof Error ? error.message : "에세이 구조 생성에 실패했어요";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

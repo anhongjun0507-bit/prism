@@ -8,12 +8,14 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Check, Crown, ArrowUpRight, Download, Upload, Sun, Moon } from "lucide-react";
+import { Check, Crown, ArrowUpRight, Download, Upload, Sun, Moon } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { ACCENTS } from "@/lib/accent";
 import { isHapticEnabled, setHapticEnabled, haptic } from "@/hooks/use-haptic";
 import { isChimeEnabled, setChimeEnabled, chime } from "@/lib/chime";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
+import { fetchWithAuth } from "@/lib/api-client";
 
 const DATA_KEYS = ["prism_essays", "prism_planner", "prism_snapshots"];
 
@@ -25,12 +27,30 @@ export default function SubscriptionPage() {
   const { theme, setTheme, accent, setAccent } = useTheme();
   const [hapticOn, setHapticOn] = useState(() => isHapticEnabled());
   const [chimeOn, setChimeOn] = useState(() => isChimeEnabled());
+  const [cancelling, setCancelling] = useState(false);
   const currentPlan = profile?.plan || "free";
   const plan = PLANS[currentPlan];
 
   const handleCancel = async () => {
     if (!confirm("정말 구독을 해지하시겠어요? 남은 기간 동안은 계속 이용 가능합니다.")) return;
-    await saveProfile({ plan: "free" });
+    setCancelling(true);
+    try {
+      // Firestore 규칙상 plan 필드는 클라가 쓸 수 없음 → Admin SDK 서버 엔드포인트 경유.
+      await fetchWithAuth("/api/subscription/cancel", { method: "POST" });
+      // 서버 성공 → onSnapshot이 1~2초 내 plan="free" 반영. 그 전에 UI 즉시 반영하기 위해
+      // in-memory profile도 낙관적으로 free로 세팅 (saveProfile의 Firestore write는 규칙상
+      // plan 필드 strip되므로 무해, setProfile만 효과 있음).
+      await saveProfile({ plan: "free" });
+      toast({ title: "구독이 해지되었어요", description: "기본 플랜으로 전환됩니다." });
+    } catch (err) {
+      toast({
+        title: "해지 처리 실패",
+        description: err instanceof Error ? err.message : "잠시 후 다시 시도해주세요.",
+        variant: "destructive",
+      });
+    } finally {
+      setCancelling(false);
+    }
   };
 
   const handleExport = () => {
@@ -75,14 +95,9 @@ export default function SubscriptionPage() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <header className="p-6 flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <h1 className="font-headline text-xl font-bold">구독 관리</h1>
-      </header>
+      <PageHeader title="구독 관리" />
 
-      <div className="px-6 space-y-6">
+      <div className="px-gutter space-y-6">
         {/* Current Plan */}
         <Card className="bg-primary text-white border-none p-6 relative overflow-hidden animate-fade-up prism-strip">
           <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-white/10 rounded-full blur-[60px]" />
@@ -124,17 +139,20 @@ export default function SubscriptionPage() {
           {currentPlan === "basic" && (
             <>
               <Button
+                size="xl"
                 onClick={() => router.push("/pricing")}
-                className="w-full h-12 rounded-xl font-bold"
+                className="w-full rounded-xl font-bold"
               >
                 프리미엄으로 업그레이드
               </Button>
               <Button
                 variant="outline"
                 onClick={handleCancel}
-                className="w-full h-12 rounded-xl text-red-500 border-red-200 hover:bg-red-50"
+                disabled={cancelling}
+                size="xl"
+                className="w-full rounded-xl text-red-500 border-red-200 hover:bg-red-50"
               >
-                구독 해지
+                {cancelling ? "해지 처리 중..." : "구독 해지"}
               </Button>
             </>
           )}
@@ -142,10 +160,12 @@ export default function SubscriptionPage() {
           {currentPlan === "premium" && (
             <Button
               variant="outline"
+              size="xl"
               onClick={handleCancel}
-              className="w-full h-12 rounded-xl text-red-500 border-red-200 hover:bg-red-50"
+              disabled={cancelling}
+              className="w-full rounded-xl text-red-500 border-red-200 hover:bg-red-50"
             >
-              구독 해지
+              {cancelling ? "해지 처리 중..." : "구독 해지"}
             </Button>
           )}
         </div>

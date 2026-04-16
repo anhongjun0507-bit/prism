@@ -44,12 +44,19 @@ export async function POST(req: NextRequest) {
     if (!parsed) {
       return NextResponse.json({ error: "유효하지 않은 주문 형식입니다." }, { status: 400 });
     }
-    const { plan, billing, uid: orderUid } = parsed;
+    const { plan, billing, uid: orderUid, timestamp } = parsed;
 
     /* ── 4. uid 일치 검증 — 남의 결제로 자기 플랜 활성화 차단 ── */
     if (orderUid !== session.uid) {
       console.warn(`[payment] uid mismatch: session=${session.uid} orderUid=${orderUid}`);
       return NextResponse.json({ error: "본인 계정의 결제만 처리할 수 있어요." }, { status: 403 });
+    }
+
+    /* ── 4b. timestamp 유효성 — 30일 이상 된 orderId는 replay 가능성. ── */
+    const tsMs = Number(timestamp);
+    if (!Number.isFinite(tsMs) || Math.abs(Date.now() - tsMs) > 30 * 24 * 60 * 60 * 1000) {
+      console.warn(`[payment] suspicious timestamp: ${timestamp}`);
+      return NextResponse.json({ error: "만료된 주문 번호입니다. 다시 결제를 시작해주세요." }, { status: 400 });
     }
 
     /* ── 5. 클라이언트가 보낸 amount가 플랜·주기에 맞는 정상 가격인지 1차 검증 ── */

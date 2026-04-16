@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from "react";
 import {
   onAuthStateChanged, signInWithPopup, signOut, signInWithCustomToken,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
@@ -66,6 +66,7 @@ interface AuthContextValue {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
+  isMaster: boolean;
   loginWithGoogle: () => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string, name: string) => Promise<void>;
@@ -79,11 +80,18 @@ interface AuthContextValue {
   isFavorite: (schoolName: string) => boolean;
 }
 
-/* ── Master account: bypasses all plan restrictions ── */
-const MASTER_EMAILS = (process.env.NEXT_PUBLIC_MASTER_EMAILS || "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
+/* ── Master account: bypasses all plan restrictions ──
+ * NEXT_PUBLIC_MASTER_EMAILS는 build-time에 inlining되므로 프로덕션 배포 환경에 미설정이면
+ * 클라이언트가 마스터를 인지하지 못함. 그래서 `HARDCODED_MASTER_EMAILS`로 안전망을 둠.
+ */
+const HARDCODED_MASTER_EMAILS = ["hongjunan100@gmail.com"];
+const MASTER_EMAILS = Array.from(new Set([
+  ...HARDCODED_MASTER_EMAILS,
+  ...(process.env.NEXT_PUBLIC_MASTER_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean),
+]));
 
 export function isMasterEmail(email: string | null | undefined): boolean {
   if (!email) return false;
@@ -140,6 +148,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [snapshots, setSnapshots] = useState<ProfileSnapshot[]>(loadSnapshots);
+
+  // profile을 ref로도 추적해 useCallback 안정화 — saveProfile이 profile 바뀔 때마다
+  // 새 참조로 재생성되면 consumer effect가 strict deps를 쓸 수 없어(무한 루프) eslint-disable을
+  // 강요받음. ref 패턴으로 saveProfile을 user deps만으로 안정화.
+  const profileRef = useRef<UserProfile | null>(null);
+  profileRef.current = profile;
 
   useEffect(() => {
     let profileUnsub: (() => void) | null = null;
@@ -326,8 +340,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.location.href = "/";
   };
 
-  const saveProfile = async (data: Partial<UserProfile>) => {
-    const merged = { ...profile, ...data, onboarded: true } as UserProfile;
+  const saveProfile = useCallback(async (data: Partial<UserProfile>) => {
+    const prev = profileRef.current; // 최신 profile을 ref로 읽기 → deps에서 제외 가능
+    const merged = { ...prev, ...data, onboarded: true } as UserProfile;
     // Master account always stays premium — in-memory only, never written to Firestore
     if (isMasterEmail(user?.email)) {
       merged.plan = "premium";
@@ -336,8 +351,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user) {
       // 보호 필드(plan/planBilling/planActivatedAt/lastPayment)는 Firestore 규칙이 거부하므로
       // strip 후 쓴다. 이 필드들은 서버 Admin SDK(결제 confirm, 카카오 callback)만 갱신.
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { plan, planBilling, planActivatedAt, lastPayment, ...writableData } = merged;
+      const { plan: _p, planBilling: _pb, planActivatedAt: _pa, lastPayment: _lp, ...writableData } = merged;
+      void _p; void _pb; void _pa; void _lp;
       try {
         await setDoc(doc(db, "users", user.uid), writableData, { merge: true });
       } catch {
@@ -345,10 +360,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    saveSnapshot(merged, profile);
+    saveSnapshot(merged, prev);
     setSnapshots(loadSnapshots());
     setProfile(merged); // in-memory에는 plan 포함 (마스터·서버 응답 등)
-  };
+  }, [user]);
 
   const toggleFavorite = async (schoolName: string) => {
     const current = profile?.favoriteSchools || [];
@@ -362,9 +377,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return (profile?.favoriteSchools || []).includes(schoolName);
   };
 
+  const isMaster = isMasterEmail(user?.email);
+
   return (
     <AuthContext.Provider value={{
-      user, profile, loading,
+      user, profile, loading, isMaster,
       loginWithGoogle, loginWithEmail, signUpWithEmail, resetPassword, loginWithKakao, loginWithApple,
       logout, saveProfile, snapshots, toggleFavorite, isFavorite,
     }}>

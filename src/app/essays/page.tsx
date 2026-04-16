@@ -3,6 +3,8 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { BottomNav } from "@/components/BottomNav";
+import { PageHeader } from "@/components/PageHeader";
+import { PrismLoader } from "@/components/PrismLoader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,42 +14,26 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
-  Save, Plus, FileText, ArrowLeft, Search, ChevronRight,
+  Save, Plus, FileText, Search, ChevronRight, ChevronDown,
   Sparkles, Loader2, Clock, Zap, TrendingUp, Trash2, GraduationCap, History, RotateCcw, PenLine,
+  Lightbulb, Target,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { useAuth } from "@/lib/auth-context";
 import Link from "next/link";
 import { PLANS } from "@/lib/plans";
-import { collection, doc, setDoc, getDoc, deleteDoc, onSnapshot, writeBatch } from "firebase/firestore";
+import { collection, doc, setDoc, getDoc, deleteDoc, onSnapshot, writeBatch, query, orderBy, limit as fsLimit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import { fetchWithAuth } from "@/lib/api-client";
 import { SCHOOLS_INDEX, schoolMatchesQuery } from "@/lib/schools-index";
 import { COMMON_APP_PROMPTS, COMMON_APP_PROMPTS_KO } from "@/lib/constants";
 import { SchoolLogo } from "@/components/SchoolLogo";
-import type { Essay, EssayReview, EssayVersion } from "@/types/essay";
+import type { Essay, EssayReview, EssayVersion, EssayOutline, OutlineSection } from "@/types/essay";
 import { slimEssaysForCache } from "@/types/essay";
 import { readJSON, writeJSON, removeKey } from "@/lib/storage";
 import { EmptyState } from "@/components/EmptyState";
-
-interface OutlineSection {
-  title: string;
-  // New fields (preferred)
-  korean_guide?: string;
-  english_starter?: string;
-  // Legacy fields (fallback for older API responses / cached data)
-  hint?: string;
-  starter?: string;
-}
-
-interface EssayOutline {
-  past: OutlineSection;
-  turning: OutlineSection;
-  growth: OutlineSection;
-  connection?: OutlineSection;
-}
 
 /** Read either the new or legacy field — used for migration safety. */
 const getKoreanGuide = (s: OutlineSection) => s.korean_guide ?? s.hint ?? "";
@@ -67,9 +53,9 @@ function loadEssays(): Essay[] {
 
 export default function EssaysPage() {
   const { toast } = useToast();
-  const { profile, saveProfile, user } = useAuth();
+  const { profile, saveProfile, user, isMaster } = useAuth();
   const currentPlan = profile?.plan || "free";
-  const hasPlanAccess = PLANS[currentPlan].limits.essayOutline;
+  const hasPlanAccess = isMaster || PLANS[currentPlan].limits.essayOutline;
   const outlineUsed = profile?.outlineUsed || 0;
   const canUseOutline = hasPlanAccess || outlineUsed < 1; // 1회 무료 체험
   const [essays, setEssays] = useState<Essay[]>(loadEssays);
@@ -138,8 +124,8 @@ export default function EssaysPage() {
       removeKey(LEGACY_KEY);
       return updated;
     });
-    // Run once on mount
-
+    // Run once on mount — writeEssayDoc은 최초 mount 시점 함수로 충분
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const removeReview = (essayId: string, reviewId: string) => {
@@ -164,6 +150,32 @@ export default function EssaysPage() {
   // Version history
   const [viewingVersion, setViewingVersion] = useState<EssayVersion | null>(null);
   const [showVersions, setShowVersions] = useState(false);
+
+  // Inline AI review panel (editor view) — collapsed by default so textarea stays focused.
+  // activeReviewIndex는 activeEssay.reviews의 createdAt-desc 정렬 기준 인덱스.
+  const [showReviewPanel, setShowReviewPanel] = useState(false);
+  const [activeReviewIndex, setActiveReviewIndex] = useState(0);
+  const [showPerfectExample, setShowPerfectExample] = useState(false);
+
+  // Reset review panel state when switching essays so stale indexes/toggles don't leak.
+  useEffect(() => {
+    setActiveReviewIndex(0);
+    setShowPerfectExample(false);
+  }, [activeEssay?.id]);
+
+  // 저장된 outline 자동 복원 — 에세이를 다시 열었을 때 AI 구조가 그대로 보이도록.
+  // activeEssay.outline이 있으면 outline state에 로드 + 잠금 해제 + 패널 열기.
+  // 없으면 이전 에세이의 state가 남지 않게 초기화.
+  useEffect(() => {
+    if (activeEssay?.outline) {
+      setOutline(activeEssay.outline);
+      setOutlineUnlocked(true);
+      setShowOutline(true);
+    } else {
+      setOutline(null);
+      setShowOutline(false);
+    }
+  }, [activeEssay?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Time-Machine Essay state
   const [outline, setOutline] = useState<EssayOutline | null>(null);
@@ -214,7 +226,14 @@ export default function EssaysPage() {
       }
     };
 
-    const colRef = collection(db, "users", user.uid, "essays");
+    // Bounded subscription: 최근 50개 에세이만 구독 — 사용자당 에세이 수가 늘어나도
+    // 클라이언트 메모리/네트워크가 unbounded로 자라지 않도록 안전 장치.
+    // 50개를 넘는 경우는 실제 유저 시나리오상 드물고, 필요 시 "더 보기" pagination으로 확장.
+    const colRef = query(
+      collection(db, "users", user.uid, "essays"),
+      orderBy("updatedAt", "desc"),
+      fsLimit(50)
+    );
     const unsub = onSnapshot(
       colRef,
       (snap) => {
@@ -224,8 +243,6 @@ export default function EssaysPage() {
           tryMigrateLegacy();
           return;
         }
-        // updatedAt 내림차순 정렬 (최신 편집 먼저)
-        list.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
         setEssays(list);
       },
       (err) => console.error("[essays] snapshot error:", err)
@@ -256,10 +273,14 @@ export default function EssaysPage() {
     return stamped;
   }, [user]);
 
-  const removeEssayDoc = useCallback((id: string) => {
-    if (user) {
-      deleteDoc(doc(db, "users", user.uid, "essays", id))
-        .catch((e) => console.error("[essays] delete failed:", e));
+  const removeEssayDoc = useCallback(async (id: string): Promise<boolean> => {
+    if (!user) return true; // 로그아웃 상태면 localStorage만 관리 → 성공 취급
+    try {
+      await deleteDoc(doc(db, "users", user.uid, "essays", id));
+      return true;
+    } catch (e) {
+      console.error("[essays] delete failed:", e);
+      return false;
     }
   }, [user]);
 
@@ -361,12 +382,26 @@ export default function EssaysPage() {
     setView("list");
   };
 
-  const confirmDeleteEssay = () => {
+  const confirmDeleteEssay = async () => {
     if (!deleteTarget) return;
     const deleted = deleteTarget;
+    // Optimistic remove — 서버 실패 시 roll back.
     setEssays(prev => prev.filter(e => e.id !== deleted.id));
-    removeEssayDoc(deleted.id);
     setDeleteTarget(null);
+
+    const ok = await removeEssayDoc(deleted.id);
+    if (!ok) {
+      // 서버 삭제 실패 → UI 복원 + 에러 토스트. 이전엔 silent drop으로
+      // 재로그인 시 "좀비" 에세이가 되돌아와 혼란 유발.
+      setEssays(prev => [deleted, ...prev]);
+      toast({
+        title: "삭제 실패",
+        description: "서버 동기화에 실패했어요. 네트워크를 확인하고 다시 시도해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     toast({
       title: "삭제됨",
       description: `${deleted.university} 에세이가 삭제되었습니다.`,
@@ -442,24 +477,33 @@ export default function EssaysPage() {
       }
 
       console.log("[outline] parsed", Object.keys(data.outline));
-      setOutline(data.outline);
+      const savedOutline: EssayOutline = { ...data.outline, createdAt: new Date().toISOString() };
+      setOutline(savedOutline);
       setShowOutline(true);
       setOutlineUnlocked(true);
+
+      // 에세이에 outline 영구 저장 (localStorage + Firestore). 리뷰와 동일한 패턴 —
+      // 재생성 시 덮어씀(단일 객체). writeEssayDoc이 updatedAt/lastSaved 자동 부여.
+      const refreshed = activeEssayRef.current ?? activeEssay;
+      const stamped = writeEssayDoc({ ...refreshed, outline: savedOutline });
+      setEssays((prev) => prev.map((e) => e.id === stamped.id ? stamped : e));
+      setActiveEssay(stamped);
+
       // Track free trial usage
       if (!hasPlanAccess) {
         try { await saveProfile({ outlineUsed: (profile?.outlineUsed || 0) + 1 }); }
         catch (e) { console.warn("[outline] usage tracking failed", e); /* non-fatal */ }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // AbortError = user re-clicked or navigated away; not a real failure
-      if (err?.name === "AbortError") {
+      if (err instanceof Error && err.name === "AbortError") {
         console.log("[outline] aborted");
         return;
       }
       console.error("[outline] failed", err);
       toast({
         title: "에세이 구조 생성 실패",
-        description: err?.message || "잠시 후 다시 시도해주세요.",
+        description: err instanceof Error ? err.message : "잠시 후 다시 시도해주세요.",
         variant: "destructive",
       });
     } finally {
@@ -489,12 +533,11 @@ export default function EssaysPage() {
   if (view === "editor" && activeEssay) {
     return (
       <div className="min-h-screen bg-background pb-24">
-        <header className="p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" size="sm" onClick={handleBack} className="text-primary -ml-2 gap-1">
-              <ArrowLeft className="w-4 h-4" /> 목록
-            </Button>
-            <div className="flex items-center gap-2">
+        <PageHeader
+          title="에세이 편집"
+          onBack={handleBack}
+          action={
+            <>
               {autoSaveStatus === "saving" && (
                 <span className="text-xs text-muted-foreground animate-pulse">저장 중...</span>
               )}
@@ -523,11 +566,11 @@ export default function EssaysPage() {
               <Button onClick={handleSave} size="sm" className="gap-1.5 rounded-xl">
                 <Save className="w-3.5 h-3.5" /> 저장
               </Button>
-            </div>
-          </div>
-        </header>
+            </>
+          }
+        />
 
-        <div className="px-6 space-y-4">
+        <div className="px-gutter space-y-4">
           {/* Version history panel */}
           {showVersions && activeEssay.versions && activeEssay.versions.length > 0 && (
             <Card className="p-4 bg-white dark:bg-card border-none shadow-sm space-y-2">
@@ -586,6 +629,172 @@ export default function EssaysPage() {
               <p className="text-sm leading-relaxed">{activeEssay.prompt}</p>
             </div>
           </div>
+
+          {/* Inline AI review panel — 저장된 첨삭을 편집 중에 바로 참고 */}
+          {(() => {
+            const sortedReviews = (activeEssay.reviews ?? []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+            if (sortedReviews.length === 0) {
+              // No reviews yet — show CTA to get one.
+              return (
+                <Card className="p-4 bg-white dark:bg-card border-none shadow-sm rounded-2xl flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold">AI 첨삭을 받아보세요</p>
+                    <p className="text-xs text-muted-foreground">점수·강점·약점·10점 예문을 즉시 확인할 수 있어요</p>
+                  </div>
+                  <Button asChild size="sm" variant="outline" className="rounded-lg h-8 gap-1 text-xs border-primary/30 text-primary shrink-0">
+                    <Link href={`/essays/review?essayId=${activeEssay.id}`}>
+                      <Sparkles className="w-3.5 h-3.5" /> 첨삭 받기
+                    </Link>
+                  </Button>
+                </Card>
+              );
+            }
+            const idx = Math.min(activeReviewIndex, sortedReviews.length - 1);
+            const current = sortedReviews[idx];
+            return (
+              <Card className="overflow-hidden bg-white dark:bg-card border border-primary/20 shadow-sm rounded-2xl">
+                {/* Header — 클릭으로 펼치기/접기 */}
+                <button
+                  type="button"
+                  onClick={() => setShowReviewPanel((v) => !v)}
+                  aria-expanded={showReviewPanel}
+                  className="w-full p-4 flex items-center gap-3 text-left hover:bg-accent/30 transition-colors"
+                >
+                  <ScoreBadge value={current.score} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-primary" />
+                      AI 첨삭
+                      {sortedReviews.length > 1 && (
+                        <span className="text-xs font-normal text-muted-foreground">· {sortedReviews.length}개</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                      {current.summary || "첨삭 결과 보기"}
+                    </p>
+                  </div>
+                  <ChevronDown
+                    className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${showReviewPanel ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {/* Body — 펼쳤을 때만 */}
+                {showReviewPanel && (
+                  <div className="px-4 pb-4 pt-1 space-y-3 border-t border-border/60">
+                    {/* 여러 리뷰 선택 pills */}
+                    {sortedReviews.length > 1 && (
+                      <div className="flex flex-wrap gap-1.5 pt-3">
+                        {sortedReviews.map((r, i) => (
+                          <button
+                            key={r.id}
+                            type="button"
+                            onClick={() => setActiveReviewIndex(i)}
+                            className={`px-2.5 h-7 rounded-full text-xs font-medium border transition-colors ${
+                              i === idx
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-muted/50 text-foreground border-border hover:bg-muted"
+                            }`}
+                          >
+                            {i === 0 ? "최신" : `${i + 1}번째`} · {r.score}/10
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Key change — 가장 중요한 변경 하나 */}
+                    {current.keyChange && (
+                      <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-3 space-y-1">
+                        <p className="text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                          <Target className="w-3.5 h-3.5" /> 가장 중요한 변경
+                        </p>
+                        <p className="text-xs leading-relaxed text-amber-900 dark:text-amber-100 whitespace-pre-line">
+                          {current.keyChange}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* 약점 (상위 2개) */}
+                    {current.weaknesses.length > 0 && (
+                      <div className="space-y-1.5">
+                        <p className="text-xs font-bold text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                          <Zap className="w-3.5 h-3.5" /> 개선 필요
+                        </p>
+                        {current.weaknesses.slice(0, 2).map((w, i) => (
+                          <div key={i} className="text-xs leading-relaxed text-red-800 dark:text-red-200 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg p-2.5 whitespace-pre-line">
+                            {w}
+                          </div>
+                        ))}
+                        {current.weaknesses.length > 2 && (
+                          <p className="text-xs text-muted-foreground">+ {current.weaknesses.length - 2}개 더 · 전체 보기에서 확인</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 제안 (상위 2개) */}
+                    {current.suggestions.length > 0 && (
+                      <div className="space-y-1.5">
+                        <p className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                          <Lightbulb className="w-3.5 h-3.5" /> 개선 제안
+                        </p>
+                        {current.suggestions.slice(0, 2).map((s, i) => (
+                          <div key={i} className="text-xs leading-relaxed text-blue-800 dark:text-blue-200 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-2.5 whitespace-pre-line">
+                            {s}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 10점 예문 — 접혀있음 (길어서) */}
+                    {current.perfectExample && (
+                      <div className="space-y-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setShowPerfectExample((v) => !v)}
+                          className="w-full flex items-center justify-between text-xs font-bold text-emerald-600 dark:text-emerald-400"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5" /> 10점짜리 예문
+                          </span>
+                          <ChevronDown
+                            className={`w-3.5 h-3.5 transition-transform ${showPerfectExample ? "rotate-180" : ""}`}
+                          />
+                        </button>
+                        {showPerfectExample && (
+                          <div className="text-xs leading-relaxed text-emerald-900 dark:text-emerald-100 bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 rounded-lg p-3 whitespace-pre-line">
+                            {current.perfectExample}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Footer actions */}
+                    <div className="flex items-center gap-2 pt-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setViewingReview({ essay: activeEssay, review: current })}
+                        className="flex-1 rounded-lg h-8 text-xs gap-1"
+                      >
+                        <FileText className="w-3.5 h-3.5" /> 전체 보기
+                      </Button>
+                      <Button
+                        asChild
+                        size="sm"
+                        className="flex-1 rounded-lg h-8 text-xs gap-1"
+                      >
+                        <Link href={`/essays/review?essayId=${activeEssay.id}`}>
+                          <Sparkles className="w-3.5 h-3.5" /> 새 첨삭 받기
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            );
+          })()}
 
           {/* Premium upsell for Time-Machine */}
           {!canUseOutline && !outlineUnlocked && (
@@ -665,8 +874,7 @@ export default function EssaysPage() {
 
           {canShowOutline && outlineLoading && !outline && (
             <Card className="p-4 text-center">
-              <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto mb-2" />
-              <p className="text-xs text-muted-foreground">프로필 기반 에세이 구조 생성 중...</p>
+              <PrismLoader size={32} label="프로필 기반 에세이 구조 생성 중..." className="mx-auto" />
             </Card>
           )}
 
@@ -679,7 +887,6 @@ export default function EssaysPage() {
           <div className="relative pb-[env(safe-area-inset-bottom,0px)]">
             {/* Section color indicator bar — shows which part of the essay you're writing */}
             {outline && (() => {
-              const lines = (activeEssay.content || "").split("\n");
               const totalLen = activeEssay.content.length || 1;
               const cursorApprox = totalLen; // approximate: user is at the end
               const third = totalLen / 3;
@@ -733,35 +940,25 @@ export default function EssaysPage() {
   if (view === "picker") {
     return (
       <div className="min-h-screen bg-background pb-24">
-        <header className="p-6 space-y-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => { setView("list"); setSelectedSchool(null); setSearchQuery(""); }}
-            className="text-primary -ml-2 gap-1"
-          >
-            <ArrowLeft className="w-4 h-4" /> 뒤로
-          </Button>
+        <PageHeader
+          title={selectedSchool || "대학 선택"}
+          onBack={() => { setView("list"); setSelectedSchool(null); setSearchQuery(""); }}
+        />
+        {!selectedSchool && (
+          <div className="px-gutter pb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="대학 이름 검색..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-11 rounded-xl"
+              />
+            </div>
+          </div>
+        )}
 
-          {!selectedSchool ? (
-            <>
-              <h1 className="font-headline text-2xl font-bold">대학 선택</h1>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="대학 이름 검색..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-11 rounded-xl"
-                />
-              </div>
-            </>
-          ) : (
-            <h1 className="font-headline text-2xl font-bold">{selectedSchool}</h1>
-          )}
-        </header>
-
-        <div className="px-6 space-y-2">
+        <div className="px-gutter space-y-2">
           {!selectedSchool ? (
             <>
               <Card
@@ -874,18 +1071,19 @@ export default function EssaysPage() {
   // List View
   return (
     <div className="min-h-screen bg-background pb-24">
-      <header className="p-6 flex justify-between items-center">
-        <div>
-          <h1 className="font-headline text-2xl font-bold">에세이 관리</h1>
-          <p className="text-sm text-muted-foreground">대학별 프롬프트로 에세이를 작성하세요.</p>
-        </div>
-        <Button onClick={() => setView("picker")} size="icon" className="rounded-full w-12 h-12 shadow-lg">
-          <Plus />
-        </Button>
-      </header>
+      <PageHeader
+        title="에세이 관리"
+        subtitle="대학별 프롬프트로 에세이를 작성하세요."
+        hideBack
+        action={
+          <Button onClick={() => setView("picker")} size="icon" className="rounded-full w-12 h-12 shadow-lg" aria-label="새 에세이 추가">
+            <Plus />
+          </Button>
+        }
+      />
 
       {/* AI Review CTA */}
-      <div className="px-6 mb-3">
+      <div className="px-gutter mb-3">
         <Link href="/essays/review">
           <Card className="p-4 bg-primary/5 border border-primary/20 flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
@@ -923,10 +1121,12 @@ export default function EssaysPage() {
                 <Card
                   variant="elevated"
                   interactive
-                  className="group"
+                  className="group h-full"
                   onClick={() => { setActiveEssay(essay); setView("editor"); }}
                 >
-                  <CardContent className="p-5 space-y-2">
+                  {/* 고정 min-h + flex-col + mt-auto로 모든 에세이 카드 높이 균일화.
+                      prompt·content 길이가 달라도 footer(수정일+버튼)는 항상 맨 아래 정렬. */}
+                  <CardContent className="p-5 flex flex-col gap-2 min-h-[180px]">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="font-bold text-sm flex-1 min-w-0 truncate">{essay.university}</h3>
                       <div className="flex items-center gap-1.5 shrink-0">
@@ -935,7 +1135,7 @@ export default function EssaysPage() {
                             onClick={(e) => { e.stopPropagation(); toggleExpandedReviews(essay.id); }}
                             aria-expanded={isExpanded}
                             aria-label={isExpanded ? "첨삭 결과 접기" : "첨삭 결과 펼치기"}
-                            className="flex items-center gap-1 px-2 h-6 rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-semibold transition-colors"
+                            className="flex items-center gap-1 px-2 h-6 rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold transition-colors"
                           >
                             <Sparkles className="w-3 h-3" />
                             AI 첨삭 {reviews.length}개
@@ -953,11 +1153,15 @@ export default function EssaysPage() {
                         </Badge>
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{essay.prompt}</p>
-                    {essay.content && (
-                      <p className="text-xs text-foreground/60 line-clamp-1 italic">{essay.content}</p>
-                    )}
-                    <div className="flex items-center justify-between pt-2 gap-2">
+                    {/* Prompt — 항상 2줄 공간 확보(짧은 프롬프트도 동일 높이) */}
+                    <p className="text-xs text-muted-foreground line-clamp-2 min-h-[2.4em] leading-[1.2]">
+                      {essay.prompt || "\u00A0"}
+                    </p>
+                    {/* Content preview — 항상 1줄 공간 확보(빈 에세이도 동일 높이) */}
+                    <p className="text-xs text-foreground/60 line-clamp-1 italic min-h-[1.2em] leading-[1.2]">
+                      {essay.content || "\u00A0"}
+                    </p>
+                    <div className="flex items-center justify-between pt-2 gap-2 mt-auto">
                       <p className="text-xs text-muted-foreground">최종 수정: {essay.lastSaved}</p>
                       <Button
                         size="sm"
@@ -1047,7 +1251,7 @@ export default function EssaysPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <PenLine className="w-4 h-4 text-emerald-600" />
-              일반 에세이 시작
+              새 에세이 쓰기
             </DialogTitle>
             <DialogDescription>
               대학 supplemental이 아닌 자유 형식의 글을 작성할 수 있어요. 제목과 주제는 나중에 바꿀 수 있어요.
@@ -1234,6 +1438,16 @@ function ReviewDetailDialog({
             <div className="space-y-2">
               <h4 className="text-sm font-bold flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-primary" /> 수정된 첫 단락</h4>
               <div className="p-3 rounded-xl bg-primary/5 text-xs italic leading-relaxed">{review.revisedOpening}</div>
+            </div>
+          )}
+          {review.perfectExample && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-bold flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-500" /> 10점짜리 에세이 예문
+              </h4>
+              <div className="p-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 text-xs leading-relaxed whitespace-pre-line text-emerald-900 dark:text-emerald-100">
+                {review.perfectExample}
+              </div>
             </div>
           )}
           {review.admissionNote && (

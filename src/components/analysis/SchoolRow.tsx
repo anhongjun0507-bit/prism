@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ExternalLink, Heart } from "lucide-react";
 import type { School } from "@/lib/matching";
 import { SchoolLogo } from "@/components/SchoolLogo";
-import { CAT_STYLE, probGradientStyle } from "@/lib/analysis-helpers";
+import { CAT_STYLE, CAT_ICON, probGradientStyle } from "@/lib/analysis-helpers";
 import { haptic } from "@/hooks/use-haptic";
 import type { RowComponentProps } from "react-window";
 
@@ -27,9 +27,10 @@ export const SchoolRow = ({
   const school = filtered[index];
   if (!school) return null;
   const catStyle = CAT_STYLE[school.cat || "Reach"];
+  const CatIcon = CAT_ICON[school.cat || "Reach"];
   const fav = isFavorite(school.n);
   return (
-    <div style={style} className="px-6 pb-2.5">
+    <div style={style} className="px-gutter pb-2.5">
       <button className="w-full text-left" onClick={() => onSelect(school)} aria-label={`${school.n} 상세 보기`}>
         <Card
           variant="elevated"
@@ -47,14 +48,26 @@ export const SchoolRow = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1.5">
                 <p className="font-bold text-sm truncate">{school.n}</p>
-                <Badge className={`${catStyle.bg} border-none text-xs shrink-0 px-1.5 font-bold`}>{school.cat}</Badge>
+                <Badge className={`${catStyle.bg} border-none text-xs shrink-0 px-1.5 font-bold inline-flex items-center gap-1`}>
+                  <CatIcon className="w-3 h-3" aria-hidden="true" />
+                  {school.cat}
+                </Badge>
               </div>
-              {/* Probability bar with depth — track shows muted, fill is school color gradient */}
+              {/* Probability bar with depth — track shows muted, fill is school color gradient.
+                  role=progressbar로 스크린리더에 확률 + 카테고리 의미 모두 전달. */}
               <div className="flex items-center gap-2">
-                <div className="relative flex-1 h-2.5 bg-muted rounded-full overflow-hidden ring-1 ring-inset ring-black/5 dark:ring-white/5">
+                <div
+                  role="progressbar"
+                  aria-valuenow={school.prob || 0}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`합격 확률 ${school.prob || 0}퍼센트, ${school.cat || "Reach"} 카테고리`}
+                  className="relative flex-1 h-2.5 bg-muted rounded-full overflow-hidden ring-1 ring-inset ring-black/5 dark:ring-white/5"
+                >
                   <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{ width: `${school.prob || 0}%`, ...probGradientStyle(school.prob || 0) }}
+                    aria-hidden="true"
                   />
                   {/* subtle highlight for glossy feel */}
                   <div
@@ -63,7 +76,7 @@ export const SchoolRow = ({
                     aria-hidden="true"
                   />
                 </div>
-                <span className="text-xs font-bold tabular-nums w-9 text-right" style={{ color: school.c }}>
+                <span className="text-xs font-bold tabular-nums w-9 text-right" style={{ color: school.c }} aria-hidden="true">
                   {school.prob}%
                 </span>
               </div>

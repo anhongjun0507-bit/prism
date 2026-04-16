@@ -1,22 +1,11 @@
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function TermsOfServicePage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-2xl mx-auto px-6 py-10">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-8"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          홈으로 돌아가기
-        </Link>
-
-        <h1 className="text-3xl font-bold mb-2">이용약관</h1>
-        <p className="text-sm text-muted-foreground mb-10">시행일: 2026년 4월 7일</p>
-
-        <div className="space-y-8 text-sm leading-relaxed text-foreground/90">
+      <PageHeader title="이용약관" subtitle="시행일: 2026년 4월 7일" backHref="/" />
+      <div className="max-w-2xl mx-auto px-gutter pb-section-lg">
+        <div className="space-y-section text-sm leading-relaxed text-foreground/90">
           <section>
             <h2 className="text-lg font-semibold mb-3">제1조 (서비스 소개)</h2>
             <p>

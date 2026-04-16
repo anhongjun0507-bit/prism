@@ -51,10 +51,14 @@ function selectFreePreviewIds(results: School[]): Set<string> {
   return new Set(picks.slice(0, FREE_PREVIEW_COUNT));
 }
 
-const MASTER_EMAILS = (process.env.NEXT_PUBLIC_MASTER_EMAILS || "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
+const HARDCODED_MASTER_EMAILS = ["hongjunan100@gmail.com"];
+const MASTER_EMAILS = Array.from(new Set([
+  ...HARDCODED_MASTER_EMAILS,
+  ...(process.env.NEXT_PUBLIC_MASTER_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean),
+]));
 
 export async function POST(req: NextRequest) {
   try {

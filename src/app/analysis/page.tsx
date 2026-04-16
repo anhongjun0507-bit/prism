@@ -3,39 +3,30 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { BottomNav } from "@/components/BottomNav";
+import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
 import { type Specs, type School } from "@/lib/matching";
 import { schoolMatchesQuery } from "@/lib/school-search";
 import { MAJOR_LIST } from "@/lib/constants";
 import {
-  BarChart3, TrendingUp, Filter, DollarSign, ArrowLeft, Search,
-  MapPin, Users, GraduationCap, Calendar, FileText, Trophy,
-  ExternalLink, X, Sparkles, BookOpen, Loader2, MessageSquare, Heart, Share2, Target,
+  BarChart3, TrendingUp, Filter, DollarSign, Search,
+  Sparkles, BookOpen, Share2,
   ChevronDown, School as SchoolIcon, Briefcase,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { PLANS } from "@/lib/plans";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import { fetchWithAuth } from "@/lib/api-client";
-import { CAT_STYLE, CAT_ORDER } from "@/lib/analysis-helpers";
+import { CAT_ORDER, CAT_ICON } from "@/lib/analysis-helpers";
 import { SchoolModal } from "@/components/analysis/SchoolModal";
 import { SchoolRow } from "@/components/analysis/SchoolRow";
-import { FormField, TierSelector, ToggleRow, PillButton } from "@/components/analysis/form-helpers";
+import { FormField, TierSelector, ToggleRow } from "@/components/analysis/form-helpers";
 import { List } from "react-window";
 import { readJSON, writeJSON, readString, writeString } from "@/lib/storage";
 import { PrismLoader } from "@/components/PrismLoader";
-import Link from "next/link";
 
 // 분리된 모듈:
 // - lib/analysis-helpers: 색상 상수·probGradient·story cache
@@ -47,9 +38,6 @@ import Link from "next/link";
 /* ═══════════════ MAIN PAGE ═══════════════ */
 export default function AnalysisPage() {
   const { profile, toggleFavorite, isFavorite, saveProfile } = useAuth();
-  const currentPlan = profile?.plan || "free";
-  const schoolLimit = PLANS[currentPlan].limits.analysisSchools;
-  const isFree = currentPlan === "free";
 
   const [step, setStep] = useState<"form" | "analyzing" | "result">("form");
   const [formStep, setFormStep] = useState(1);
@@ -132,7 +120,7 @@ export default function AnalysisPage() {
     specsSaveTimer.current = setTimeout(() => {
       // Persist to Firestore (cross-device sync)
       if (profile && (specs.gpaUW || specs.sat)) {
-        const profileUpdate: Record<string, any> = {
+        const profileUpdate: Record<string, unknown> = {
           specs,
           specLastUpdated: new Date().toISOString(),
         };
@@ -153,14 +141,19 @@ export default function AnalysisPage() {
       setSpecsSaveStatus("saved");
     }, 3000);
     return () => { if (specsSaveTimer.current) clearTimeout(specsSaveTimer.current); };
-  // 의도적 부분 deps: specs 변경 시에만 자동 저장 트리거.
-  // saveProfile/profile은 auth-context에서 useCallback로 안정화되어 있지 않아 deps에 넣으면
-  // 매 profile 갱신마다 디바운스가 리셋되어 영구 저장 안 됨. profile null 체크는 가드만 수행.
-  // (TODO: auth-context의 saveProfile을 useCallback로 안정화하면 deps에 추가 가능)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [specs]);
+  // specs 변경 시에만 자동 저장 트리거. saveProfile은 auth-context에서 useCallback로
+  // user deps만으로 안정화되었으므로, 여기 deps에 포함해도 무한 리셋 없음.
+  }, [specs, profile, saveProfile]);
 
   const specLastUpdated = profile?.specLastUpdated ? new Date(profile.specLastUpdated).toLocaleDateString("ko-KR") : null;
+
+  // analyze 진행 메시지 타이머들 — unmount·재시작 시 leak 방지용 ref
+  const analyzeTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const clearAnalyzeTimers = () => {
+    analyzeTimersRef.current.forEach(clearTimeout);
+    analyzeTimersRef.current = [];
+  };
+  useEffect(() => clearAnalyzeTimers, []);
 
   const startAnalysis = useCallback(() => {
     // Flush specs to localStorage + Firestore immediately on submit (don't wait for debounce)
@@ -168,6 +161,7 @@ export default function AnalysisPage() {
     if (profile && (specs.gpaUW || specs.sat)) {
       saveProfile({ specs, specLastUpdated: new Date().toISOString() }).catch(() => {});
     }
+    clearAnalyzeTimers(); // 재시작 시 이전 타이머 클린업
     setStep("analyzing");
     setAnalyzeProgress(0);
     setAnalyzeMsg("학생 프로필 분석 중...");
@@ -176,10 +170,12 @@ export default function AnalysisPage() {
       { at: 900, msg: "합격 확률 계산 중...", pct: 65 },
       { at: 1400, msg: "결과 생성 완료!", pct: 100 },
     ];
-    msgs.forEach(({ at, msg, pct }) =>
-      setTimeout(() => { setAnalyzeMsg(msg); setAnalyzeProgress(pct); }, at)
-    );
-    setTimeout(() => setStep("result"), 1800);
+    msgs.forEach(({ at, msg, pct }) => {
+      const id = setTimeout(() => { setAnalyzeMsg(msg); setAnalyzeProgress(pct); }, at);
+      analyzeTimersRef.current.push(id);
+    });
+    const finalId = setTimeout(() => setStep("result"), 1800);
+    analyzeTimersRef.current.push(finalId);
   }, [specs, profile, saveProfile]);
 
   // 서버 사이드 매칭 결과 — plan에 따라 자동 truncated
@@ -230,29 +226,12 @@ export default function AnalysisPage() {
   }, [results, filterCat, searchQuery, sortBy]);
 
   const stats = useMemo(() => {
-    if (!results.length) return { safety: 0, target: 0, hardTarget: 0, reach: 0, recommended: 0, focusSchools: [] as { school: School; label: string; tag: string }[] };
-    const reachList = results.filter((s) => s.cat === "Reach");
-    const hardTargetList = results.filter((s) => s.cat === "Hard Target");
-    const targetList = results.filter((s) => s.cat === "Target");
-    const safetyList = results.filter((s) => s.cat === "Safety");
-
-    // Focus schools: best from each category (ranked schools preferred)
-    const rankedReach = reachList.filter(s => s.rk > 0).sort((a, b) => (b.prob || 0) - (a.prob || 0));
-    const rankedTarget = [...targetList, ...hardTargetList].filter(s => s.rk > 0).sort((a, b) => a.rk - b.rk);
-    const rankedSafety = safetyList.filter(s => s.rk > 0).sort((a, b) => a.rk - b.rk);
-
-    const focusSchools: { school: School; label: string; tag: string }[] = [];
-    if (rankedReach[0]) focusSchools.push({ school: rankedReach[0], label: "도전", tag: "bg-red-500/20 text-red-200" });
-    if (rankedTarget[0]) focusSchools.push({ school: rankedTarget[0], label: "균형", tag: "bg-blue-500/20 text-blue-200" });
-    if (rankedSafety[0]) focusSchools.push({ school: rankedSafety[0], label: "안전", tag: "bg-emerald-500/20 text-emerald-200" });
-
+    if (!results.length) return { safety: 0, target: 0, hardTarget: 0, reach: 0 };
     return {
-      safety: safetyList.length,
-      target: targetList.length,
-      hardTarget: hardTargetList.length,
-      reach: reachList.length,
-      recommended: targetList.length + hardTargetList.length,
-      focusSchools,
+      reach: results.filter((s) => s.cat === "Reach").length,
+      hardTarget: results.filter((s) => s.cat === "Hard Target").length,
+      target: results.filter((s) => s.cat === "Target").length,
+      safety: results.filter((s) => s.cat === "Safety").length,
     };
   }, [results]);
 
@@ -263,21 +242,17 @@ export default function AnalysisPage() {
   /* ── ANALYZING VIEW ── */
   if (step === "analyzing") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6 relative overflow-hidden">
-        {/* Floating prismatic orbs background */}
-        <div className="brand-orb brand-orb-primary -top-10 -left-10 w-64 h-64 opacity-30" aria-hidden="true" />
-        <div className="brand-orb brand-orb-violet -bottom-16 -right-12 w-72 h-72 opacity-25" aria-hidden="true" />
-
-        <div className="relative max-w-xs w-full text-center space-y-6 animate-scale-in">
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="max-w-xs w-full text-center space-y-6 animate-scale-in">
           <div className="flex justify-center">
             <PrismLoader size={88} />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <h2 className="font-headline text-xl font-bold">{analyzeMsg}</h2>
             <p className="text-sm text-muted-foreground">200개 대학을 분석하고 있어요</p>
           </div>
           <div className="space-y-2">
-            <Progress value={analyzeProgress} className="h-2" />
+            <Progress value={analyzeProgress} className="h-1.5" />
             <p className="text-xs text-muted-foreground tabular-nums">{analyzeProgress}%</p>
           </div>
         </div>
@@ -289,17 +264,16 @@ export default function AnalysisPage() {
   if (step === "result") {
     return (
       <div className="min-h-screen bg-background pb-24">
-        <header className="p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" size="sm" onClick={() => setStep("form")} className="text-primary -ml-2 gap-1">
-              <ArrowLeft className="w-4 h-4" /> 다시 입력
-            </Button>
+        <PageHeader
+          title="분석 결과"
+          subtitle={`${results.length}개 대학 분석 완료`}
+          onBack={() => setStep("form")}
+          action={
             <Button
               variant="ghost"
               size="sm"
               onClick={() => {
-                const focusText = stats.focusSchools.map(f => `${f.label}: ${f.school.n} ${f.school.prob}%`).join("\n");
-                const text = `PRISM에서 분석한 내 합격 확률 결과:\n지원 추천 대학 ${stats.recommended}개\n${focusText}\nReach ${stats.reach}개, Target ${stats.target + stats.hardTarget}개, Safety ${stats.safety}개\n\n나도 분석받기 → ${typeof window !== "undefined" ? window.location.origin : ""}`;
+                const text = `PRISM에서 분석한 내 합격 확률 결과\nReach ${stats.reach}개 · Target ${stats.target + stats.hardTarget}개 · Safety ${stats.safety}개\n\n나도 분석받기 → ${typeof window !== "undefined" ? window.location.origin : ""}`;
                 if (navigator.share) {
                   navigator.share({ title: "PRISM 합격 확률 분석", text }).catch(() => {});
                 } else if (navigator.clipboard) {
@@ -311,82 +285,65 @@ export default function AnalysisPage() {
             >
               <Share2 className="w-4 h-4" /> 공유
             </Button>
-          </div>
+          }
+        />
+        <div className="px-gutter pt-2 space-y-4">
 
-          {/* Summary Card */}
-          <Card className="dark-hero-gradient text-white border-none p-6 relative overflow-hidden prism-strip">
-            <div className="absolute top-[-20%] right-[-10%] w-32 h-32 bg-primary/20 rounded-full blur-[60px]" />
-            <div className="relative z-10">
-              <p className="text-xs text-white/70 mb-3">
-                {results.length}개 대학 분석 완료
-              </p>
-              <div className="grid grid-cols-4 gap-3 text-center mb-4">
-                {CAT_ORDER.map((cat) => {
-                  const count = results.filter((s) => s.cat === cat).length;
-                  const dotColor = CAT_STYLE[cat].dot;
-                  return (
-                    <button key={cat} onClick={() => setFilterCat(filterCat === cat ? null : cat)}
-                      className={`rounded-xl p-2.5 transition-all ${filterCat === cat ? "bg-white/20 ring-1 ring-white/30" : "bg-white/5"}`}>
-                      <div className={`w-2 h-2 rounded-full ${dotColor} mx-auto mb-1`} />
-                      <p className="text-xl font-bold">{count}</p>
-                      <p className="text-xs text-white/70">{cat}</p>
-                    </button>
-                  );
-                })}
+          {/* Summary — interactive 4-cell stat가 필터 역할까지 겸함. 장식 orb·추천 포커스·
+             "지원 추천 대학" count는 제거 (아래 School list와 중복) */}
+          <Card className="dark-hero-gradient text-white border-none p-5 rounded-2xl">
+            <div className="flex items-center justify-between mb-3 gap-2">
+              <p className="text-xs text-white/70">{results.length}개 대학 분석</p>
+              <div className="flex items-center gap-2">
+                {filterCat && (
+                  <button
+                    onClick={() => setFilterCat(null)}
+                    className="text-[11px] text-white/80 underline underline-offset-2 hover:text-white"
+                  >
+                    필터 해제
+                  </button>
+                )}
+                <button
+                  onClick={() => setStep("form")}
+                  className="inline-flex items-center gap-1 bg-white/15 hover:bg-white/25 text-white text-[11px] font-semibold rounded-full px-2.5 h-7 transition-colors"
+                  aria-label="스펙 입력 폼으로 돌아가 다시 분석"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  스펙 수정
+                </button>
               </div>
-              {/* Recommended count */}
-              <div className="pt-3 border-t border-white/10 mb-3 flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-white/70">지원 추천 대학</p>
-                  <p className="text-2xl font-bold font-headline">{stats.recommended}<span className="text-sm font-normal text-white/70 ml-1">개</span></p>
-                </div>
-                <p className="text-xs text-white/50">Target + Hard Target</p>
-              </div>
-
-              {/* Focus schools */}
-              {stats.focusSchools.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs text-white/70 flex items-center gap-1.5">
-                    <Target className="w-3 h-3" /> 추천 포커스 대학
-                  </p>
-                  {stats.focusSchools.map(({ school, label, tag }) => (
-                    <div key={school.n} className="flex items-center gap-3 bg-white/5 rounded-xl px-3 py-2.5">
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-md shrink-0 ${tag}`}>{label}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate">{school.n}</p>
-                        {school.rk > 0 && <p className="text-xs text-white/50">#{school.rk} US News</p>}
-                      </div>
-                      <span className="text-sm font-bold shrink-0">{school.prob}%</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {CAT_ORDER.map((cat) => {
+                const count = results.filter((s) => s.cat === cat).length;
+                const CatIcon = CAT_ICON[cat];
+                const isActive = filterCat === cat;
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setFilterCat(isActive ? null : cat)}
+                    className={`rounded-xl p-3 transition-all ${isActive ? "bg-white/20 ring-1 ring-white/40" : "bg-white/5 hover:bg-white/10"}`}
+                    aria-pressed={isActive}
+                    aria-label={`${cat} 카테고리 ${count}개, ${isActive ? "필터 해제" : "필터 적용"}`}
+                  >
+                    <CatIcon className="w-4 h-4 mx-auto mb-1 text-white/90" aria-hidden="true" />
+                    <p className="text-xl font-bold tabular-nums leading-none">{count}</p>
+                    <p className="text-[11px] text-white/70 mt-1">{cat}</p>
+                  </button>
+                );
+              })}
             </div>
           </Card>
 
-          {/* What-If CTA */}
-          <Link href="/what-if">
-            <Card className="p-3.5 bg-primary/5 border border-primary/20 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <Sparkles className="w-4.5 h-4.5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs font-bold text-foreground">What-If 시뮬레이터</p>
-                <p className="text-xs text-muted-foreground">점수를 바꾸면 확률이 어떻게 변할까?</p>
-              </div>
-              <ExternalLink className="w-3.5 h-3.5 text-primary" />
-            </Card>
-          </Link>
-
-          {/* Search + Sort */}
+          {/* Toolbar — 검색 + 정렬 */}
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
               <Input
                 placeholder="대학 검색..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-10 rounded-xl bg-white dark:bg-card border-none shadow-sm"
+                className="pl-9 h-10 rounded-xl bg-muted/50 dark:bg-card/60 border-none text-sm"
               />
             </div>
             <button
@@ -394,35 +351,19 @@ export default function AnalysisPage() {
                 const next: SortMode = sortBy === "probDesc" ? "probAsc" : sortBy === "probAsc" ? "rank" : "probDesc";
                 setSortBy(next);
               }}
-              className="h-10 px-3 rounded-xl bg-white dark:bg-card shadow-sm text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap"
+              className="h-10 px-3 rounded-xl bg-muted/50 dark:bg-card/60 text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap hover:bg-muted transition-colors"
               title="정렬 기준 변경"
             >
-              {sortBy === "probDesc" ? "합격 가능성 높은 순" : sortBy === "probAsc" ? "도전 학교 먼저" : "US News 랭킹 순"}
+              {sortBy === "probDesc" ? "확률 높은 순" : sortBy === "probAsc" ? "도전 먼저" : "랭킹 순"}
               <TrendingUp className={`w-3.5 h-3.5 ${sortBy === "probAsc" ? "rotate-180" : ""} transition-transform`} />
             </button>
           </div>
-
-          {/* Filter pills */}
-          <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-6 px-6">
-            <PillButton active={!filterCat} onClick={() => setFilterCat(null)}>
-              전체 ({results.length})
-            </PillButton>
-            {CAT_ORDER.map((cat) => {
-              const count = results.filter((s) => s.cat === cat).length;
-              return (
-                <PillButton key={cat} active={filterCat === cat} onClick={() => setFilterCat(filterCat === cat ? null : cat)}>
-                  {cat} ({count})
-                </PillButton>
-              );
-            })}
-          </div>
-        </header>
+        </div>
 
         {/* School list (virtualized) */}
         {matchLoading && results.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin text-primary" />
-            <p className="text-sm">분석 결과 불러오는 중...</p>
+          <div className="py-12 text-center">
+            <PrismLoader size={36} label="분석 결과 불러오는 중..." className="mx-auto" />
           </div>
         ) : matchError ? (
           <div className="text-center py-12 px-6">
@@ -435,7 +376,7 @@ export default function AnalysisPage() {
             <p className="text-sm">검색 결과가 없습니다.</p>
           </div>
         ) : (
-          <div style={{ height: "calc(100dvh - 360px)", minHeight: 420 }}>
+          <div className="mt-4" style={{ height: "calc(100dvh - 360px)", minHeight: 420 }}>
             <List
               rowCount={filtered.length}
               rowHeight={120}
@@ -486,73 +427,51 @@ export default function AnalysisPage() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <header className="p-6 pb-4">
-        <h1 className="font-headline text-2xl font-bold flex items-center gap-2">
-          <BarChart3 className="w-6 h-6 text-primary" /> 합격 확률 분석
-        </h1>
-        <div className="flex items-center justify-between mt-1">
-          <p className="text-sm text-muted-foreground">내 스펙을 입력하면 200개 대학의 합격 확률을 분석합니다.</p>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {specsSaveStatus === "saving" && <span className="text-xs text-muted-foreground animate-pulse">저장 중...</span>}
-            {specsSaveStatus === "saved" && <span className="text-xs text-emerald-600">저장됨</span>}
-            {specLastUpdated && <span className="text-xs text-muted-foreground">· {specLastUpdated}</span>}
-          </div>
-        </div>
+      <PageHeader
+        title="합격 확률 분석"
+        subtitle="내 스펙을 입력하면 200개 대학의 합격 확률을 분석합니다."
+        hideBack
+        leading={<BarChart3 className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />}
+        action={
+          (specsSaveStatus === "saving" || specsSaveStatus === "saved" || specLastUpdated) && (
+            <div className="flex items-center gap-1.5">
+              {specsSaveStatus === "saving" && <span className="text-xs text-muted-foreground animate-pulse">저장 중...</span>}
+              {specsSaveStatus === "saved" && <span className="text-xs text-emerald-600">저장됨</span>}
+              {specLastUpdated && <span className="text-xs text-muted-foreground">· {specLastUpdated}</span>}
+            </div>
+          )
+        }
+      />
 
-        {/* Progress bar */}
-        <div className="mt-4 space-y-2">
-          <div className="flex justify-between">
-            {formStepLabels.map((label, i) => (
-              <button
-                key={label}
-                onClick={() => setFormStep(i + 1)}
-                className={`text-xs font-semibold transition-colors ${
-                  formStep === i + 1 ? "text-primary" : formStep > i + 1 ? "text-emerald-500" : "text-muted-foreground"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <Progress value={(formStep / 5) * 100} className="h-1.5" />
-          <p className="text-xs text-muted-foreground">Step {formStep} / 5</p>
-        </div>
-      </header>
-
-      {/* Blurred preview hint (only on step 1) */}
-      {formStep === 1 && (
-      <div className="px-6 mb-4">
-        <div className="relative rounded-2xl overflow-hidden">
-          <div className="blur-[6px] pointer-events-none space-y-2 p-1">
-            {[
-              { name: "Stanford University", prob: 32, color: "#8C1515" },
-              { name: "MIT", prob: 28, color: "#A31F34" },
-              { name: "UC Berkeley", prob: 54, color: "#003262" },
-            ].map((s) => (
-              <Card key={s.name} className="bg-white dark:bg-card border-none shadow-sm p-4 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg text-white text-xs font-bold flex items-center justify-center" style={{ backgroundColor: s.color }}>
-                  #1
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold">{s.name}</p>
-                  <Progress value={s.prob} className="h-1.5 mt-1" />
-                </div>
-                <span className="text-xs font-bold">{s.prob}%</span>
-              </Card>
-            ))}
-          </div>
-          <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-[2px]">
-            <div className="text-center">
-              <Sparkles className="w-8 h-8 text-primary mx-auto mb-2" />
-              <p className="text-sm font-bold">스펙을 입력하면</p>
-              <p className="text-sm font-bold text-primary">200개 대학의 합격 확률을 분석해드려요</p>
+      <div className="px-gutter pb-4">
+        {/* Progress — 단계 번호 + 현재 단계 라벨 + 바 */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-primary">
+              Step {formStep} / 5 · {formStepLabels[formStep - 1]}
+            </p>
+            <div className="flex gap-1">
+              {formStepLabels.map((label, i) => (
+                <button
+                  key={label}
+                  onClick={() => setFormStep(i + 1)}
+                  aria-label={`${label} 단계로 이동`}
+                  className={`w-2 h-2 rounded-full transition-colors ${
+                    formStep === i + 1
+                      ? "bg-primary"
+                      : formStep > i + 1
+                        ? "bg-emerald-500"
+                        : "bg-muted"
+                  }`}
+                />
+              ))}
             </div>
           </div>
+          <Progress value={(formStep / 5) * 100} className="h-1" />
         </div>
       </div>
-      )}
 
-      <div className="px-6 space-y-5">
+      <div className="px-gutter space-y-5">
         {/* Step 1: 학업 성적 */}
         {formStep === 1 && (
           <Card className="bg-white dark:bg-card border-none shadow-sm p-5 space-y-4">

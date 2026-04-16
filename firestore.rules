@@ -82,14 +82,19 @@ service cloud.firestore {
       // 읽기: 로그인 사용자만 (피드는 대시보드에서 표시)
       allow read: if request.auth != null;
 
-      // 생성: 로그인 + 데이터 구조 검증 (최소 무결성)
+      // 생성: 로그인 + 데이터 구조 검증 + 합리적 범위 검증.
+      // 진정한 rate limit은 Firestore rules만으로 불가 — 필요 시 Cloud Function으로 이관.
+      // 현재 방어선: size·year·submittedAt 길이 제한으로 최소한의 spam 차단.
       allow create: if request.auth != null
                     && request.resource.data.keys().hasAll(['results', 'submittedAt', 'year'])
                     && request.resource.data.results is list
                     && request.resource.data.results.size() > 0
                     && request.resource.data.results.size() <= 30
                     && request.resource.data.submittedAt is string
-                    && request.resource.data.year is number;
+                    && request.resource.data.submittedAt.size() <= 40
+                    && request.resource.data.year is number
+                    && request.resource.data.year >= 2020
+                    && request.resource.data.year <= 2035;
 
       // 익명 데이터는 수정·삭제 불가 (한 번 제출하면 영구)
       allow update, delete: if false;

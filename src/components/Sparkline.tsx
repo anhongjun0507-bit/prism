@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ResponsiveContainer, AreaChart, Area, Tooltip, YAxis, ReferenceLine } from "recharts";
 
 /**
@@ -23,12 +24,18 @@ export function Sparkline({
   /** 기준선 (y) — 표시되면 점선 */
   baseline?: number;
 }) {
+  // recharts ResponsiveContainer는 SSR에서 부모 width를 모르므로 초기 페인트가 0px로 깜빡임.
+  // 마운트 이후에만 렌더해 hydration mismatch·zero-width flash 제거.
+  const mounted = useMounted();
   if (data.length < 2) {
     return (
-      <div className="flex items-center justify-center text-[10px] text-muted-foreground" style={{ height }}>
+      <div className="flex items-center justify-center text-xs text-muted-foreground" style={{ height }}>
         데이터 부족
       </div>
     );
+  }
+  if (!mounted) {
+    return <div style={{ height }} aria-hidden="true" />;
   }
   const stroke = color ?? "hsl(var(--primary))";
   const gradId = `spark-grad-${Math.random().toString(36).slice(2, 8)}`;
@@ -74,4 +81,10 @@ export function Sparkline({
       </AreaChart>
     </ResponsiveContainer>
   );
+}
+
+function useMounted() {
+  const [m, setM] = useState(false);
+  useEffect(() => setM(true), []);
+  return m;
 }

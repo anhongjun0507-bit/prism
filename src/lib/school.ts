@@ -6,12 +6,16 @@
  */
 import "server-only";
 import schoolsData from "@/data/schools.json";
+import type { School } from "./matching";
 export { schoolMatchesQuery } from "./school-search";
 
-export const SCHOOLS = schoolsData as any[];
+// schools.json의 literal 타입(예: mr의 키가 literal union)이 School의 Record<string, number>와
+// 구조적 비교가 안 돼서 unknown 경유 cast. 런타임에 필요한 필드(n, d)만 안전하게 읽음.
+// 이전엔 `as any[]`로 타입 체크 우회 → Partial<School>로 optional 필드 명시.
+export const SCHOOLS = schoolsData as unknown as Array<Partial<School> & { n: string; d?: string }>;
 
-export const DOMS: Record<string,string> = {};
-SCHOOLS.forEach((s: any) => { if(s.d) DOMS[s.n] = s.d; });
+export const DOMS: Record<string, string> = {};
+SCHOOLS.forEach((s) => { if (s.d) DOMS[s.n] = s.d; });
 
 // schoolMatchesQuery는 lib/school-search.ts에서 re-export. 아래 ALIASES + local 함수는
 // 더 이상 사용되지 않으므로 제거 가능. 보존 이유: 일부 스크립트가 직접 참조할 수 있어 안전한

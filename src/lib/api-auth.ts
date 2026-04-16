@@ -13,7 +13,6 @@
  *   }
  */
 import { NextRequest, NextResponse } from "next/server";
-import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "./firebase-admin";
 import { PLANS, type PlanType } from "./plans";
 
@@ -23,10 +22,15 @@ export interface Session {
   isMaster: boolean;
 }
 
-const MASTER_EMAILS = (process.env.NEXT_PUBLIC_MASTER_EMAILS || "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
+// Hardcoded fallback — 배포 환경에 env 미설정 시에도 오너 마스터 계정 보장.
+const HARDCODED_MASTER_EMAILS = ["hongjunan100@gmail.com"];
+const MASTER_EMAILS = Array.from(new Set([
+  ...HARDCODED_MASTER_EMAILS,
+  ...(process.env.NEXT_PUBLIC_MASTER_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean),
+]));
 
 function isMasterEmail(email: string | null | undefined): boolean {
   if (!email) return false;

@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import schoolsData from "@/data/schools.json";
+import type { School } from "@/lib/matching";
 import { requireAuth, enforceQuota } from "@/lib/api-auth";
 
 function getClient() {
@@ -9,15 +10,20 @@ function getClient() {
   return new Anthropic({ apiKey: key });
 }
 
+// schools.json의 literal 타입이 School의 Record<string, number>와 구조적 비교 불가 →
+// unknown 경유 cast. 런타임에 필요한 필드만 읽으므로 안전.
+type SchoolLite = Partial<School> & { n: string };
+const schools = schoolsData as unknown as SchoolLite[];
+
 // Build a quick lookup for school names (lowercase → school data)
-const schoolsByName = new Map<string, any>();
-(schoolsData as any[]).forEach((s) => {
+const schoolsByName = new Map<string, SchoolLite>();
+schools.forEach((s) => {
   schoolsByName.set(s.n.toLowerCase(), s);
 });
 
 // Extract mentioned school names from a message
-function findMentionedSchools(text: string): any[] {
-  const found: any[] = [];
+function findMentionedSchools(text: string): SchoolLite[] {
+  const found: SchoolLite[] = [];
   const lower = text.toLowerCase();
   schoolsByName.forEach((school, name) => {
     if (lower.includes(name)) {
@@ -30,14 +36,14 @@ function findMentionedSchools(text: string): any[] {
     .slice(0, 3);
 }
 
-function formatSchoolContext(schools: any[]): string {
+function formatSchoolContext(schools: SchoolLite[]): string {
   if (!schools.length) return "";
   const lines = schools.map((s) => {
     const parts = [`${s.n}`];
-    if (s.rk > 0) parts.push(`US News #${s.rk}`);
-    parts.push(`합격률 ${s.r}%`);
-    if (s.sat[0] > 0) parts.push(`SAT ${s.sat[0]}-${s.sat[1]}`);
-    if (s.gpa > 0) parts.push(`GPA ${s.gpa}`);
+    if ((s.rk ?? 0) > 0) parts.push(`US News #${s.rk}`);
+    if (s.r != null) parts.push(`합격률 ${s.r}%`);
+    if (s.sat && s.sat[0] > 0) parts.push(`SAT ${s.sat[0]}-${s.sat[1]}`);
+    if ((s.gpa ?? 0) > 0) parts.push(`GPA ${s.gpa}`);
     if (s.toefl) parts.push(`TOEFL ${s.toefl}+`);
     if (s.tuition) parts.push(`등록금 $${s.tuition.toLocaleString()}`);
     if (s.ea) parts.push(`EA: ${s.ea}`);

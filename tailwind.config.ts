@@ -31,6 +31,7 @@ export default {
       //   4xl  36  hero primary
       //   5xl  48  marketing hero
       fontSize: {
+        '2xs': ['0.625rem', { lineHeight: '0.875rem' }],    // 10 / 14  micro badge·overline
         xs: ['0.75rem', { lineHeight: '1rem' }],            // 12 / 16
         sm: ['0.8125rem', { lineHeight: '1.15rem' }],       // 13 / 18.4
         base: ['0.9375rem', { lineHeight: '1.45rem' }],     // 15 / 23.2
@@ -92,25 +93,50 @@ export default {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))',
         },
+        // Admission category semantic colors — 다크모드 자동 (CSS 변수)
+        cat: {
+          safety:      { DEFAULT: 'hsl(var(--cat-safety))',  fg: 'hsl(var(--cat-safety-fg))',  soft: 'hsl(var(--cat-safety-soft))' },
+          target:      { DEFAULT: 'hsl(var(--cat-target))',  fg: 'hsl(var(--cat-target-fg))',  soft: 'hsl(var(--cat-target-soft))' },
+          hard:        { DEFAULT: 'hsl(var(--cat-hard))',    fg: 'hsl(var(--cat-hard-fg))',    soft: 'hsl(var(--cat-hard-soft))' },
+          reach:       { DEFAULT: 'hsl(var(--cat-reach))',   fg: 'hsl(var(--cat-reach-fg))',   soft: 'hsl(var(--cat-reach-soft))' },
+        },
       },
-      // Border radius scale.
+      // Semantic spacing tokens — 의미 단위 간격.
+      // 하드코딩된 p-4/p-6 대신 의도가 드러나는 token 사용 권장.
       //
-      // 사용 가이드 (실제 사용 빈도 기준):
-      //   rounded-full  — 원형 (87회) — 아바타, 알약 배지
-      //   rounded-2xl   — 16px (54회) — 큰 카드, 모달, 히어로
-      //   rounded-xl    — 12px (194회) — 표준 카드, 입력창, 버튼  ← 가장 많이 사용
-      //   rounded-lg    — 18px (32회, 커스텀 override) — 작은 버튼, 아이콘 박스
-      //   rounded-md    — 14px (29회, 커스텀 override) — 컴팩트 카드, 칩
-      //   rounded-sm    — 10px (14회, 커스텀 override) — 미세 둥글기
+      //   p-card        → 표준 카드 안쪽 패딩  (16px) — list item, compact card
+      //   p-card-lg     → 큰 카드/모달 패딩    (24px) — feature card, hero
+      //   gap-section   → 섹션 사이 vertical 간격 (24px)
+      //   gap-section-lg→ 큰 섹션 분리         (40px)
+      //   px-gutter     → 페이지 좌우 여백     (24px) — 기존 px-6과 일치
+      //   px-gutter-lg  → 데스크톱 페이지 여백 (32px)
       //
-      // ⚠️ 주의: lg/md/sm은 커스텀 override라 Tailwind 기본값(8/6/2px)보다 큼.
-      //   이로 인해 sm < md < lg 순서지만 lg(18) > xl(12) > md(14) 는 단조롭지 않음.
-      //   변경은 광범위 visual diff를 일으키므로 의도적으로 유지 — 신규 코드는 가능하면
-      //   가장 흔한 rounded-xl 또는 rounded-2xl 를 우선 사용.
+      // 결정 트리:
+      //   - 페이지 좌우: px-gutter
+      //   - 카드 안쪽: p-card (작음) / p-card-lg (큼)
+      //   - 섹션 간격: space-y-section / gap-section
+      spacing: {
+        'card': '1rem',         // 16
+        'card-lg': '1.5rem',    // 24
+        'section': '1.5rem',    // 24
+        'section-lg': '2.5rem', // 40
+        'gutter': '1.5rem',     // 24 — px-6 대체
+        'gutter-lg': '2rem',    // 32
+      },
+      // Border radius scale — strictly monotonic, shadcn-idiomatic.
+      //
+      // sm  →  8px  (--radius - 4)  — 미세 (체크박스, dropdown item)
+      // md  → 10px  (--radius - 2)  — 칩, 작은 입력
+      // lg  → 12px  (--radius)      — Card, Input, 표준 surface  (= xl)
+      // xl  → 12px  (Tailwind 기본)  — 표준 카드/버튼  (= lg, alias)
+      // 2xl → 16px  (Tailwind 기본)  — 큰 모달, 히어로
+      // full → 9999px              — 아바타, 알약 배지
+      //
+      // --radius CSS variable로 한 번에 조절 가능 (globals.css).
       borderRadius: {
-        lg: '18px',
-        md: '14px',
-        sm: '10px',
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
       },
       // Keyframes + animation utilities. 단일 source of truth.
       // (예전에 일부 keyframes가 globals.css에만 있어 drift 위험이 있었음.)

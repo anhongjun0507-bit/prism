@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { PLANS } from "@/lib/plans";
 import type { Specs, School } from "@/lib/matching";
@@ -13,10 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
-import { ArrowLeft, Users, TrendingUp, Award, FileText, Calendar, Download, Sparkles } from "lucide-react";
+import { Users, TrendingUp, Award, Download, Sparkles } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function ParentReportPage() {
-  const router = useRouter();
   const { profile, snapshots } = useAuth();
   const showApiError = useApiErrorToast();
   const currentPlan = profile?.plan || "free";
@@ -56,14 +55,19 @@ export default function ParentReportPage() {
   }, [profile, matchResults]);
 
   /* ── growth comparison ── */
+  // gpaDiff·satDiff·probDiff 모두 숫자 타입으로 계산해 저장 (이전엔 gpaDiff가 toFixed(2) 문자열
+  // → "0.00"도 truthy라 렌더 조건에서 매번 parseFloat 재실행 + 혼란). 표시 시점에만 toFixed.
   const growth = useMemo(() => {
     if (snapshots.length < 2) return null;
     const first = snapshots[0];
     const current = snapshots[snapshots.length - 1];
+    const gpaFirst = first.gpa ? parseFloat(first.gpa) : NaN;
+    const gpaCurrent = current.gpa ? parseFloat(current.gpa) : NaN;
+    const gpaDiff = Number.isFinite(gpaFirst) && Number.isFinite(gpaCurrent) ? gpaCurrent - gpaFirst : null;
     return {
       first,
       current,
-      gpaDiff: first.gpa && current.gpa ? (parseFloat(current.gpa) - parseFloat(first.gpa)).toFixed(2) : null,
+      gpaDiff,
       satDiff: first.sat && current.sat ? parseInt(current.sat) - parseInt(first.sat) : 0,
       probDiff: first.dreamSchoolProb != null && current.dreamSchoolProb != null
         ? current.dreamSchoolProb - first.dreamSchoolProb : null,
@@ -168,11 +172,11 @@ export default function ParentReportPage() {
             <TrendingUp className="w-4 h-4 text-emerald-500" /> 성장 기록
           </h3>
           <div className="space-y-2 text-sm">
-            {growth.gpaDiff && parseFloat(growth.gpaDiff) !== 0 && (
+            {growth.gpaDiff != null && growth.gpaDiff !== 0 && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">GPA 변화</span>
-                <span className={`font-bold ${parseFloat(growth.gpaDiff) > 0 ? "text-emerald-600" : "text-red-500"}`}>
-                  {parseFloat(growth.gpaDiff) > 0 ? "+" : ""}{growth.gpaDiff}
+                <span className={`font-bold tabular-nums ${growth.gpaDiff > 0 ? "text-emerald-600" : "text-red-500"}`}>
+                  {growth.gpaDiff > 0 ? "+" : ""}{growth.gpaDiff.toFixed(2)}
                 </span>
               </div>
             )}
@@ -235,15 +239,13 @@ export default function ParentReportPage() {
 
   return (
     <main className="min-h-screen bg-background pb-28 print:pb-0">
-      <header className="p-6 flex items-center gap-3 print:hidden">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <h1 className="font-headline text-xl font-bold">학부모 리포트</h1>
-        {!hasAccess && <Badge variant="secondary" className="ml-auto text-[10px]">프리미엄</Badge>}
-      </header>
+      <PageHeader
+        title="학부모 리포트"
+        className="print:hidden"
+        action={!hasAccess && <Badge variant="secondary" className="text-xs">프리미엄</Badge>}
+      />
 
-      <div className="px-6">
+      <div className="px-gutter">
         {hasAccess ? (
           reportContent
         ) : (

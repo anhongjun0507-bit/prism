@@ -13,6 +13,26 @@ export interface EssayVersion {
   wordCount: number;
 }
 
+/** AI 타임머신 에세이 구조의 단일 섹션 (과거/전환점/성장/연결). */
+export interface OutlineSection {
+  title: string;
+  // New fields (preferred)
+  korean_guide?: string;
+  english_starter?: string;
+  // Legacy fields (fallback for older API responses / cached data)
+  hint?: string;
+  starter?: string;
+}
+
+export interface EssayOutline {
+  past: OutlineSection;
+  turning: OutlineSection;
+  growth: OutlineSection;
+  connection?: OutlineSection;
+  /** ISO — 저장 시각. 레거시 outline(필드 없음)도 허용. */
+  createdAt?: string;
+}
+
 export interface EssayReview {
   id: string;
   score: number;            // 1–10
@@ -25,6 +45,8 @@ export interface EssayReview {
   keyChange?: string;
   admissionNote?: string;
   revisedOpening?: string;
+  /** 에세이 전체를 10점 수준으로 다시 쓴 버전. 에세이 원어와 동일 언어. */
+  perfectExample?: string;
   createdAt: string;        // ISO
 }
 
@@ -40,6 +62,8 @@ export interface Essay {
   wordLimit?: number;
   versions?: EssayVersion[];
   reviews?: EssayReview[];
+  /** AI 타임머신 구조 — 재생성 시 덮어씀. 단일 객체로 관리(리뷰처럼 누적 안 함). */
+  outline?: EssayOutline;
 }
 
 /**

@@ -3,6 +3,9 @@
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import { Crown, Sparkles } from "lucide-react";
 
 interface UpgradeCTAProps {
@@ -56,17 +59,17 @@ export function ChatLimitModal({
 }) {
   const router = useRouter();
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6">
-      <Card className="max-w-sm w-full p-8 text-center animate-in fade-in zoom-in-95">
-        <p className="text-4xl mb-4">💬</p>
-        <h3 className="font-bold text-lg mb-2">오늘의 상담을 모두 사용했어요</h3>
-        <p className="text-sm text-muted-foreground mb-2 leading-relaxed">
-          무료 플랜은 하루 5회까지 AI 상담이 가능해요.
-        </p>
-        <p className="text-xs text-primary font-semibold mb-6">
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent hideClose className="max-w-sm p-8 text-center">
+        <DialogHeader className="items-center space-y-0">
+          <p className="text-4xl mb-4" aria-hidden="true">💬</p>
+          <DialogTitle className="font-bold text-lg mb-2">오늘의 상담을 모두 사용했어요</DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
+            무료 플랜은 하루 5회까지 AI 상담이 가능해요.
+          </DialogDescription>
+        </DialogHeader>
+        <p className="text-xs text-primary font-semibold mb-2">
           베이직 플랜으로 무제한 상담 + 200개교 분석을 이용하세요
         </p>
         <div className="space-y-2">
@@ -77,7 +80,7 @@ export function ChatLimitModal({
             내일 다시 올게요
           </Button>
         </div>
-      </Card>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

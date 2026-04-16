@@ -18,6 +18,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthGate } from "@/components/AuthGate";
 import { Analytics } from "@/components/Analytics";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { DesktopSidebar } from "@/components/DesktopSidebar";
+import { StorageQuotaBanner } from "@/components/StorageQuotaBanner";
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://prism-app-3ab7d.web.app'),
@@ -109,16 +111,24 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="font-body antialiased min-h-screen pb-20 md:pb-0">
+      {/* lg+에서는 사이드바(w-64 fixed) 자리만큼 좌측 reserve.
+          모바일 BottomNav 클리어런스는 각 페이지가 자체 pb-24/pb-28로 처리함 —
+          body에 전역 pb를 두면 chat 같은 full-height 페이지에서 document 오버플로 발생. */}
+      <body className="font-body antialiased min-h-screen lg:pl-64">
         <Analytics />
         <ThemeProvider>
           <ErrorBoundary>
             <AuthProvider>
               <AuthGate>
-                <main className="max-w-md md:max-w-2xl lg:max-w-4xl mx-auto min-h-screen bg-background relative overflow-x-hidden">
+                {/* Desktop sidebar — lg+에서만 표시. 모바일은 BottomNav로 대체 (각 페이지가 직접 렌더). */}
+                <DesktopSidebar />
+                {/* Content shell — 모바일·태블릿: 중앙정렬 single column.
+                    lg+: body의 pl-64 안에서 다시 mx-auto로 가용 공간에 centering. */}
+                <main className="max-w-md md:max-w-2xl lg:max-w-5xl mx-auto min-h-screen bg-background relative overflow-x-hidden">
                   <PageTransition>{children}</PageTransition>
                 </main>
                 <Toaster />
+                <StorageQuotaBanner />
                 <InstallPrompt />
               </AuthGate>
             </AuthProvider>

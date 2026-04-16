@@ -117,9 +117,10 @@ export async function GET(req: NextRequest) {
       </body></html>`,
       { headers: { "Content-Type": "text/html" } }
     );
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("Kakao auth error:", e);
-    return errorResponse(e.message || "카카오 로그인 실패", targetOrigin);
+    const msg = e instanceof Error ? e.message : "카카오 로그인 실패";
+    return errorResponse(msg, targetOrigin);
   }
 }
 

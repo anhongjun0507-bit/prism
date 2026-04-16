@@ -97,7 +97,24 @@ body {
     --border: 36 12% 85%;
     --input: 36 12% 85%;
     --ring: 19 79% 34%;
-    --radius: 18px;
+    /* shadcn radius base — lg=var(--radius), md=lg-2, sm=lg-4. xl/2xl는 Tailwind 기본(12/16). */
+    --radius: 12px;
+
+    /* ─── Semantic category colors (admission category) ───
+       Safety / Target / Hard Target / Reach.
+       사용처: 확률 바, 카테고리 배지, 차트. CSS 변수라 다크모드 자동 대응. */
+    --cat-safety: 160 60% 38%;
+    --cat-safety-fg: 160 70% 24%;
+    --cat-safety-soft: 160 50% 95%;
+    --cat-target: 217 71% 48%;
+    --cat-target-fg: 217 80% 30%;
+    --cat-target-soft: 217 70% 95%;
+    --cat-hard: 38 92% 45%;
+    --cat-hard-fg: 32 90% 32%;
+    --cat-hard-soft: 38 80% 95%;
+    --cat-reach: 0 72% 48%;
+    --cat-reach-fg: 0 75% 35%;
+    --cat-reach-soft: 0 70% 96%;
   }
 
   .dark {
@@ -120,6 +137,20 @@ body {
     --border: 30 10% 22%;
     --input: 30 10% 22%;
     --ring: 19 79% 50%;
+
+    /* Dark mode: soft 배경은 더 깊고 채도 낮게, fg는 더 밝게 */
+    --cat-safety: 160 60% 50%;
+    --cat-safety-fg: 160 70% 75%;
+    --cat-safety-soft: 160 45% 12%;
+    --cat-target: 217 80% 60%;
+    --cat-target-fg: 217 85% 78%;
+    --cat-target-soft: 217 50% 14%;
+    --cat-hard: 38 92% 55%;
+    --cat-hard-fg: 38 95% 75%;
+    --cat-hard-soft: 38 50% 13%;
+    --cat-reach: 0 75% 60%;
+    --cat-reach-fg: 0 80% 78%;
+    --cat-reach-soft: 0 50% 14%;
   }
 }
 
@@ -247,6 +278,27 @@ body {
 .animate-stagger {
   animation: fade-up 0.45s ease-out both;
   animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+/* ─── Probability reveal particle burst — ProbabilityReveal 컴포넌트 전용.
+   링 채움이 끝나는 순간 12개 점이 방사형으로 뻗어나감.
+   CSS 변수(--angle, --delay, --color)로 각 입자별 방향·타이밍·색 제어. */
+@keyframes prob-particle-burst {
+  0%   { transform: translate(-50%, -50%) rotate(var(--angle)) translateY(0)    scale(0.4); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translate(-50%, -50%) rotate(var(--angle)) translateY(-28px) scale(0); opacity: 0; }
+}
+.prob-particle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--color, hsl(var(--primary)));
+  transform-origin: center;
+  animation: prob-particle-burst 0.9s cubic-bezier(0.22, 1, 0.36, 1) var(--delay, 0ms) both;
+  will-change: transform, opacity;
 }
 
 /* ─── Illustration micro-motion (lottie-like, no library) ─── */

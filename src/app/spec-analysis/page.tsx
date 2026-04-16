@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
-import { ArrowLeft, BarChart3, AlertCircle, CheckCircle2, Lightbulb, Download, Sparkles, Loader2, Eye, Zap } from "lucide-react";
+import { BarChart3, AlertCircle, CheckCircle2, Lightbulb, Download, Sparkles, Eye, Zap } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { PrismLoader } from "@/components/PrismLoader";
 
 interface AnalysisItem {
@@ -36,9 +37,9 @@ const CACHE_KEY = "prism_spec_analysis";
 
 export default function SpecAnalysisPage() {
   const router = useRouter();
-  const { profile } = useAuth();
+  const { profile, isMaster } = useAuth();
   const currentPlan = profile?.plan || "free";
-  const hasAccess = PLANS[currentPlan].limits.specAnalysis;
+  const hasAccess = isMaster || PLANS[currentPlan].limits.specAnalysis;
 
   const [analysis, setAnalysis] = useState<SpecAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
@@ -64,7 +65,7 @@ export default function SpecAnalysisPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchWithAuth<{ analysis: any }>("/api/spec-analysis", {
+      const data = await fetchWithAuth<{ analysis: SpecAnalysis | null }>("/api/spec-analysis", {
         method: "POST",
         body: JSON.stringify({ profile }),
       });
@@ -277,15 +278,13 @@ export default function SpecAnalysisPage() {
 
   return (
     <main className="min-h-screen bg-background pb-28 print:pb-0">
-      <header className="p-6 flex items-center gap-3 print:hidden">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <h1 className="font-headline text-xl font-bold">AI 스펙 분석</h1>
-        {!hasAccess && <Badge variant="secondary" className="ml-auto text-[10px]">프리미엄</Badge>}
-      </header>
+      <PageHeader
+        title="AI 스펙 분석"
+        className="print:hidden"
+        action={!hasAccess && <Badge variant="secondary" className="text-xs">프리미엄</Badge>}
+      />
 
-      <div className="px-6">
+      <div className="px-gutter">
         {hasAccess ? (
           reportContent
         ) : (

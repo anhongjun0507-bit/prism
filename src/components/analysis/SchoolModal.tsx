@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -16,7 +15,8 @@ import type { Specs, School } from "@/lib/matching";
 import { useAuth } from "@/lib/auth-context";
 import { SchoolLogo, CampusPhoto } from "@/components/SchoolLogo";
 import { fetchWithAuth } from "@/lib/api-client";
-import { CAT_STYLE, getStoryCacheKey, getCachedStory, setCachedStory } from "@/lib/analysis-helpers";
+import { CAT_STYLE, CAT_ICON, getStoryCacheKey, getCachedStory, setCachedStory } from "@/lib/analysis-helpers";
+import { ProbabilityReveal } from "@/components/analysis/ProbabilityReveal";
 
 /* ═══════════════ SCHOOL DETAIL MODAL ═══════════════ */
 interface AdmissionDetail {
@@ -52,6 +52,8 @@ export function SchoolModal({ school, open, onClose, specs }: { school: School |
       .then(d => { if (!cancelled) setLazyPrompts(d.school?.prompts ?? []); })
       .catch(() => { if (!cancelled) setLazyPrompts([]); });
     return () => { cancelled = true; };
+    // school 전체 대신 식별자(n)와 prompts 존재만 트리거로 사용 — prompts 내용 변화에 재발화 불필요.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [school?.n, open]);
   const displayPrompts = school?.prompts && school.prompts.length > 0 ? school.prompts : lazyPrompts;
 
@@ -136,10 +138,13 @@ export function SchoolModal({ school, open, onClose, specs }: { school: School |
       })
       .catch(() => setStoryError(true))
       .finally(() => setStoryLoading(false));
+    // school·specs 객체 레퍼런스 변화가 아닌 식별자(n·specsKey)로만 트리거 — 과도한 refetch 방지.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [school?.n, open, specsKey]);
 
   if (!school) return null;
   const style = CAT_STYLE[school.cat || "Reach"];
+  const CatIcon = CAT_ICON[school.cat || "Reach"];
   const majorEntries = Object.entries(school.mr || {}).sort((a, b) => a[1] - b[1]);
 
   return (
@@ -175,24 +180,24 @@ export function SchoolModal({ school, open, onClose, specs }: { school: School |
           </CampusPhoto>
         </div>
 
-        {/* Floating probability card — sibling of hero (NOT inside scroll container) so its negative margin isn't clipped */}
+        {/* Floating probability card — sibling of hero (NOT inside scroll container) so its negative margin isn't clipped.
+            ProbabilityReveal: 학교가 바뀌면 key로 reveal 재실행. */}
         <div className="shrink-0 relative -mt-10 mx-6 z-10">
           <div className="bg-white dark:bg-card rounded-2xl shadow-xl ring-1 ring-black/5 dark:ring-white/5 p-4 flex items-center gap-4">
-            <div className="relative w-16 h-16 shrink-0">
-              <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
-                <circle cx="32" cy="32" r="28" fill="none" className="stroke-muted" strokeWidth="6" />
-                <circle cx="32" cy="32" r="28" fill="none" stroke={school.c} strokeWidth="6"
-                  strokeDasharray={`${(school.prob || 0) / 100 * 175.9} 175.9`}
-                  strokeLinecap="round" />
-              </svg>
-              <span className="absolute inset-0 flex items-center justify-center text-base font-bold">
-                {school.prob}%
-              </span>
-            </div>
+            <ProbabilityReveal
+              key={school.n}
+              prob={school.prob || 0}
+              schoolColor={school.c}
+              size={64}
+              strokeWidth={6}
+              revealKey={school.n}
+            />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className={`w-2 h-2 rounded-full ${style.dot}`} />
-                <span className={`text-xs font-bold ${style.bg} px-2 py-0.5 rounded-full`}>{school.cat}</span>
+                <span className={`text-xs font-bold ${style.bg} px-2 py-0.5 rounded-full inline-flex items-center gap-1`}>
+                  <CatIcon className="w-3 h-3" aria-hidden="true" />
+                  {school.cat}
+                </span>
               </div>
               <p className="text-xs text-muted-foreground mt-1.5">
                 예상 범위 {school.lo}%–{school.hi}%
@@ -317,7 +322,7 @@ export function SchoolModal({ school, open, onClose, specs }: { school: School |
                       <p className="text-xs font-semibold text-primary flex items-center gap-1.5">
                         <Sparkles className="w-3.5 h-3.5" /> AI 정밀 분석
                       </p>
-                      <Badge variant="secondary" className="text-[10px]">신뢰도 {aiDetail.confidence}</Badge>
+                      <Badge variant="secondary" className="text-xs">신뢰도 {aiDetail.confidence}</Badge>
                     </div>
                     <div className="flex items-baseline gap-2 mb-2">
                       <span className="text-3xl font-bold font-headline text-primary">{aiDetail.aiProbability}%</span>
@@ -371,13 +376,13 @@ export function SchoolModal({ school, open, onClose, specs }: { school: School |
                   {/* Essay & International Notes */}
                   {aiDetail.essayAdvice && (
                     <div className="bg-muted/30 rounded-xl p-3">
-                      <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">에세이 조언</p>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">에세이 조언</p>
                       <p className="text-xs text-foreground/80 leading-relaxed">{aiDetail.essayAdvice}</p>
                     </div>
                   )}
                   {aiDetail.internationalStudentNote && (
                     <div className="bg-muted/30 rounded-xl p-3">
-                      <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">국제학생 참고</p>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">국제학생 참고</p>
                       <p className="text-xs text-foreground/80 leading-relaxed">{aiDetail.internationalStudentNote}</p>
                     </div>
                   )}
@@ -445,7 +450,7 @@ export function SchoolModal({ school, open, onClose, specs }: { school: School |
               {school.est && (
                 <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3">
                   <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 mb-1">⚠ 추정 데이터</p>
-                  <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed">
+                  <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
                     이 학교의 SAT/GPA/합격률은 공개 데이터를 바탕으로 한 추정치입니다.
                     실제 지원 전 학교 공식 웹사이트에서 정보를 확인하세요.
                   </p>
@@ -454,7 +459,7 @@ export function SchoolModal({ school, open, onClose, specs }: { school: School |
 
               {/* Disclaimer */}
               <div className="bg-muted/30 rounded-xl p-3">
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   ⓘ 본 합격 확률은 통계적 추정치이며 실제 합격을 보장하지 않습니다.
                   최종 합격은 에세이, 추천서, 면접, 비교과 활동 등 다양한 요소에 따라 결정됩니다.
                 </p>

@@ -5,6 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import { CheckCircle2, XCircle, Clock, Trophy, ChevronRight } from "lucide-react";
 import { doc, setDoc, collection } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -19,7 +22,7 @@ export function AdmissionResultBanner({ onOpen }: { onOpen: () => void }) {
   return (
     <button onClick={onOpen} className="w-full">
       <Card className="p-4 bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-500/10 dark:to-blue-500/10 border border-emerald-200 dark:border-emerald-500/20 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center shrink-0">
           <Trophy className="w-5 h-5 text-emerald-600" aria-hidden="true" />
         </div>
         <div className="flex-1 text-left">
@@ -78,39 +81,39 @@ export function AdmissionResultModal({
     }
   };
 
-  if (!open) return null;
-
   if (submitted) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6">
-        <Card className="max-w-sm w-full p-8 text-center animate-in fade-in zoom-in-95 relative overflow-hidden prism-strip-once">
-          <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
-            <Trophy className="w-8 h-8 text-emerald-500" aria-hidden="true" />
-          </div>
-          <h3 className="font-headline font-bold text-xl mb-2">감사합니다!</h3>
-          <p className="text-sm text-muted-foreground mb-2">
-            {results.length}개 결과가 익명으로 기록되었습니다.
-          </p>
-          <p className="text-xs text-primary font-medium mb-6">
+      <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+        <DialogContent hideClose className="max-w-sm p-8 text-center relative overflow-hidden prism-strip-once">
+          <DialogHeader className="items-center space-y-0">
+            <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center mx-auto mb-4">
+              <Trophy className="w-8 h-8 text-emerald-500" aria-hidden="true" />
+            </div>
+            <DialogTitle className="font-headline font-bold text-xl mb-2">감사합니다!</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground mb-2">
+              {results.length}개 결과가 익명으로 기록되었습니다.
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-xs text-primary font-medium mb-2">
             이 데이터가 후배들의 더 정확한 합격 예측에 기여합니다
           </p>
           <Button onClick={onClose} className="w-full rounded-xl">
             확인
           </Button>
-        </Card>
-      </div>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-6">
-      <Card className="w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl rounded-b-none p-6 space-y-5 max-h-[85vh] overflow-y-auto animate-in fade-in slide-in-from-bottom-4">
-        <div>
-          <h3 className="font-headline font-bold text-lg">합격 결과 공유</h3>
-          <p className="text-xs text-muted-foreground mt-1">
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent hideClose className="max-w-md p-6 max-h-[85vh] overflow-y-auto space-y-5">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="font-headline font-bold text-lg">합격 결과 공유</DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
             결과는 익명으로만 저장되며, PRISM 합격 예측 정확도 향상에 사용됩니다.
-          </p>
-        </div>
+          </DialogDescription>
+        </DialogHeader>
 
         {/* Added results */}
         {results.length > 0 && (
@@ -195,7 +198,7 @@ export function AdmissionResultModal({
         <p className="text-xs text-muted-foreground/60 text-center">
           GPA/SAT은 범위(3.7→3.7, 1450→1450)로만 저장되며 개인 식별이 불가합니다
         </p>
-      </Card>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

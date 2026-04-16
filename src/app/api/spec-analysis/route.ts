@@ -142,7 +142,7 @@ ${profile.internship ? "실무 경험이 있으므로 이를 어떻게 강조할
     const textBlock = response.content.find((b) => b.type === "text");
     const raw = textBlock?.text || "";
 
-    let parsed: any = null;
+    let parsed: unknown = null;
     try {
       parsed = JSON.parse(raw);
     } catch {

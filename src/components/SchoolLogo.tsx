@@ -95,12 +95,13 @@ function SchoolLogoBase({
     >
       <Image
         src={src}
-        alt={`${name} logo`}
+        alt=""
         width={Math.round(px * 0.7)}
         height={Math.round(px * 0.7)}
         className="object-contain"
         loading="lazy"
         unoptimized
+        aria-hidden="true"
         onLoad={() => {
           if (!cached) setCachedSource(domain, useFavicon ? "favicon" : "ddg");
         }}
@@ -212,13 +213,14 @@ function CampusPhotoBase({
       {imageUrl && !error && (
         <Image
           src={imageUrl}
-          alt={`${schoolName} campus`}
+          alt=""
           fill
           sizes="(max-width: 768px) 100vw, 768px"
           className={`object-cover transition-opacity duration-500 ${loaded ? "opacity-30" : "opacity-0"}`}
           onLoad={() => setLoaded(true)}
           onError={() => setError(true)}
           loading="lazy"
+          aria-hidden="true"
         />
       )}
       <div

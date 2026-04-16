@@ -1,26 +1,19 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Sparkles, ArrowLeft, TrendingUp, TrendingDown, Minus, RotateCcw } from "lucide-react";
+import { Sparkles, TrendingUp, TrendingDown, RotateCcw } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { useAuth } from "@/lib/auth-context";
 import { PLANS } from "@/lib/plans";
 import type { Specs, School } from "@/lib/matching";
 import { fetchWithAuth } from "@/lib/api-client";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
-import Link from "next/link";
-
-/* ───── category styles ───── */
-const CAT_STYLE: Record<string, { bg: string; text: string }> = {
-  Safety:       { bg: "bg-emerald-50", text: "text-emerald-700" },
-  Target:       { bg: "bg-blue-50",    text: "text-blue-700" },
-  "Hard Target":{ bg: "bg-amber-50",   text: "text-amber-700" },
-  Reach:        { bg: "bg-red-50",     text: "text-red-700" },
-};
+import { CAT_STYLE } from "@/lib/analysis-helpers";
 
 /* ───── helpers ───── */
 function buildSpecs(
@@ -39,9 +32,9 @@ function buildSpecs(
 }
 
 export default function WhatIfPage() {
-  const { profile, saveProfile } = useAuth();
+  const { profile, saveProfile, isMaster } = useAuth();
   const currentPlan = profile?.plan || "free";
-  const hasFullAccess = PLANS[currentPlan].limits.whatIf;
+  const hasFullAccess = isMaster || PLANS[currentPlan].limits.whatIf;
   const whatIfUsed = profile?.whatIfUsed || 0;
   const canUseWhatIf = hasFullAccess || whatIfUsed < 1; // 1 free trial
 
@@ -71,12 +64,17 @@ export default function WhatIfPage() {
   // baseline*·hasFullAccess·whatIfUsed·saveProfile은 deps에 넣지 않음 — 이들은 이 effect의
   // 트리거 조건이 아니라 가드 조건이고, 변경 시 effect가 다시 발화하면 stale check가 잘못 fire됨.
   // (예: 결제 후 hasFullAccess가 true로 바뀌면 이 effect가 재발화해도 가드에 막혀 의미 없음)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  //
+  // triedRef: saveProfile이 비동기로 Firestore round-trip 하기 전에 슬라이더가 다시 움직이면
+  // whatIfUsed가 아직 0으로 보여 중복 saveProfile 호출 발생. ref로 즉시 1회 잠금.
+  const triedRef = useRef(whatIfUsed > 0);
   useEffect(() => {
-    if (!hasFullAccess && whatIfUsed === 0 && (gpa !== baselineGpa || sat !== baselineSat || toefl !== baselineToefl || ecTier !== baselineEcTier || awardTier !== baselineAwardTier)) {
+    if (triedRef.current || hasFullAccess || isMaster || whatIfUsed > 0) return;
+    if (gpa !== baselineGpa || sat !== baselineSat || toefl !== baselineToefl || ecTier !== baselineEcTier || awardTier !== baselineAwardTier) {
+      triedRef.current = true;
       saveProfile({ whatIfUsed: 1 });
     }
-  }, [gpa, sat, toefl, ecTier, awardTier]);
+  }, [gpa, sat, toefl, ecTier, awardTier, baselineGpa, baselineSat, baselineToefl, baselineEcTier, baselineAwardTier, hasFullAccess, isMaster, whatIfUsed, saveProfile]);
 
   /* ── compute results — server-side, debounced ── */
   const [baselineResults, setBaselineResults] = useState<School[]>([]);
@@ -106,7 +104,7 @@ export default function WhatIfPage() {
       })
         .then((d) => { if (!cancelled) setWhatIfResults(d.results || []); })
         .catch((e) => console.warn("[what-if] simulation fetch failed:", e));
-    }, 400); // 400ms debounce
+    }, 600); // 600ms debounce — 모바일 슬라이더 터치 드래그 시 과도한 요청 완화
     return () => { cancelled = true; clearTimeout(timer); };
   }, [profile, gpa, sat, toefl, ecTier, awardTier]);
 
@@ -234,16 +232,17 @@ export default function WhatIfPage() {
             const before = count(baselineResults, cat);
             const after = count(whatIfResults, cat);
             const diff = after - before;
-            const style = CAT_STYLE[cat] || { bg: "bg-gray-50", text: "text-gray-700" };
+            const style = CAT_STYLE[cat] || { bg: "bg-muted text-muted-foreground", ring: "", dot: "" };
             return (
+              // style.bg 문자열에 bg-cat-X-soft + text-cat-X-fg가 결합되어 있음 → 하위 p는 상속
               <div key={cat} className={`rounded-xl p-3 ${style.bg}`}>
-                <p className={`text-xs font-semibold ${style.text}`}>{cat}</p>
+                <p className="text-xs font-semibold">{cat}</p>
                 <div className="flex items-center gap-1.5 mt-1">
                   <span className="text-lg font-bold">{before}개</span>
                   <span className="text-muted-foreground">→</span>
                   <span className="text-lg font-bold">{after}개</span>
                   {diff !== 0 && (
-                    <Badge variant="outline" className={`text-[10px] ml-auto ${diff > 0 ? "border-emerald-300 text-emerald-700" : "border-red-300 text-red-600"}`}>
+                    <Badge variant="outline" className={`text-xs ml-auto ${diff > 0 ? "border-emerald-300 text-emerald-700" : "border-red-300 text-red-600"}`}>
                       {diff > 0 ? `+${diff}` : diff}
                     </Badge>
                   )}
@@ -276,7 +275,7 @@ export default function WhatIfPage() {
                       <span>→</span>
                       <span className="font-medium text-foreground">{d.newProb}%</span>
                       {catChanged && (
-                        <span className="text-[10px] ml-1 text-muted-foreground">
+                        <span className="text-xs ml-1 text-muted-foreground">
                           ({d.baseCat} → {d.newCat})
                         </span>
                       )}
@@ -305,27 +304,22 @@ export default function WhatIfPage() {
 
   return (
     <main className="min-h-screen bg-background pb-28">
-      {/* ── Header ── */}
-      <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b">
-        <div className="max-w-lg mx-auto flex items-center gap-3 px-5 py-3">
-          <Link href="/analysis">
-            <Button variant="ghost" size="icon" className="rounded-xl">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            <h1 className="font-headline font-bold text-lg">What-If 시뮬레이터</h1>
-          </div>
-          {hasFullAccess ? (
-            <Badge variant="secondary" className="ml-auto text-[10px]">프리미엄</Badge>
+      <PageHeader
+        title="What-If 시뮬레이터"
+        backHref="/analysis"
+        sticky
+        leading={<Sparkles className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />}
+        action={
+          hasFullAccess ? (
+            <Badge variant="secondary" className="text-xs">프리미엄</Badge>
           ) : canUseWhatIf ? (
-            <Badge variant="secondary" className="ml-auto bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px]">무료 체험 1회</Badge>
+            <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-xs">무료 체험 1회</Badge>
           ) : (
-            <Badge variant="secondary" className="ml-auto text-[10px]">프리미엄</Badge>
-          )}
-        </div>
-      </div>
+            <Badge variant="secondary" className="text-xs">프리미엄</Badge>
+          )
+        }
+      />
+
 
       <div className="max-w-lg mx-auto px-5 py-5">
         {canUseWhatIf ? (

@@ -6,12 +6,15 @@ import { PLANS, type PlanType, type BillingCycle } from "@/lib/plans";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, ArrowLeft, Crown, Sparkles, Users, Smartphone, ExternalLink } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Check, Sparkles, Users, Smartphone, ExternalLink } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
+import { SegmentedControl, SegmentedControlItem } from "@/components/ui/segmented-control";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 
 export default function PricingPage() {
-  const { user, profile } = useAuth();
-  const router = useRouter();
+  const { profile } = useAuth();
   const currentPlan = profile?.plan || "free";
   const [billing, setBilling] = useState<BillingCycle>("monthly");
   const [showAppPrompt, setShowAppPrompt] = useState<PlanType | null>(null);
@@ -25,46 +28,32 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <header className="p-6 flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <h1 className="font-headline text-xl font-bold">요금제 선택</h1>
-      </header>
+      <PageHeader title="요금제 선택" />
 
-      <div className="px-6 space-y-5">
-        {/* Billing toggle */}
-        <div className="flex items-center justify-center gap-1 bg-muted/50 rounded-xl p-1">
-          <button
-            onClick={() => setBilling("monthly")}
-            className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-              billing === "monthly"
-                ? "bg-white dark:bg-card shadow-sm text-foreground"
-                : "text-muted-foreground"
-            }`}
-          >
-            월간
-          </button>
-          <button
-            onClick={() => setBilling("yearly")}
-            className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all relative ${
-              billing === "yearly"
-                ? "bg-white dark:bg-card shadow-sm text-foreground"
-                : "text-muted-foreground"
-            }`}
+      <div className="px-gutter space-y-5">
+        {/* Billing toggle — SegmentedControl로 키보드 내비·aria 자동 */}
+        <SegmentedControl
+          value={billing}
+          onValueChange={(v) => setBilling(v as BillingCycle)}
+          aria-label="결제 주기"
+        >
+          <SegmentedControlItem value="monthly">월간</SegmentedControlItem>
+          <SegmentedControlItem
+            value="yearly"
+            trailing={
+              <Badge className="absolute -top-2 -right-1 bg-emerald-500 text-white border-none text-xs px-1.5 py-0">
+                최대 38% 할인
+              </Badge>
+            }
           >
             연간
-            <Badge className="absolute -top-2 -right-1 bg-emerald-500 text-white border-none text-xs px-1.5 py-0">
-              최대 38% 할인
-            </Badge>
-          </button>
-        </div>
+          </SegmentedControlItem>
+        </SegmentedControl>
 
         {/* Plan cards */}
         {(Object.values(PLANS) as typeof PLANS[PlanType][]).map((plan) => {
           const isCurrent = currentPlan === plan.type;
           const isPopular = plan.type === "basic";
-          const price = billing === "yearly" ? plan.yearlyPrice : plan.price;
           const priceLabel = billing === "yearly" ? plan.yearlyPriceLabel : plan.priceLabel;
           const monthlyEquiv = billing === "yearly" && plan.yearlyPrice > 0
             ? `월 ₩${Math.round(plan.yearlyPrice / 12).toLocaleString()}`
@@ -88,9 +77,14 @@ export default function PricingPage() {
 
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <div className="flex items-center gap-2">
-                    {plan.type === "premium" && <Crown className="w-4 h-4 text-amber-500" aria-hidden="true" />}
+                  <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-bold text-lg">{plan.name}</h3>
+                    {plan.type === "premium" && (
+                      <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-none text-xs font-semibold inline-flex items-center gap-1">
+                        <Users className="w-3 h-3" aria-hidden="true" />
+                        학부모 공유
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">{plan.tagline}</p>
                 </div>
@@ -117,12 +111,6 @@ export default function PricingPage() {
                     <span>{f}</span>
                   </li>
                 ))}
-                {plan.type === "premium" && (
-                  <li className="flex items-start gap-2 text-sm text-amber-700 dark:text-amber-400">
-                    <Users className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
-                    <span className="font-medium">학부모님께 입시 현황을 공유할 수 있어요</span>
-                  </li>
-                )}
               </ul>
 
               {/* CTA */}
@@ -200,42 +188,39 @@ export default function PricingPage() {
         </p>
       </div>
 
-      {/* App Store / Play Store Prompt Modal */}
-      {showAppPrompt && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center p-4" onClick={() => setShowAppPrompt(null)}>
-          <Card className="w-full max-w-sm p-6 space-y-5 animate-fade-up" onClick={(e) => e.stopPropagation()}>
-            <div className="text-center space-y-2">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
-                <Smartphone className="w-8 h-8 text-primary" />
-              </div>
-              <h2 className="font-headline text-xl font-bold">앱에서 결제해주세요</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {PLANS[showAppPrompt].name} 플랜은 PRISM 모바일 앱에서<br />
-                App Store / Google Play를 통해 결제할 수 있습니다.
-              </p>
+      {/* App Store / Play Store Prompt Modal — Radix Dialog로 focus trap·ESC 자동 */}
+      <Dialog open={!!showAppPrompt} onOpenChange={(v) => !v && setShowAppPrompt(null)}>
+        <DialogContent hideClose className="max-w-sm p-6 space-y-5">
+          <DialogHeader className="items-center space-y-2 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+              <Smartphone className="w-8 h-8 text-primary" aria-hidden="true" />
             </div>
+            <DialogTitle className="font-headline text-xl font-bold">앱에서 결제해주세요</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
+              {showAppPrompt && PLANS[showAppPrompt].name} 플랜은 PRISM 모바일 앱에서 App Store / Google Play를 통해 결제할 수 있습니다.
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="bg-muted/50 rounded-xl p-4 space-y-2">
-              <p className="text-xs font-semibold text-foreground">왜 앱에서 결제하나요?</p>
-              <ul className="text-xs text-muted-foreground space-y-1">
-                <li className="flex gap-1.5"><Check className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5" /> 안전한 Apple/Google 결제</li>
-                <li className="flex gap-1.5"><Check className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5" /> 한 번의 탭으로 빠른 결제</li>
-                <li className="flex gap-1.5"><Check className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5" /> 가족 공유 가능</li>
-              </ul>
-            </div>
+          <div className="bg-muted/50 rounded-xl p-4 space-y-2">
+            <p className="text-xs font-semibold text-foreground">왜 앱에서 결제하나요?</p>
+            <ul className="text-xs text-muted-foreground space-y-1">
+              <li className="flex gap-1.5"><Check className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5" aria-hidden="true" /> 안전한 Apple/Google 결제</li>
+              <li className="flex gap-1.5"><Check className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5" aria-hidden="true" /> 한 번의 탭으로 빠른 결제</li>
+              <li className="flex gap-1.5"><Check className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5" aria-hidden="true" /> 가족 공유 가능</li>
+            </ul>
+          </div>
 
-            <div className="space-y-2">
-              <Button size="xl" className="w-full rounded-xl gap-2" disabled>
-                <ExternalLink className="w-4 h-4" />
-                앱 다운로드 (출시 예정)
-              </Button>
-              <Button variant="outline" className="w-full rounded-xl" onClick={() => setShowAppPrompt(null)}>
-                닫기
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
+          <div className="space-y-2">
+            <Button size="xl" className="w-full rounded-xl gap-2" disabled>
+              <ExternalLink className="w-4 h-4" aria-hidden="true" />
+              앱 다운로드 (출시 예정)
+            </Button>
+            <Button variant="outline" className="w-full rounded-xl" onClick={() => setShowAppPrompt(null)}>
+              닫기
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -22,10 +22,10 @@ interface FeedItem {
 }
 
 const RESULT_CONFIG = {
-  accepted: { icon: CheckCircle2, label: "합격", color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
-  rejected: { icon: XCircle, label: "불합격", color: "text-red-500", bg: "bg-red-50 dark:bg-red-500/10" },
-  waitlisted: { icon: Clock, label: "대기", color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-500/10" },
-  deferred: { icon: Clock, label: "보류", color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-500/10" },
+  accepted: { icon: CheckCircle2, label: "합격", color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
+  rejected: { icon: XCircle, label: "불합격", color: "text-red-500", bg: "bg-red-50 dark:bg-red-950/30" },
+  waitlisted: { icon: Clock, label: "대기", color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30" },
+  deferred: { icon: Clock, label: "보류", color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-950/30" },
 };
 
 function timeAgo(dateStr: string): string {
@@ -103,7 +103,10 @@ export function AdmissionFeed() {
         {feed.slice(0, canFilter ? 15 : 5).map((item, i) => {
           const config = RESULT_CONFIG[item.result];
           const Icon = config.icon;
-          const isSimlar = userGpa && item.gpaRange && Math.abs(userGpa - parseFloat(item.gpaRange)) <= 0.3;
+          // "나와 비슷한 스펙" — GPA ±0.3 또는 SAT ±100 내면 similar로 간주 (둘 중 하나라도 맞으면).
+          const gpaSimilar = !!(userGpa && item.gpaRange && Math.abs(userGpa - parseFloat(item.gpaRange)) <= 0.3);
+          const satSimilar = !!(userSat && item.satRange && Math.abs(userSat - parseInt(item.satRange)) <= 100);
+          const isSimlar = gpaSimilar || satSimilar;
 
           return (
             <div

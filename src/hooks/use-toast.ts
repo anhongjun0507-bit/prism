@@ -18,7 +18,10 @@ type ToasterToast = ToastProps & {
   action?: ToastActionElement
 }
 
-const actionTypes = {
+// shadcn-ui 공식 예제에서 가져온 actionTypes. 런타임 사용은 없고 type space에서만
+// ActionType 유틸로 참조됨 (아래 Action 유니온의 key로 사용). eslint no-unused-vars가
+// 타입 유틸용 const를 감지 못하므로 _ prefix로 명시적 표시.
+const _actionTypes = {
   ADD_TOAST: "ADD_TOAST",
   UPDATE_TOAST: "UPDATE_TOAST",
   DISMISS_TOAST: "DISMISS_TOAST",
@@ -32,7 +35,7 @@ function genId() {
   return count.toString()
 }
 
-type ActionType = typeof actionTypes
+type ActionType = typeof _actionTypes
 
 type Action =
   | {

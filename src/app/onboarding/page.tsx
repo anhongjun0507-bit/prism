@@ -16,6 +16,7 @@ import { schoolMatchesQuery } from "@/lib/school-search";
 import type { Specs, School } from "@/lib/matching";
 import { fetchWithAuth } from "@/lib/api-client";
 import { CheckCircle2, ChevronRight, ChevronUp, Sparkles } from "lucide-react";
+import { CAT_STYLE } from "@/lib/analysis-helpers";
 
 const grades = ["9학년", "10학년", "11학년", "12학년", "졸업생/Gap Year", "홈스쿨/기타"];
 
@@ -64,8 +65,6 @@ export default function OnboardingPage() {
     }
   };
 
-  const progress = (step / 3) * 100;
-
   const filteredUnis = uniSearch.length > 0
     ? UNI_LIST.filter((u) => schoolMatchesQuery({ n: u }, uniSearch)).slice(0, 6)
     : [];
@@ -76,9 +75,11 @@ export default function OnboardingPage() {
 
   // Preview schools — server fetch (debounced)
   const [previewSchools, setPreviewSchools] = useState<School[]>([]);
+  const [previewError, setPreviewError] = useState(false);
   useEffect(() => {
     if (!formData.gpa && !formData.sat) {
       setPreviewSchools([]);
+      setPreviewError(false);
       return;
     }
     let cancelled = false;
@@ -128,17 +129,29 @@ export default function OnboardingPage() {
             }
           }
           setPreviewSchools(unique.slice(0, 3));
+          setPreviewError(false);
         })
-        .catch(() => {
-          // preview는 보조 UI — 실패해도 사용자 진행 막지 않음.
-          // 진짜 분석은 onboarding 완료 후 분석 페이지에서 다시 fetch됨.
+        .catch((err) => {
+          if (cancelled) return;
+          // preview는 보조 UI — 실패해도 사용자 진행을 막지 않지만, 침묵하면
+          // "추천 대학이 안 뜨네?"로 혼란. 배너로 명시해 건너뛰기 유도.
+          console.warn("[onboarding] preview fetch failed:", err);
+          setPreviewSchools([]);
+          setPreviewError(true);
         });
     }, 400);
     return () => { cancelled = true; clearTimeout(timer); };
   }, [formData.gpa, formData.sat, formData.toefl, formData.major]);
 
   const [previewOpen, setPreviewOpen] = useState(false);
-  const step1Valid = formData.name && formData.grade && formData.dreamSchool && formData.major;
+  // 모든 필드 trim 체크 — 공백만 입력된 경우도 차단. customMajor 모드에서는 formData.major가
+  // 사용자 자유 입력 상태라 공백 허용이 특히 위험.
+  const step1Valid = !!(
+    formData.name.trim() &&
+    formData.grade.trim() &&
+    formData.dreamSchool.trim() &&
+    formData.major.trim()
+  );
 
   return (
     <div className="min-h-screen bg-background flex flex-col p-8 pt-12 relative overflow-hidden">
@@ -163,7 +176,7 @@ export default function OnboardingPage() {
                     <div className="absolute inset-0 rounded-full bg-prismatic blur-md opacity-50 animate-pulse" />
                   )}
                   <div
-                    className={`relative rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-300 ${
+                    className={`relative rounded-full flex items-center justify-center text-2xs font-bold transition-all duration-300 ${
                       reached
                         ? "bg-prismatic text-white shadow-glow-sm"
                         : "bg-muted text-muted-foreground"
@@ -426,6 +439,13 @@ export default function OnboardingPage() {
             </div>
           </div>
 
+          {/* Preview 실패 시 안내 — 이전엔 silent catch로 아무것도 안 보여 혼란 유발 */}
+          {previewError && previewSchools.length === 0 && (
+            <div className="animate-fade-up bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+              미리보기를 불러오지 못했어요. 입력한 내용은 저장되니 그대로 <strong>다음</strong>을 눌러 진행해주세요.
+            </div>
+          )}
+
           {/* Live preview — collapsible peek bar */}
           {previewSchools.length > 0 && (
             <div className="animate-fade-up">
@@ -455,12 +475,7 @@ export default function OnboardingPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-bold text-sm truncate">{s.n}</p>
-                          <Badge className={`text-xs border-none px-1.5 shrink-0 ${
-                            s.cat === "Safety" ? "bg-emerald-50 text-emerald-700" :
-                            s.cat === "Target" ? "bg-blue-50 text-blue-700" :
-                            s.cat === "Hard Target" ? "bg-amber-50 text-amber-700" :
-                            "bg-red-50 text-red-700"
-                          }`}>{s.cat}</Badge>
+                          <Badge className={`text-xs border-none px-1.5 shrink-0 ${CAT_STYLE[s.cat || "Reach"].bg}`}>{s.cat}</Badge>
                         </div>
                         <Progress value={s.prob} className="h-1 mt-1" />
                       </div>
@@ -501,12 +516,7 @@ export default function OnboardingPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-bold text-sm truncate">{s.n}</p>
-                      <Badge className={`text-xs border-none px-1.5 shrink-0 ${
-                        s.cat === "Safety" ? "bg-emerald-50 text-emerald-700" :
-                        s.cat === "Target" ? "bg-blue-50 text-blue-700" :
-                        s.cat === "Hard Target" ? "bg-amber-50 text-amber-700" :
-                        "bg-red-50 text-red-700"
-                      }`}>{s.cat}</Badge>
+                      <Badge className={`text-xs border-none px-1.5 shrink-0 ${CAT_STYLE[s.cat || "Reach"].bg}`}>{s.cat}</Badge>
                     </div>
                     <Progress value={s.prob} className="h-1 mt-1" />
                   </div>

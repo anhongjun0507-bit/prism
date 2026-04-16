@@ -27,7 +27,7 @@ export function makeCacheKey(prefix: string, data: object): string {
  * Get cached AI response from Firestore (server-side).
  * Returns null on miss or error.
  */
-export async function getCachedResponse(key: string): Promise<any | null> {
+export async function getCachedResponse<T = unknown>(key: string): Promise<T | null> {
   try {
     const db = getAdminDb();
     const doc = await db.collection("ai_cache").doc(key).get();
@@ -40,7 +40,7 @@ export async function getCachedResponse(key: string): Promise<any | null> {
     const ageDays = (Date.now() - (data.createdAt || 0)) / (1000 * 60 * 60 * 24);
     if (ageDays > 30) return null;
 
-    return data.response;
+    return data.response as T;
   } catch {
     return null;
   }
@@ -49,7 +49,7 @@ export async function getCachedResponse(key: string): Promise<any | null> {
 /**
  * Store AI response in Firestore cache (server-side, fire-and-forget).
  */
-export async function setCachedResponse(key: string, response: any): Promise<void> {
+export async function setCachedResponse(key: string, response: unknown): Promise<void> {
   try {
     const db = getAdminDb();
     await db.collection("ai_cache").doc(key).set({

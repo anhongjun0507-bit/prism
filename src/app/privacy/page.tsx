@@ -1,22 +1,11 @@
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function PrivacyPolicyPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-2xl mx-auto px-6 py-10">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-8"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          홈으로 돌아가기
-        </Link>
-
-        <h1 className="text-3xl font-bold mb-2">개인정보 처리방침</h1>
-        <p className="text-sm text-muted-foreground mb-10">시행일: 2026년 4월 7일</p>
-
-        <div className="space-y-8 text-sm leading-relaxed text-foreground/90">
+      <PageHeader title="개인정보 처리방침" subtitle="시행일: 2026년 4월 7일" backHref="/" />
+      <div className="max-w-2xl mx-auto px-gutter pb-section-lg">
+        <div className="space-y-section text-sm leading-relaxed text-foreground/90">
           <p>
             PRISM(이하 &quot;서비스&quot;)은 이용자의 개인정보를 소중히 여기며, 관련
             법령에 따라 개인정보를 안전하게 관리하고 있습니다. 본 개인정보
