@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { PLANS } from "@/lib/plans";
-import { MAJOR_LIST } from "@/lib/constants";
+import { UNI_LIST, MAJOR_LIST } from "@/lib/constants";
+import { schoolMatchesQuery } from "@/lib/school-search";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,13 @@ export default function SpecAnalysisPage() {
   const [editDreamSchool, setEditDreamSchool] = useState("");
   const [editMajor, setEditMajor] = useState("");
   const [editGrade, setEditGrade] = useState("");
+
+  // University combobox search
+  const [uniSearch, setUniSearch] = useState("");
+  const [uniHighlight, setUniHighlight] = useState(-1);
+  const filteredUnis = uniSearch.length > 0
+    ? UNI_LIST.filter((u) => schoolMatchesQuery({ n: u }, uniSearch)).slice(0, 6)
+    : [];
 
   // Hydrate from profile
   useEffect(() => {
@@ -157,9 +165,72 @@ export default function SpecAnalysisPage() {
         </div>
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-1.5 relative">
         <Label className="text-xs text-muted-foreground">목표 대학</Label>
-        <Input placeholder="예: Harvard University" value={editDreamSchool} onChange={(e) => setEditDreamSchool(e.target.value)} className="h-10 rounded-xl" />
+        <Input
+          placeholder="대학 이름 검색..."
+          value={editDreamSchool || uniSearch}
+          onChange={(e) => {
+            setUniSearch(e.target.value);
+            setEditDreamSchool("");
+            setUniHighlight(-1);
+          }}
+          onKeyDown={(e) => {
+            if (!filteredUnis.length || editDreamSchool) return;
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setUniHighlight((h) => {
+                const next = Math.min(h + 1, filteredUnis.length - 1);
+                document.getElementById(`spec-uni-${next}`)?.scrollIntoView({ block: "nearest" });
+                return next;
+              });
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setUniHighlight((h) => {
+                const next = Math.max(h - 1, 0);
+                document.getElementById(`spec-uni-${next}`)?.scrollIntoView({ block: "nearest" });
+                return next;
+              });
+            } else if (e.key === "Enter" && uniHighlight >= 0) {
+              e.preventDefault();
+              setEditDreamSchool(filteredUnis[uniHighlight]);
+              setUniSearch("");
+              setUniHighlight(-1);
+            } else if (e.key === "Escape") {
+              setUniSearch("");
+              setUniHighlight(-1);
+            }
+          }}
+          role="combobox"
+          aria-expanded={filteredUnis.length > 0 && !editDreamSchool}
+          aria-haspopup="listbox"
+          aria-autocomplete="list"
+          autoComplete="off"
+          className="h-10 rounded-xl"
+        />
+        {filteredUnis.length > 0 && !editDreamSchool && (
+          <div role="listbox" aria-label="대학 검색 결과" className="absolute top-full left-0 right-0 z-10 bg-card rounded-xl shadow-lg border mt-1 max-h-48 overflow-y-auto overscroll-contain">
+            {filteredUnis.map((u, idx) => (
+              <button
+                key={u}
+                id={`spec-uni-${idx}`}
+                role="option"
+                aria-selected={idx === uniHighlight}
+                onClick={() => {
+                  setEditDreamSchool(u);
+                  setUniSearch("");
+                  setUniHighlight(-1);
+                }}
+                className={cn(
+                  "w-full text-left px-4 py-3 text-sm transition-colors",
+                  idx === uniHighlight ? "bg-accent/50" : "hover:bg-accent/50"
+                )}
+              >
+                {u}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="space-y-1.5">
