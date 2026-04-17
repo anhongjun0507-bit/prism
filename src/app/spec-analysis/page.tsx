@@ -4,16 +4,20 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { PLANS } from "@/lib/plans";
+import { MAJOR_LIST } from "@/lib/constants";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
-import { BarChart3, AlertCircle, CheckCircle2, Lightbulb, Download, Sparkles, Eye, Zap } from "lucide-react";
+import { BarChart3, AlertCircle, CheckCircle2, Lightbulb, Download, Sparkles, Eye, Zap, ChevronDown, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { PrismLoader } from "@/components/PrismLoader";
+import { cn } from "@/lib/utils";
 
 interface AnalysisItem {
   category: string;
@@ -44,6 +48,26 @@ export default function SpecAnalysisPage() {
   const [analysis, setAnalysis] = useState<SpecAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
+
+  // Editable specs — initialized from profile, user can override before analysis
+  const [editGpa, setEditGpa] = useState("");
+  const [editSat, setEditSat] = useState("");
+  const [editToefl, setEditToefl] = useState("");
+  const [editDreamSchool, setEditDreamSchool] = useState("");
+  const [editMajor, setEditMajor] = useState("");
+  const [editGrade, setEditGrade] = useState("");
+
+  // Hydrate from profile
+  useEffect(() => {
+    if (!profile) return;
+    setEditGpa(profile.gpa || "");
+    setEditSat(profile.sat || "");
+    setEditToefl(profile.toefl || "");
+    setEditDreamSchool(profile.dreamSchool || "");
+    setEditMajor(profile.major || "");
+    setEditGrade(profile.grade || "");
+  }, [profile]);
 
   // Try to load cached analysis
   useEffect(() => {
@@ -60,22 +84,32 @@ export default function SpecAnalysisPage() {
     } catch {}
   }, [profile]);
 
+  const buildProfile = () => ({
+    ...profile,
+    gpa: editGpa,
+    sat: editSat,
+    toefl: editToefl,
+    dreamSchool: editDreamSchool,
+    major: editMajor,
+    grade: editGrade,
+  });
+
   const runAnalysis = async () => {
-    if (!profile) return;
     setLoading(true);
     setError(null);
+    setShowEditor(false);
+    const customProfile = buildProfile();
     try {
       const data = await fetchWithAuth<{ analysis: SpecAnalysis | null }>("/api/spec-analysis", {
         method: "POST",
-        body: JSON.stringify({ profile }),
+        body: JSON.stringify({ profile: customProfile }),
       });
       if (!data.analysis) {
         setError("분석을 완료하지 못했어요. 다시 시도해주세요.");
         return;
       }
       setAnalysis(data.analysis);
-      // Cache by profile key
-      const profileKey = `${profile.gpa}_${profile.sat}_${profile.toefl}_${profile.major}_${profile.dreamSchool}`;
+      const profileKey = `${editGpa}_${editSat}_${editToefl}_${editMajor}_${editDreamSchool}`;
       sessionStorage.setItem(CACHE_KEY, JSON.stringify({ analysis: data.analysis, profileKey }));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "연결에 문제가 있어요. 잠시 후 다시 시도해주세요.");
@@ -84,34 +118,98 @@ export default function SpecAnalysisPage() {
     }
   };
 
-  const hasMinSpecs = !!(profile?.gpa || profile?.sat);
+  const hasMinSpecs = !!(editGpa || editSat);
+
+  // Spec editor card
+  const specEditorCard = (
+    <Card className="bg-card border-none shadow-sm p-card space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-bold text-sm flex items-center gap-2">
+          <Pencil className="w-4 h-4 text-primary" /> 분석할 스펙
+        </h3>
+        {analysis && (
+          <Button variant="ghost" size="sm" onClick={() => setShowEditor(false)} className="text-xs text-muted-foreground h-7 px-2">
+            접기
+          </Button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">GPA (UW)</Label>
+          <Input placeholder="4.0" type="number" step="0.01" value={editGpa} onChange={(e) => setEditGpa(e.target.value)} className="h-10 rounded-xl" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">SAT</Label>
+          <Input placeholder="1400" type="number" value={editSat} onChange={(e) => setEditSat(e.target.value)} className="h-10 rounded-xl" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">TOEFL</Label>
+          <Input placeholder="110" type="number" value={editToefl} onChange={(e) => setEditToefl(e.target.value)} className="h-10 rounded-xl" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">학년</Label>
+          <select value={editGrade} onChange={(e) => setEditGrade(e.target.value)}
+            className="w-full h-10 rounded-xl border border-input px-3 text-sm bg-background">
+            <option value="">선택</option>
+            {["9학년","10학년","11학년","12학년","졸업생/Gap Year"].map(g => <option key={g} value={g}>{g}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs text-muted-foreground">목표 대학</Label>
+        <Input placeholder="예: Harvard University" value={editDreamSchool} onChange={(e) => setEditDreamSchool(e.target.value)} className="h-10 rounded-xl" />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs text-muted-foreground">지망 전공</Label>
+        <select value={editMajor} onChange={(e) => setEditMajor(e.target.value)}
+          className="w-full h-10 rounded-xl border border-input px-3 text-sm bg-background">
+          <option value="">선택</option>
+          {MAJOR_LIST.map(m => <option key={m} value={m}>{m}</option>)}
+        </select>
+      </div>
+
+      <Button onClick={runAnalysis} size="xl" className="w-full gap-2" disabled={!hasMinSpecs}>
+        <Sparkles className="w-4 h-4" /> {analysis ? "다시 분석하기" : "AI 분석 시작"}
+      </Button>
+
+      <p className="text-2xs text-muted-foreground/60 text-center">
+        수정한 값은 이 분석에만 적용돼요 · 프로필은 변경되지 않아요
+      </p>
+    </Card>
+  );
 
   const reportContent = (
     <div className="space-y-6">
-      {!analysis && !loading && (
-        <Card className="p-8 text-center bg-card border-none shadow-sm">
-          <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Sparkles className="w-10 h-10 text-primary" />
-          </div>
-          <h3 className="font-headline text-lg font-bold mb-2">AI 스펙 분석</h3>
-          <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
-            Claude AI가 GPA, SAT, TOEFL을 분석하고<br />
-            맞춤형 강점/약점/다음 단계를 제시합니다
-          </p>
-          {hasMinSpecs ? (
-            <Button onClick={runAnalysis} size="xl" className="gap-2">
-              <Sparkles className="w-4 h-4" /> AI 분석 시작
-            </Button>
-          ) : (
-            <div className="space-y-2">
-              <p className="text-xs text-amber-600">먼저 GPA, SAT를 입력해주세요</p>
-              <Button onClick={() => router.push("/onboarding")} className="rounded-xl">
-                스펙 입력하기
-              </Button>
+      {/* Always show spec editor or collapsed summary */}
+      {!analysis && !loading && specEditorCard}
+
+      {/* Collapsed spec summary when results exist */}
+      {analysis && !loading && !showEditor && (
+        <button
+          onClick={() => setShowEditor(true)}
+          className="w-full flex items-center gap-3 p-4 rounded-2xl bg-card shadow-sm border border-border/60 text-left hover:shadow-md active:scale-[0.98] transition-all"
+        >
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-muted-foreground mb-1">분석 기준</p>
+            <div className="flex flex-wrap gap-1.5">
+              {editGpa && <Badge variant="secondary" className="text-xs">GPA {editGpa}</Badge>}
+              {editSat && <Badge variant="secondary" className="text-xs">SAT {editSat}</Badge>}
+              {editToefl && <Badge variant="secondary" className="text-xs">TOEFL {editToefl}</Badge>}
+              {editDreamSchool && <Badge variant="secondary" className="text-xs">{editDreamSchool}</Badge>}
+              {editMajor && <Badge variant="secondary" className="text-xs">{editMajor}</Badge>}
             </div>
-          )}
-        </Card>
+          </div>
+          <div className="flex items-center gap-1 text-xs text-primary font-semibold shrink-0">
+            <Pencil className="w-3.5 h-3.5" /> 수정
+          </div>
+        </button>
       )}
+
+      {/* Expanded editor when editing after results */}
+      {analysis && !loading && showEditor && specEditorCard}
 
       {loading && (
         <Card variant="elevated" className="p-12 text-center">
@@ -132,7 +230,7 @@ export default function SpecAnalysisPage() {
         </Card>
       )}
 
-      {analysis && (
+      {analysis && !loading && (
         <>
           {/* Overall Score Card */}
           <Card className="dark-hero-gradient text-white border-none p-6 relative overflow-hidden">
@@ -148,7 +246,7 @@ export default function SpecAnalysisPage() {
               </div>
               <h2 className="font-headline text-2xl font-bold mt-2">스펙 종합 점수</h2>
               <div className="flex items-end gap-2 mt-3">
-                <span className="text-6xl font-bold font-headline">{analysis.overallScore}</span>
+                <span key={analysis.overallScore} className="text-6xl font-bold font-headline animate-count-pulse">{analysis.overallScore}</span>
                 <span className="text-white/70 mb-2">/ 100</span>
               </div>
               <p className="text-sm text-white/80 mt-3 leading-relaxed">
@@ -169,7 +267,7 @@ export default function SpecAnalysisPage() {
                     <p className="font-bold text-sm text-emerald-900 dark:text-emerald-300">{s.category}</p>
                     <Badge className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-none text-xs">{s.score}점</Badge>
                   </div>
-                  <p className="text-xs text-emerald-800 dark:text-emerald-400 leading-relaxed mb-2">{s.feedback}</p>
+                  <p className="text-sm text-emerald-800 dark:text-emerald-400 leading-relaxed mb-2">{s.feedback}</p>
                   <div className="bg-white/60 dark:bg-emerald-950/40 rounded-lg p-2">
                     <p className="text-xs text-emerald-900 dark:text-emerald-300 flex gap-1">
                       <Lightbulb className="w-3 h-3 shrink-0 mt-0.5" />
@@ -193,7 +291,7 @@ export default function SpecAnalysisPage() {
                     <p className="font-bold text-sm text-red-900 dark:text-red-300">{s.category}</p>
                     <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-none text-xs">{s.score}점</Badge>
                   </div>
-                  <p className="text-xs text-red-800 dark:text-red-400 leading-relaxed">{s.feedback}</p>
+                  <p className="text-sm text-red-800 dark:text-red-400 leading-relaxed">{s.feedback}</p>
                   <div className="bg-white dark:bg-red-950/40 rounded-lg p-2">
                     <p className="text-xs text-red-900 dark:text-red-300 flex gap-1">
                       <Lightbulb className="w-3 h-3 shrink-0 mt-0.5" />
@@ -206,7 +304,7 @@ export default function SpecAnalysisPage() {
           )}
 
           {/* All scores breakdown */}
-          <Card className="p-5 bg-card border-none shadow-sm space-y-3">
+          <Card className="p-card bg-card border-none shadow-sm space-y-3">
             <h3 className="font-headline font-bold text-base flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-primary" /> 항목별 점수
             </h3>
@@ -215,7 +313,10 @@ export default function SpecAnalysisPage() {
                 <div key={a.category}>
                   <div className="flex justify-between mb-1">
                     <span className="text-sm font-medium">{a.category}</span>
-                    <span className="text-sm font-bold">{a.score}점</span>
+                    <span className={cn(
+                      "text-sm font-bold",
+                      a.status === "강점" ? "text-emerald-600" : a.status === "약점" ? "text-red-500" : "text-muted-foreground"
+                    )}>{a.score}점</span>
                   </div>
                   <Progress value={a.score} className="h-2" />
                 </div>
@@ -225,7 +326,7 @@ export default function SpecAnalysisPage() {
 
           {/* Hidden Strengths */}
           {analysis.hiddenStrengths && (
-            <Card className="p-5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 space-y-2">
+            <Card className="p-card bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 space-y-2">
               <h3 className="font-headline font-bold text-base flex items-center gap-2 text-blue-900 dark:text-blue-300">
                 <Eye className="w-4 h-4" /> 숨겨진 강점
               </h3>
@@ -235,7 +336,7 @@ export default function SpecAnalysisPage() {
 
           {/* Watch Outs */}
           {analysis.watchOuts && (
-            <Card className="p-5 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 space-y-2">
+            <Card className="p-card bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 space-y-2">
               <h3 className="font-headline font-bold text-base flex items-center gap-2 text-amber-900 dark:text-amber-300">
                 <Zap className="w-4 h-4" /> 주의할 점
               </h3>
@@ -244,15 +345,15 @@ export default function SpecAnalysisPage() {
           )}
 
           {/* Next Steps */}
-          <Card className="p-5 bg-primary/5 border border-primary/20 space-y-3">
+          <Card className="p-card bg-primary/5 border border-primary/20 space-y-3">
             <h3 className="font-headline font-bold text-base flex items-center gap-2">
               <Lightbulb className="w-4 h-4 text-primary" /> 다음 단계
             </h3>
             <ul className="space-y-2 text-sm">
-              {analysis.nextSteps.map((step, i) => (
+              {analysis.nextSteps.map((s, i) => (
                 <li key={i} className="flex gap-2">
                   <span className="font-bold text-primary">{i + 1}.</span>
-                  <span>{step}</span>
+                  <span>{s}</span>
                 </li>
               ))}
             </ul>
@@ -260,8 +361,8 @@ export default function SpecAnalysisPage() {
 
           {/* Action buttons */}
           <div className="flex gap-2 print:hidden">
-            <Button onClick={runAnalysis} variant="outline" className="flex-1 gap-2">
-              <Sparkles className="w-4 h-4" /> 다시 분석
+            <Button onClick={() => setShowEditor(true)} variant="outline" className="flex-1 gap-2">
+              <Pencil className="w-4 h-4" /> 스펙 수정 후 재분석
             </Button>
             <Button onClick={() => window.print()} className="flex-1 gap-2">
               <Download className="w-4 h-4" /> PDF로 저장
@@ -290,7 +391,6 @@ export default function SpecAnalysisPage() {
         ) : (
           <div className="relative">
             <div className="pointer-events-none select-none blur-sm opacity-50">
-              {/* fake content for blurred preview */}
               <Card className="dark-hero-gradient text-white border-none p-6">
                 <h2 className="font-headline text-2xl font-bold">스펙 종합 점수</h2>
                 <p className="text-6xl font-bold font-headline mt-3">85</p>

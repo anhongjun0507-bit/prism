@@ -15,8 +15,9 @@ import { MAJOR_LIST } from "@/lib/constants";
 import {
   BarChart3, TrendingUp, Filter, DollarSign, Search,
   Sparkles, BookOpen, Share2,
-  ChevronDown, Briefcase,
+  ChevronDown, ChevronRight, Briefcase,
 } from "lucide-react";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
@@ -29,9 +30,6 @@ import { List } from "react-window";
 import { readJSON, writeJSON, readString, writeString } from "@/lib/storage";
 import { PrismLoader } from "@/components/PrismLoader";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SpecAnalysisPanel } from "@/components/analysis/SpecAnalysisPanel";
-import { SpecAnalysisView } from "@/components/analysis/SpecAnalysisView";
-import { SegmentedControl, SegmentedControlItem } from "@/components/ui/segmented-control";
 import { PLANS } from "@/lib/plans";
 
 // 분리된 모듈:
@@ -45,7 +43,6 @@ import { PLANS } from "@/lib/plans";
 export default function AnalysisPage() {
   const { profile, toggleFavorite, isFavorite, saveProfile, isMaster } = useAuth();
 
-  const [mode, setMode] = useState<"matching" | "spec">("matching");
   const [step, setStep] = useState<"form" | "analyzing" | "result">("form");
   const [formStep, setFormStep] = useState(1);
   const [analyzeProgress, setAnalyzeProgress] = useState(0);
@@ -296,36 +293,19 @@ export default function AnalysisPage() {
         />
         <div className="px-gutter pt-2 space-y-4">
 
-          {/* Emotion moment — dream school 확률 기반 격려/축하 */}
-          {(() => {
-            const dream = profile?.dreamSchool;
-            const dreamResult = dream ? results.find(s => s.n === dream) : null;
-            if (!dreamResult) return null;
-            const prob = dreamResult.prob ?? 0;
-            const isHigh = prob >= 60;
-            return (
-              <div className={cn(
-                "rounded-2xl p-4 flex items-center gap-3 animate-fade-up",
-                isHigh
-                  ? "bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900"
-                  : "bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900"
-              )}>
-                <span className="text-2xl shrink-0" aria-hidden="true">{isHigh ? "🎉" : "💪"}</span>
-                <div className="flex-1 min-w-0">
-                  <p className={cn("text-sm font-bold", isHigh ? "text-emerald-800 dark:text-emerald-200" : "text-blue-800 dark:text-blue-200")}>
-                    {isHigh
-                      ? `${dream}에 좋은 가능성이 보여요!`
-                      : `${dream}, 도전할 가치가 있어요`}
-                  </p>
-                  <p className={cn("text-xs mt-0.5", isHigh ? "text-emerald-700 dark:text-emerald-300" : "text-blue-700 dark:text-blue-300")}>
-                    {isHigh
-                      ? `합격 확률 ${prob}% — 에세이와 활동으로 더 높여보세요`
-                      : `합격 확률 ${prob}% — 전략적 준비로 충분히 가능해요`}
-                  </p>
-                </div>
+          {/* AI 스펙 분석 CTA — 최상단 배치 */}
+          <Link href="/spec-analysis">
+            <Card className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 flex items-center gap-3 hover:shadow-md active:scale-[0.98] transition-all">
+              <div className="w-11 h-11 rounded-xl bg-primary/12 flex items-center justify-center shrink-0">
+                <Sparkles className="w-5 h-5 text-primary" />
               </div>
-            );
-          })()}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold">AI 스펙 분석</p>
+                <p className="text-xs text-muted-foreground mt-0.5">내 강점·약점·숨겨진 가능성 분석</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-primary shrink-0" />
+            </Card>
+          </Link>
 
           {/* Summary — interactive 4-cell stat가 필터 역할까지 겸함. 장식 orb·추천 포커스·
              "지원 추천 대학" count는 제거 (아래 School list와 중복) */}
@@ -444,12 +424,6 @@ export default function AnalysisPage() {
           </div>
         )}
 
-        {/* AI Spec Analysis — 결과 화면에서 바로 강점/약점 분석 */}
-        <SpecAnalysisPanel
-          profile={profile as unknown as Record<string, unknown>}
-          hasAccess={isMaster || PLANS[profile?.plan || "free"].limits.specAnalysis}
-        />
-
         {/* Upgrade CTA — 서버가 알려준 lockedCount 사용 (DOM에 잠긴 학교 데이터 자체가 없음) */}
         {lockedCount > 0 && (
           <div className="px-6 mt-4 space-y-3">
@@ -493,7 +467,7 @@ export default function AnalysisPage() {
         hideBack
         leading={<BarChart3 className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />}
         action={
-          mode === "matching" && (specsSaveStatus === "saving" || specsSaveStatus === "saved" || specLastUpdated) ? (
+          (specsSaveStatus === "saving" || specsSaveStatus === "saved" || specLastUpdated) ? (
             <div className="flex items-center gap-1.5">
               {specsSaveStatus === "saving" && <span className="text-xs text-muted-foreground animate-pulse">저장 중...</span>}
               {specsSaveStatus === "saved" && <span className="text-xs text-emerald-600">저장됨</span>}
@@ -503,27 +477,6 @@ export default function AnalysisPage() {
         }
       />
 
-      {/* Mode switcher */}
-      <div className="px-gutter pb-4">
-        <SegmentedControl value={mode} onValueChange={(v) => setMode(v as "matching" | "spec")} aria-label="분석 모드">
-          <SegmentedControlItem value="matching">대학 매칭</SegmentedControlItem>
-          <SegmentedControlItem value="spec">스펙 분석</SegmentedControlItem>
-        </SegmentedControl>
-      </div>
-
-      {/* Spec Analysis Mode */}
-      {mode === "spec" && (
-        <div className="pb-6">
-          <SpecAnalysisView
-            profile={profile as unknown as Record<string, unknown>}
-            hasAccess={isMaster || PLANS[profile?.plan || "free"].limits.specAnalysis}
-          />
-          <BottomNav />
-        </div>
-      )}
-
-      {/* Matching Mode — Form */}
-      {mode === "matching" && (<>
       <div className="px-gutter pb-4">
         {/* Progress — 단계 번호 + 현재 단계 라벨 + 바 */}
         <div className="space-y-2">
@@ -791,7 +744,6 @@ export default function AnalysisPage() {
         )}
       </div>
       <BottomNav />
-      </>)}
     </div>
   );
 }
