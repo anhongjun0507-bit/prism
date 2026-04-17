@@ -20,21 +20,25 @@ export type InputSize = keyof typeof SIZE_CLASS;
 
 export interface InputProps extends Omit<React.ComponentProps<"input">, "size"> {
   size?: InputSize;
+  error?: boolean;
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, size = "default", ...props }, ref) => {
+  ({ className, type, size = "default", error, ...props }, ref) => {
     return (
       <input
         type={type}
+        aria-invalid={error || undefined}
         className={cn(
           // Base
           "flex w-full rounded-md border border-input bg-background px-3 py-2 ring-offset-background",
           "file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground",
           "placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
-          // Brand focus glow — focus-visible 시 primary 색조의 부드러운 halo + border 강조
+          // Brand focus glow
           "outline-none transition-shadow",
           "focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/20 focus-visible:shadow-glow-sm",
+          // Error state
+          error && "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20",
           SIZE_CLASS[size],
           className
         )}

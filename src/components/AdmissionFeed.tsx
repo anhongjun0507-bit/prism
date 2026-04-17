@@ -90,7 +90,7 @@ export function AdmissionFeed() {
   const userSat = profile?.sat ? parseInt(profile.sat) : null;
 
   return (
-    <Card className="p-4 bg-white dark:bg-card border-none shadow-sm space-y-3">
+    <Card className="p-4 bg-card border-none shadow-sm space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="font-bold text-sm flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -143,7 +143,7 @@ export function AdmissionFeed() {
             "나와 비슷한 스펙" 필터는 베이직부터 가능해요
           </div>
           <Link href="/pricing">
-            <Button variant="outline" size="sm" className="w-full rounded-xl text-xs">
+            <Button variant="outline" size="sm" className="w-full text-xs">
               전체 피드 + 스펙 필터 잠금 해제
             </Button>
           </Link>

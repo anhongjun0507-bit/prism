@@ -136,7 +136,7 @@ export default function WhatIfPage() {
   const simulatorContent = (
     <div className="space-y-5">
       {/* ── Adjustable Specs ── */}
-      <Card className="rounded-2xl bg-white dark:bg-card shadow-sm p-5 space-y-4">
+      <Card className="rounded-2xl bg-card shadow-sm p-5 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-headline font-bold text-base">스펙 조정</h2>
           <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground" onClick={reset}>
@@ -225,7 +225,7 @@ export default function WhatIfPage() {
       </Card>
 
       {/* ── Category Summary ── */}
-      <Card className="rounded-2xl bg-white dark:bg-card shadow-sm p-5 space-y-3">
+      <Card className="rounded-2xl bg-card shadow-sm p-5 space-y-3">
         <h2 className="font-headline font-bold text-sm">카테고리 변화</h2>
         <div className="grid grid-cols-2 gap-3">
           {cats.map((cat) => {
@@ -254,7 +254,7 @@ export default function WhatIfPage() {
       </Card>
 
       {/* ── Top Changes ── */}
-      <Card className="rounded-2xl bg-white dark:bg-card shadow-sm p-5 space-y-3">
+      <Card className="rounded-2xl bg-card shadow-sm p-5 space-y-3">
         <h2 className="font-headline font-bold text-sm">확률 변화 Top 10</h2>
 
         {diffs.length === 0 ? (

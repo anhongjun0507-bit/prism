@@ -100,6 +100,11 @@ body {
     /* shadcn radius base — lg=var(--radius), md=lg-2, sm=lg-4. xl/2xl는 Tailwind 기본(12/16). */
     --radius: 12px;
 
+    /* Hero card — 어두운 배경 위 텍스트 토큰 */
+    --hero-text: 0 0% 100%;
+    --hero-text-muted: 0 0% 100%;
+    --hero-overlay: 0 0% 100%;
+
     /* ─── Semantic category colors (admission category) ───
        Safety / Target / Hard Target / Reach.
        사용처: 확률 바, 카테고리 배지, 차트. CSS 변수라 다크모드 자동 대응. */
@@ -368,11 +373,11 @@ body {
    PAGE-SPECIFIC LEGACY
    ─────────────────────────────────────────────────────────────────────── */
 .dark-hero-gradient {
-  background: linear-gradient(135deg, #1a1714 0%, #2c2620 100%);
+  background: linear-gradient(135deg, hsl(30 10% 10%) 0%, hsl(30 12% 18%) 100%);
 }
 
 .dark .dark-hero-gradient {
-  background: linear-gradient(135deg, #0d0b0a 0%, #1a1714 100%);
+  background: linear-gradient(135deg, hsl(30 10% 4%) 0%, hsl(30 10% 10%) 100%);
 }
 
 .dark .glass-card {

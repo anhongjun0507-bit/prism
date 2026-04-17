@@ -25,13 +25,13 @@ export function UpgradeCTA({
 
   if (variant === "value") {
     return (
-      <Card className="relative overflow-hidden border-primary/20 p-5 space-y-3">
+      <Card className="relative overflow-hidden border-primary/40 shadow-glow-sm p-5 space-y-3">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-primary" aria-hidden="true" />
           <h3 className="font-bold text-sm">{title}</h3>
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
-        <Button onClick={() => router.push("/pricing")} size="sm" className="rounded-xl gap-1.5">
+        <Button onClick={() => router.push("/pricing")} size="sm" className="gap-1.5">
           <Crown className="w-3.5 h-3.5" aria-hidden="true" /> {planLabel}
         </Button>
       </Card>
@@ -43,9 +43,12 @@ export function UpgradeCTA({
       <Crown className="w-10 h-10 text-primary mx-auto mb-3" aria-hidden="true" />
       <h3 className="font-bold text-base mb-1">{title}</h3>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{description}</p>
-      <Button onClick={() => router.push("/pricing")} className="rounded-xl px-6">
+      <Button onClick={() => router.push("/pricing")} className="px-6">
         {planLabel}
       </Button>
+      <p className="text-2xs text-muted-foreground/70 mt-3 italic">
+        &quot;무료 5개 외에 Target 학교를 발견해서 합격했어요&quot; — 2025 졸업생
+      </p>
     </Card>
   );
 }
@@ -73,10 +76,10 @@ export function ChatLimitModal({
           베이직 플랜으로 무제한 상담 + 200개교 분석을 이용하세요
         </p>
         <div className="space-y-2">
-          <Button onClick={() => router.push("/pricing")} className="w-full rounded-xl">
+          <Button onClick={() => router.push("/pricing")} className="w-full">
             요금제 보기
           </Button>
-          <Button variant="ghost" onClick={onClose} className="w-full rounded-xl">
+          <Button variant="ghost" onClick={onClose} className="w-full">
             내일 다시 올게요
           </Button>
         </div>

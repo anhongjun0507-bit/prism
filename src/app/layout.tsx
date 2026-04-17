@@ -86,6 +86,12 @@ export default function RootLayout({
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
         <link
+          rel="preload"
+          as="style"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+          crossOrigin="anonymous"
+        />
+        <link
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
           crossOrigin="anonymous"
@@ -115,6 +121,9 @@ export default function RootLayout({
           모바일 BottomNav 클리어런스는 각 페이지가 자체 pb-24/pb-28로 처리함 —
           body에 전역 pb를 두면 chat 같은 full-height 페이지에서 document 오버플로 발생. */}
       <body className="font-body antialiased min-h-screen lg:pl-64">
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[200] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-xl focus:shadow-lg">
+          메인 콘텐츠로 건너뛰기
+        </a>
         <Analytics />
         <ThemeProvider>
           <ErrorBoundary>
@@ -124,7 +133,7 @@ export default function RootLayout({
                 <DesktopSidebar />
                 {/* Content shell — 모바일·태블릿: 중앙정렬 single column.
                     lg+: body의 pl-64 안에서 다시 mx-auto로 가용 공간에 centering. */}
-                <main className="max-w-md md:max-w-2xl lg:max-w-5xl mx-auto min-h-screen bg-background relative overflow-x-hidden">
+                <main id="main-content" className="max-w-md md:max-w-2xl lg:max-w-5xl mx-auto min-h-screen bg-background relative overflow-x-hidden">
                   <PageTransition>{children}</PageTransition>
                 </main>
                 <Toaster />

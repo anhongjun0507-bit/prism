@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Send, Sparkles, Loader2, Bot, User, RotateCcw, GraduationCap, PenLine, TrendingUp, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
+import { EmptyState } from "@/components/EmptyState";
 import { PLANS } from "@/lib/plans";
 import { ChatLimitModal } from "@/components/UpgradeCTA";
 import { readJSON, writeJSON, removeKey } from "@/lib/storage";
@@ -68,6 +69,31 @@ const SUGGESTION_STYLES: Record<SuggestedCategory, {
     label: "과외활동",
   },
 };
+
+function highlightProfile(text: string): React.ReactNode {
+  const keywords = [
+    typeof window !== "undefined" ? "" : "", // placeholder
+  ];
+  // Dynamically collect profile keywords to highlight
+  return <HighlightedGreeting text={text} />;
+}
+
+function HighlightedGreeting({ text }: { text: string }) {
+  const { profile } = useAuth();
+  const keywords = [profile?.name, profile?.dreamSchool, profile?.major].filter(Boolean) as string[];
+  if (keywords.length === 0) return <>{text}</>;
+  const regex = new RegExp(`(${keywords.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "g");
+  const parts = text.split(regex);
+  return (
+    <>
+      {parts.map((part, i) =>
+        keywords.includes(part)
+          ? <span key={i} className="text-primary font-bold">{part}</span>
+          : part
+      )}
+    </>
+  );
+}
 
 export default function ChatPage() {
   const { profile, saveProfile, isMaster } = useAuth();
@@ -293,6 +319,14 @@ export default function ChatPage() {
               : `기기에는 최근 50개 메시지만 저장돼요 (현재 ${messages.length}개).`}
           </div>
         )}
+        {showSuggestions && (
+          <EmptyState
+            illustration="chat"
+            title="AI 카운슬러와 대화하세요"
+            description="미국 대학 입시, 에세이, 시험 준비 등 무엇이든 물어보세요"
+            className="py-6 mb-2"
+          />
+        )}
         <div className="space-y-5" aria-live="polite" aria-relevant="additions">
           {messages.map((m, i) => {
             const isNew = i >= messages.length - 2;
@@ -331,7 +365,7 @@ export default function ChatPage() {
                         : "bg-gradient-to-br from-primary to-primary/85 text-white rounded-2xl rounded-tr-md shadow-md shadow-primary/20"
                     )}
                   >
-                    {m.content}
+                    {isAi && i === 0 ? highlightProfile(m.content) : m.content}
                   </div>
                   {m.error && (
                     <Button variant="ghost" size="sm" onClick={handleRetry} className="text-xs text-red-600 gap-1 h-7 px-2 rounded-lg">
@@ -373,7 +407,7 @@ export default function ChatPage() {
         <div className="shrink-0 px-4 pt-1 pb-2 animate-fade-up">
           <div className="flex items-center gap-2 mb-2 px-2">
             <div className="h-px flex-1 bg-border/60" />
-            <p className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase">이런 질문 어때요</p>
+            <p className="text-2xs font-bold text-muted-foreground tracking-wider uppercase">이런 질문 어때요</p>
             <div className="h-px flex-1 bg-border/60" />
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -400,7 +434,7 @@ export default function ChatPage() {
                     <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center shrink-0", style.iconBg)}>
                       <Icon className={cn("w-3.5 h-3.5", style.iconColor)} />
                     </div>
-                    <p className={cn("text-[10px] font-bold uppercase tracking-wider truncate", style.iconColor)}>
+                    <p className={cn("text-2xs font-bold uppercase tracking-wider truncate", style.iconColor)}>
                       {style.label}
                     </p>
                   </div>
@@ -415,8 +449,8 @@ export default function ChatPage() {
       {/* ── Input ── */}
       <div className="shrink-0 px-4 pt-1 pb-1 bg-background">
         <div className={cn(
-          "relative flex items-end gap-2 p-2 pl-4 rounded-[22px] bg-card shadow-[0_4px_20px_-6px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_20px_-6px_rgba(0,0,0,0.6)] ring-1 transition-all",
-          "ring-border/60 focus-within:ring-primary/40 focus-within:shadow-[0_6px_28px_-6px_rgba(154,60,18,0.25)]"
+          "relative flex items-end gap-2 p-2 pl-4 rounded-2xl bg-card shadow-glow-sm ring-1 transition-all",
+          "ring-border/60 focus-within:ring-primary/40 focus-within:shadow-glow-md"
         )}>
           {/* Remaining-count pill — floats in top-right of the input shell */}
           {dailyLimit !== Infinity && (

@@ -12,7 +12,9 @@ import { useAuth } from "@/lib/auth-context";
 import { updateProfile as fbUpdateProfile } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { MAJOR_LIST } from "@/lib/constants";
-import { Camera, Loader2, LogOut, Crown } from "lucide-react";
+import { Camera, Loader2, LogOut, Crown, Moon } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
+import { Switch } from "@/components/ui/switch";
 import Link from "next/link";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -25,6 +27,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const { user, profile, saveProfile, logout } = useAuth();
   const { toast } = useToast();
+  const { theme, setTheme, accent, setAccent } = useTheme();
 
   const [name, setName] = useState("");
   const [photoURL, setPhotoURL] = useState("");
@@ -101,7 +104,7 @@ export default function ProfilePage() {
 
       <div className="px-gutter space-y-5">
         {/* Avatar + photo URL */}
-        <Card className="p-5 rounded-2xl border border-border/60 bg-white dark:bg-card shadow-sm">
+        <Card className="p-5 rounded-2xl border border-border/60 bg-card shadow-sm">
           <div className="flex items-center gap-4">
             <div className="relative w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold overflow-hidden shrink-0 ring-2 ring-border/60">
               {photoURL ? (
@@ -132,14 +135,14 @@ export default function ProfilePage() {
               onChange={(e) => setPhotoURL(e.target.value)}
               className="h-11 rounded-xl text-sm"
             />
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
+            <p className="text-2xs text-muted-foreground leading-relaxed">
               이미지 URL을 붙여넣으세요. 비워두면 이름 이니셜이 표시돼요.
             </p>
           </div>
         </Card>
 
         {/* Basic info */}
-        <Card className="p-5 rounded-2xl border border-border/60 bg-white dark:bg-card shadow-sm space-y-4">
+        <Card className="p-5 rounded-2xl border border-border/60 bg-card shadow-sm space-y-4">
           <h2 className="text-sm font-bold">기본 정보</h2>
 
           <div className="space-y-1.5">
@@ -190,12 +193,50 @@ export default function ProfilePage() {
             <select
               value={major}
               onChange={(e) => setMajor(e.target.value)}
-              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-white dark:bg-card focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
               {MAJOR_LIST.map((m) => (
                 <option key={m} value={m}>{m}</option>
               ))}
             </select>
+          </div>
+        </Card>
+
+        {/* Theme settings */}
+        <Card className="p-5 rounded-2xl border border-border/60 bg-card shadow-sm space-y-4">
+          <h2 className="text-sm font-bold">테마 설정</h2>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Moon className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm">다크모드</span>
+            </div>
+            <Switch
+              checked={theme === "dark"}
+              onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm">테마 색상</span>
+            <div className="flex items-center gap-2">
+              {([
+                { key: "orange" as const, color: "#9a3c12" },
+                { key: "blue" as const, color: "#2563eb" },
+                { key: "violet" as const, color: "#7c3aed" },
+                { key: "emerald" as const, color: "#059669" },
+                { key: "pink" as const, color: "#db2777" },
+              ]).map(({ key, color }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setAccent(key)}
+                  aria-label={`테마 색상 ${key}`}
+                  className={`w-6 h-6 rounded-full transition-all ${accent === key ? "ring-2 ring-offset-2 ring-offset-background" : ""}`}
+                  style={{ backgroundColor: color, ...(accent === key ? { ["--tw-ring-color" as string]: color } : {}) }}
+                />
+              ))}
+            </div>
           </div>
         </Card>
 
@@ -217,13 +258,13 @@ export default function ProfilePage() {
         {/* Secondary links */}
         <div className="space-y-2.5">
           <Link href="/subscription">
-            <Card className="p-4 rounded-2xl border border-border/60 bg-white dark:bg-card shadow-sm flex items-center gap-3 hover:bg-accent/30 transition-colors">
+            <Card className="p-4 rounded-2xl border border-border/60 bg-card shadow-sm flex items-center gap-3 hover:bg-accent/30 transition-colors">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                 <Crown className="w-4 h-4 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold">구독 관리</p>
-                <p className="text-[11px] text-muted-foreground">플랜·결제 정보 확인</p>
+                <p className="text-2xs text-muted-foreground">플랜·결제 정보 확인</p>
               </div>
             </Card>
           </Link>
@@ -233,13 +274,13 @@ export default function ProfilePage() {
             onClick={() => setShowLogoutDialog(true)}
             className="w-full"
           >
-            <Card className="p-4 rounded-2xl border border-border/60 bg-white dark:bg-card shadow-sm flex items-center gap-3 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors">
+            <Card className="p-4 rounded-2xl border border-border/60 bg-card shadow-sm flex items-center gap-3 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors">
               <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/30 flex items-center justify-center shrink-0">
                 <LogOut className="w-4 h-4 text-red-500" />
               </div>
               <div className="flex-1 text-left min-w-0">
                 <p className="text-sm font-semibold text-red-600 dark:text-red-400">로그아웃</p>
-                <p className="text-[11px] text-muted-foreground">계정에서 안전하게 나가기</p>
+                <p className="text-2xs text-muted-foreground">계정에서 안전하게 나가기</p>
               </div>
             </Card>
           </button>
@@ -257,7 +298,7 @@ export default function ProfilePage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-xl">취소</AlertDialogCancel>
-            <AlertDialogAction onClick={logout} className="rounded-xl bg-red-500 hover:bg-red-600 text-white">
+            <AlertDialogAction onClick={logout} className="bg-red-500 hover:bg-red-600 text-white">
               로그아웃
             </AlertDialogAction>
           </AlertDialogFooter>

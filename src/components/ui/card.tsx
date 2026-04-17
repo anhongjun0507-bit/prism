@@ -27,7 +27,7 @@ const cardVariants = cva(
         accent: "rounded-2xl bg-primary/5 dark:bg-primary/10 border border-primary/20",
       },
       interactive: {
-        true: "hover-lift cursor-pointer",
+        true: "hover-lift cursor-pointer active:scale-[0.98] transition-transform",
         false: "",
       },
     },

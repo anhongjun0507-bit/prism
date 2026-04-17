@@ -454,7 +454,7 @@ export default function EssayReviewPage() {
             placeholder="에세이를 여기에 붙여넣으세요..."
             value={essay}
             onChange={(e) => setEssay(e.target.value)}
-            className="min-h-[200px] rounded-2xl p-4 text-sm leading-relaxed border-none shadow-sm focus-visible:ring-primary/20 bg-white dark:bg-card"
+            className="min-h-[200px] rounded-2xl p-4 text-sm leading-relaxed border-none shadow-sm focus-visible:ring-primary/20 bg-card"
           />
           {essay.trim() && (
             <p className="text-xs text-muted-foreground text-right">
@@ -541,7 +541,7 @@ export default function EssayReviewPage() {
               </div>
             )}
             {/* Score + Summary */}
-            <Card className="p-6 bg-white dark:bg-card border-none shadow-sm rounded-2xl flex flex-col items-center gap-3">
+            <Card className="p-6 bg-card border-none shadow-sm rounded-2xl flex flex-col items-center gap-3">
               <ScoreCircle score={result.score} />
               {result.summary && (
                 <p className="text-sm font-semibold text-center leading-relaxed">{result.summary}</p>

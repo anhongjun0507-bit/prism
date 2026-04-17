@@ -166,7 +166,7 @@ function PaymentSuccessContent() {
         <p className="text-xs text-primary font-medium mb-6">
           이제 모든 AI 기능을 자유롭게 이용하세요
         </p>
-        <Button size="xl" onClick={() => router.push("/dashboard")} className="w-full rounded-xl font-bold">
+        <Button size="xl" onClick={() => router.push("/dashboard")} className="w-full font-bold">
           대시보드로 이동
         </Button>
       </Card>

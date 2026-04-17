@@ -97,7 +97,7 @@ export function AdmissionResultModal({
           <p className="text-xs text-primary font-medium mb-2">
             이 데이터가 후배들의 더 정확한 합격 예측에 기여합니다
           </p>
-          <Button onClick={onClose} className="w-full rounded-xl">
+          <Button onClick={onClose} className="w-full">
             확인
           </Button>
         </DialogContent>
@@ -183,7 +183,7 @@ export function AdmissionResultModal({
 
         {/* Actions */}
         <div className="flex gap-2 pt-2">
-          <Button variant="ghost" onClick={onClose} className="flex-1 rounded-xl">
+          <Button variant="ghost" onClick={onClose} className="flex-1">
             나중에
           </Button>
           <Button

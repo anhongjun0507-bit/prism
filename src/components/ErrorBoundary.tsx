@@ -70,12 +70,12 @@ export class ErrorBoundary extends Component<Props, State> {
             )}
 
             <div className="flex flex-col gap-2">
-              <Button onClick={this.handleReset} size="xl" className="w-full rounded-xl gap-2">
+              <Button onClick={this.handleReset} size="xl" className="w-full gap-2">
                 <RotateCw className="w-4 h-4" />
                 다시 시도
               </Button>
               <Link href="/dashboard">
-                <Button variant="outline" size="xl" className="w-full rounded-xl gap-2">
+                <Button variant="outline" size="xl" className="w-full gap-2">
                   <Home className="w-4 h-4" />
                   홈으로
                 </Button>

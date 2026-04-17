@@ -250,7 +250,7 @@ export default function OnboardingPage() {
             <Label className="text-xs text-muted-foreground">지망 대학교</Label>
             <Input
               placeholder="대학 이름 검색..."
-              className="h-12 rounded-xl border-2"
+              className="h-12 rounded-xl border-2 text-sm"
               value={formData.dreamSchool || uniSearch}
               onChange={(e) => {
                 setUniSearch(e.target.value);
@@ -259,8 +259,22 @@ export default function OnboardingPage() {
               }}
               onKeyDown={(e) => {
                 if (!filteredUnis.length || formData.dreamSchool) return;
-                if (e.key === "ArrowDown") { e.preventDefault(); setUniHighlight((h) => Math.min(h + 1, filteredUnis.length - 1)); }
-                else if (e.key === "ArrowUp") { e.preventDefault(); setUniHighlight((h) => Math.max(h - 1, 0)); }
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setUniHighlight((h) => {
+                    const next = Math.min(h + 1, filteredUnis.length - 1);
+                    document.getElementById(`uni-option-${next}`)?.scrollIntoView({ block: "nearest" });
+                    return next;
+                  });
+                }
+                else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setUniHighlight((h) => {
+                    const next = Math.max(h - 1, 0);
+                    document.getElementById(`uni-option-${next}`)?.scrollIntoView({ block: "nearest" });
+                    return next;
+                  });
+                }
                 else if (e.key === "Enter" && uniHighlight >= 0) { e.preventDefault(); setFormData({ ...formData, dreamSchool: filteredUnis[uniHighlight] }); setUniSearch(""); setUniHighlight(-1); }
                 else if (e.key === "Escape") { setUniSearch(""); setUniHighlight(-1); }
               }}
@@ -272,7 +286,7 @@ export default function OnboardingPage() {
               autoComplete="off"
             />
             {filteredUnis.length > 0 && !formData.dreamSchool && (
-              <div role="listbox" aria-label="대학 검색 결과" className="absolute top-full left-0 right-0 z-10 bg-white dark:bg-card rounded-xl shadow-lg border mt-1 overflow-hidden">
+              <div role="listbox" aria-label="대학 검색 결과" className="absolute top-full left-0 right-0 z-10 bg-card rounded-xl shadow-lg border mt-1 max-h-48 overflow-y-auto overscroll-contain">
                 {filteredUnis.map((u, idx) => (
                   <button
                     key={u}
@@ -301,7 +315,7 @@ export default function OnboardingPage() {
             <Label className="text-xs text-muted-foreground">지망 전공</Label>
             <Input
               placeholder="전공 검색..."
-              className="h-12 rounded-xl border-2"
+              className="h-12 rounded-xl border-2 text-sm"
               value={formData.major || majorSearch}
               onChange={(e) => {
                 setMajorSearch(e.target.value);
@@ -310,8 +324,22 @@ export default function OnboardingPage() {
               }}
               onKeyDown={(e) => {
                 if (!filteredMajors.length || formData.major) return;
-                if (e.key === "ArrowDown") { e.preventDefault(); setMajorHighlight((h) => Math.min(h + 1, filteredMajors.length - 1)); }
-                else if (e.key === "ArrowUp") { e.preventDefault(); setMajorHighlight((h) => Math.max(h - 1, 0)); }
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setMajorHighlight((h) => {
+                    const next = Math.min(h + 1, filteredMajors.length - 1);
+                    document.getElementById(`major-option-${next}`)?.scrollIntoView({ block: "nearest" });
+                    return next;
+                  });
+                }
+                else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setMajorHighlight((h) => {
+                    const next = Math.max(h - 1, 0);
+                    document.getElementById(`major-option-${next}`)?.scrollIntoView({ block: "nearest" });
+                    return next;
+                  });
+                }
                 else if (e.key === "Enter" && majorHighlight >= 0) { e.preventDefault(); setFormData({ ...formData, major: filteredMajors[majorHighlight] }); setMajorSearch(""); setMajorHighlight(-1); }
                 else if (e.key === "Escape") { setMajorSearch(""); setMajorHighlight(-1); }
               }}
@@ -323,7 +351,7 @@ export default function OnboardingPage() {
               autoComplete="off"
             />
             {filteredMajors.length > 0 && !formData.major && (
-              <div role="listbox" aria-label="전공 검색 결과" className="absolute top-full left-0 right-0 z-10 bg-white dark:bg-card rounded-xl shadow-lg border mt-1 overflow-hidden">
+              <div role="listbox" aria-label="전공 검색 결과" className="absolute top-full left-0 right-0 z-10 bg-card rounded-xl shadow-lg border mt-1 max-h-48 overflow-y-auto overscroll-contain">
                 {filteredMajors.map((m, idx) => (
                   <button
                     key={m}
@@ -465,7 +493,7 @@ export default function OnboardingPage() {
               {previewOpen && (
                 <div className="mt-2 space-y-2 animate-fade-up">
                   {previewSchools.map((s) => (
-                    <Card key={s.n} className="p-4 bg-white dark:bg-card border-none shadow-sm flex items-center gap-3">
+                    <Card key={s.n} className="p-4 bg-card border-none shadow-sm flex items-center gap-3">
                       <div
                         className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0"
                         style={{ backgroundColor: s.c }}
@@ -506,7 +534,7 @@ export default function OnboardingPage() {
             <div className="w-full space-y-2">
               <p className="text-xs font-bold text-muted-foreground">나의 추천 대학 미리보기</p>
               {previewSchools.map((s) => (
-                <Card key={s.n} className="p-4 bg-white dark:bg-card border-none shadow-sm flex items-center gap-3">
+                <Card key={s.n} className="p-4 bg-card border-none shadow-sm flex items-center gap-3">
                   <div
                     className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0"
                     style={{ backgroundColor: s.c }}

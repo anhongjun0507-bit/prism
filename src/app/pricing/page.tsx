@@ -115,27 +115,32 @@ export default function PricingPage() {
 
               {/* CTA */}
               {isCurrent ? (
-                <Button variant="outline" className="w-full rounded-xl" disabled>
+                <Button variant="outline" className="w-full" disabled>
                   현재 사용 중
                 </Button>
               ) : plan.type === "free" ? (
-                <Button variant="outline" className="w-full rounded-xl" disabled>
+                <Button variant="outline" className="w-full" disabled>
                   기본 제공
                 </Button>
               ) : (
-                <Button
-                  className="w-full rounded-xl"
-                  onClick={() => handlePlanSelect(plan.type)}
-                >
-                  {plan.name} 시작하기
-                </Button>
+                <div className="space-y-1.5">
+                  <Button
+                    className="w-full rounded-xl"
+                    onClick={() => handlePlanSelect(plan.type)}
+                  >
+                    앱에서 구독하기
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">
+                    App Store 또는 Google Play에서 결제
+                  </p>
+                </div>
               )}
             </Card>
           );
         })}
 
         {/* Social proof */}
-        <Card className="p-4 bg-white dark:bg-card border-none shadow-sm">
+        <Card className="p-4 bg-card border-none shadow-sm">
           <div className="flex gap-3">
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
               <span className="text-xs font-bold text-primary">JK</span>
@@ -146,6 +151,32 @@ export default function PricingPage() {
                 그 학교에 지원해서 합격했습니다.&quot;
               </p>
               <p className="text-xs text-muted-foreground mt-1.5">2025 졸업생 · 서울 외국인학교</p>
+            </div>
+          </div>
+        </Card>
+
+        {/* Feature comparison table */}
+        <Card className="p-card border-none shadow-sm space-y-3">
+          <h3 className="font-bold text-sm">한눈에 비교</h3>
+          <div className="space-y-2">
+            {[
+              { label: "대학 분석", free: "5개", basic: "200개", premium: "1,001개" },
+              { label: "AI 상담", free: "5회/일", basic: "무제한", premium: "무제한" },
+              { label: "에세이 첨삭", free: "1회", basic: "무제한", premium: "무제한" },
+              { label: "학부모 리포트", free: "—", basic: "—", premium: "매월" },
+            ].map((row) => (
+              <div key={row.label} className="grid grid-cols-4 gap-2 items-center text-xs">
+                <span className="font-medium text-muted-foreground">{row.label}</span>
+                <span className="text-center">{row.free}</span>
+                <span className="text-center font-semibold text-primary">{row.basic}</span>
+                <span className="text-center font-semibold">{row.premium}</span>
+              </div>
+            ))}
+            <div className="grid grid-cols-4 gap-2 text-2xs text-muted-foreground border-t border-border pt-2">
+              <span />
+              <span className="text-center">무료</span>
+              <span className="text-center text-primary font-bold">베이직</span>
+              <span className="text-center font-bold">프리미엄</span>
             </div>
           </div>
         </Card>
@@ -168,7 +199,7 @@ export default function PricingPage() {
         </div>
 
         {/* Parent pitch */}
-        <Card className="p-5 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 space-y-2">
+        <Card className="p-card bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 space-y-2">
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-amber-600" aria-hidden="true" />
             <h3 className="font-bold text-sm text-amber-900 dark:text-amber-300">학부모님이신가요?</h3>
@@ -211,12 +242,15 @@ export default function PricingPage() {
           </div>
 
           <div className="space-y-2">
-            <Button size="xl" className="w-full rounded-xl gap-2" disabled>
+            <Button size="xl" className="w-full gap-2" disabled>
               <ExternalLink className="w-4 h-4" aria-hidden="true" />
               앱 다운로드 (출시 예정)
             </Button>
-            <Button variant="outline" className="w-full rounded-xl" onClick={() => setShowAppPrompt(null)}>
-              닫기
+            <p className="text-xs text-center text-muted-foreground">
+              앱 출시 시 알림을 받으려면 현재 계정 이메일로 안내드려요
+            </p>
+            <Button variant="outline" className="w-full" onClick={() => setShowAppPrompt(null)}>
+              확인
             </Button>
           </div>
         </DialogContent>

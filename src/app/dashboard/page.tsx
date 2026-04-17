@@ -27,7 +27,9 @@ import type { Specs, School } from "@/lib/matching";
 import { fetchWithAuth } from "@/lib/api-client";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { SchoolLogo } from "@/components/SchoolLogo";
+import { SchoolModal } from "@/components/analysis/SchoolModal";
 import { EmptyState } from "@/components/EmptyState";
+import { Skeleton } from "@/components/ui/skeleton";
 import dynamic from "next/dynamic";
 // Sparkline은 recharts(~100KB) 의존 — dynamic import로 초기 번들 분리
 const Sparkline = dynamic(() => import("@/components/Sparkline").then(m => ({ default: m.Sparkline })), {
@@ -68,11 +70,14 @@ export default function DashboardPage() {
   // 가짜 결과를 보여줬는데, 사용자가 "내 데이터?"로 착각할 수 있었음.
   const hasSpecs = !!(profile?.gpa || profile?.sat);
   const [allMatchResults, setAllMatchResults] = useState<School[]>([]);
+  const [matchLoading, setMatchLoading] = useState(true);
   useEffect(() => {
     if (!profile || !hasSpecs) {
       setAllMatchResults([]);
+      setMatchLoading(false);
       return;
     }
+    setMatchLoading(true);
     const specs: Specs = {
       gpaUW: profile.gpa || "", gpaW: "", sat: profile.sat || "", act: "",
       toefl: profile.toefl || "", ielts: "", apCount: "", apAvg: "",
@@ -87,8 +92,8 @@ export default function DashboardPage() {
       method: "POST",
       body: JSON.stringify({ specs }),
     })
-      .then((data) => { if (!cancelled) setAllMatchResults(data.results || []); })
-      .catch((e) => { if (!cancelled) showApiError(e, { title: "분석 결과를 불러오지 못했어요" }); });
+      .then((data) => { if (!cancelled) { setAllMatchResults(data.results || []); setMatchLoading(false); } })
+      .catch((e) => { if (!cancelled) { showApiError(e, { title: "분석 결과를 불러오지 못했어요" }); setMatchLoading(false); } });
     return () => { cancelled = true; };
   }, [profile, hasSpecs, showApiError]);
 
@@ -124,6 +129,7 @@ export default function DashboardPage() {
   }, [searchQuery]);
 
   const [showResultModal, setShowResultModal] = useState(false);
+  const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
   const currentMonth = new Date().getMonth() + 1;
   const isAdmissionSeason = currentMonth >= 3 && currentMonth <= 5;
 
@@ -151,12 +157,12 @@ export default function DashboardPage() {
           </div>
         </Link>
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] text-muted-foreground">안녕하세요</p>
+          <p className="text-2xs text-muted-foreground">안녕하세요</p>
           <div className="flex items-center gap-1.5">
             <h1 className="text-base font-bold truncate">{displayName}님</h1>
             {currentPlan !== "free" && (
               <Link href="/subscription" className="shrink-0">
-                <span className="inline-flex items-center gap-1 bg-primary/10 text-primary rounded-full px-2 h-5 text-[10px] font-semibold">
+                <span className="inline-flex items-center gap-1 bg-primary/10 text-primary rounded-full px-2 h-5 text-2xs font-semibold">
                   <Crown className="w-2.5 h-2.5" /> {planInfo.name}
                 </span>
               </Link>
@@ -185,7 +191,7 @@ export default function DashboardPage() {
           />
         </div>
         {searchResults.length > 0 && (
-          <div className="absolute top-[52px] left-gutter right-gutter bg-white dark:bg-card rounded-xl shadow-lg border z-50 overflow-hidden">
+          <div className="absolute top-[52px] left-gutter right-gutter bg-card rounded-xl shadow-lg border z-50 overflow-hidden">
             {searchResults.map(s => (
               <Link key={s.n} href="/analysis" onClick={() => setSearchQuery("")} className="flex items-center gap-3 p-3 hover:bg-accent/50 transition-colors">
                 <SchoolLogo domain={s.d} color={s.c} name={s.n} size="sm" />
@@ -202,32 +208,32 @@ export default function DashboardPage() {
       {/* ── Main content ── */}
       <main className="px-gutter space-y-5">
         {/* Hero — 목표 대학 · D-day · 합격 확률 */}
-        <Card className="p-6 rounded-2xl border-none shadow-lg overflow-hidden relative dark-hero-gradient text-white">
+        <Card className="p-6 rounded-2xl border-none shadow-lg overflow-hidden relative dark-hero-gradient text-hero">
           {/* subtle radial overlay only — no parallax orbs */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.12),_transparent_60%)] pointer-events-none" aria-hidden="true" />
+          <div className="absolute inset-0 bg-hero-overlay pointer-events-none" style={{ background: "radial-gradient(ellipse at top right, hsl(var(--hero-overlay) / 0.12), transparent 60%)" }} aria-hidden="true" />
           <div className="relative">
-            <p className="text-[11px] text-white/65 uppercase tracking-wide mb-1.5 font-medium">목표 대학</p>
-            <h2 className="text-[22px] leading-tight font-headline font-bold truncate">
+            <p className="text-2xs text-hero-muted uppercase tracking-wide mb-1.5 font-medium">목표 대학</p>
+            <h2 className="text-xl leading-tight font-headline font-bold truncate">
               {profile?.dreamSchool || "아직 미설정"}
             </h2>
 
-            <div className="flex items-stretch gap-4 mt-5 pt-5 border-t border-white/15">
+            <div className="flex items-stretch gap-4 mt-5 pt-5 border-t border-hero-muted">
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-white/55 uppercase tracking-wide font-semibold mb-1">
+                <p className="text-2xs text-hero-muted uppercase tracking-wide font-semibold mb-1">
                   {dreamSchoolData?.ea ? "조기 지원" : "정시 지원"}
                 </p>
-                <p className="text-[32px] font-bold tabular-nums leading-none font-headline">{dday.primary}</p>
-                <p className="text-[11px] text-white/60 mt-1.5">{dday.hint}</p>
+                <p key={dday.primary} className="text-3xl font-bold tabular-nums leading-none font-headline animate-count-pulse">{dday.primary}</p>
+                <p className="text-2xs text-hero-muted mt-1.5">{dday.hint}</p>
               </div>
               {dreamProb != null ? (
-                <div className="text-right pl-4 border-l border-white/15">
-                  <p className="text-[10px] text-white/55 uppercase tracking-wide font-semibold mb-1">합격 확률</p>
-                  <p className="text-[32px] font-bold tabular-nums leading-none font-headline">{dreamProb}%</p>
-                  <p className="text-[11px] text-white/60 mt-1.5">AI 예측</p>
+                <div className="text-right pl-4 border-l border-hero-muted">
+                  <p className="text-2xs text-hero-muted uppercase tracking-wide font-semibold mb-1">합격 확률</p>
+                  <p key={dreamProb} className="text-3xl font-bold tabular-nums leading-none font-headline animate-count-pulse">{dreamProb}%</p>
+                  <p className="text-2xs text-hero-muted mt-1.5">AI 예측</p>
                 </div>
               ) : hasSpecs ? null : (
-                <div className="text-right pl-4 border-l border-white/15 self-center">
-                  <Link href="/onboarding" className="text-[11px] text-white underline underline-offset-2 hover:text-white/80">
+                <div className="text-right pl-4 border-l border-hero-muted self-center">
+                  <Link href="/onboarding" className="text-2xs text-hero underline underline-offset-2 hover:text-hero-muted">
                     목표 대학 설정 →
                   </Link>
                 </div>
@@ -236,10 +242,10 @@ export default function DashboardPage() {
 
             {hasSpecs && (
               <div className="flex gap-1.5 mt-4 flex-wrap">
-                {profile?.gpa && <span className="text-[11px] bg-white/12 rounded-full px-2.5 py-1 font-medium backdrop-blur-sm">GPA {profile.gpa}</span>}
-                {profile?.sat && <span className="text-[11px] bg-white/12 rounded-full px-2.5 py-1 font-medium backdrop-blur-sm">SAT {profile.sat}</span>}
-                {profile?.toefl && <span className="text-[11px] bg-white/12 rounded-full px-2.5 py-1 font-medium backdrop-blur-sm">TOEFL {profile.toefl}</span>}
-                {profile?.major && <span className="text-[11px] bg-white/12 rounded-full px-2.5 py-1 font-medium backdrop-blur-sm">{profile.major}</span>}
+                {profile?.gpa && <span className="text-2xs bg-hero-overlay rounded-full px-2.5 py-1 font-medium backdrop-blur-sm">GPA {profile.gpa}</span>}
+                {profile?.sat && <span className="text-2xs bg-hero-overlay rounded-full px-2.5 py-1 font-medium backdrop-blur-sm">SAT {profile.sat}</span>}
+                {profile?.toefl && <span className="text-2xs bg-hero-overlay rounded-full px-2.5 py-1 font-medium backdrop-blur-sm">TOEFL {profile.toefl}</span>}
+                {profile?.major && <span className="text-2xs bg-hero-overlay rounded-full px-2.5 py-1 font-medium backdrop-blur-sm">{profile.major}</span>}
               </div>
             )}
           </div>
@@ -269,7 +275,7 @@ export default function DashboardPage() {
         {/* First-time CTA — 스펙이 없을 때만 표시. 있으면 Hero에 이미 정보가 있어 중복. */}
         {!hasSpecs && (
           <Link href="/analysis">
-            <Card className="p-4 rounded-2xl border border-primary/25 bg-primary/5 flex items-center gap-3 hover:bg-primary/10 transition-colors">
+            <Card className="p-4 rounded-2xl border border-primary/25 bg-primary/5 flex items-center gap-3 hover:bg-primary/10 transition-all active:scale-[0.98]">
               <div className="w-11 h-11 rounded-xl bg-primary/12 flex items-center justify-center shrink-0">
                 <Sparkles className="w-5 h-5 text-primary" />
               </div>
@@ -294,9 +300,9 @@ export default function DashboardPage() {
                 <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center mx-auto mb-1.5`}>
                   <Icon className={`w-4 h-4 ${color}`} />
                 </div>
-                <p className="text-[11px] text-muted-foreground">{label}</p>
+                <p className="text-2xs text-muted-foreground">{label}</p>
                 <p className="text-lg font-bold tabular-nums leading-tight mt-0.5">
-                  {count}<span className="text-[11px] font-normal text-muted-foreground ml-0.5">개</span>
+                  {count}<span className="text-2xs font-normal text-muted-foreground ml-0.5">개</span>
                 </p>
               </div>
             ))}
@@ -307,13 +313,13 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 gap-3">
           {tools.map(({ href, label, desc, Icon, color, bg }) => (
             <Link key={href} href={href} className="block">
-              <Card className="p-4 rounded-2xl border border-border/60 bg-white dark:bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all h-full flex flex-col gap-2.5">
+              <Card className="p-4 rounded-2xl border border-border/60 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all active:scale-[0.98] h-full flex flex-col gap-2.5">
                 <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center`}>
                   <Icon className={`w-5 h-5 ${color}`} />
                 </div>
                 <div>
                   <p className="text-sm font-bold">{label}</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{desc}</p>
+                  <p className="text-2xs text-muted-foreground mt-0.5 leading-snug">{desc}</p>
                 </div>
               </Card>
             </Link>
@@ -330,7 +336,18 @@ export default function DashboardPage() {
               </Link>
             )}
           </div>
-          {savedSchoolResults.length === 0 ? (
+          {matchLoading && hasSpecs ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i} className="p-3.5 rounded-2xl border border-border/60 bg-card shadow-sm flex items-center gap-3">
+                <Skeleton className="w-10 h-10 rounded-full shrink-0" />
+                <div className="flex-1 min-w-0 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                  <Skeleton className="h-1 w-full rounded-full" />
+                </div>
+              </Card>
+            ))
+          ) : savedSchoolResults.length === 0 ? (
             <Card variant="elevated" className="overflow-hidden">
               <EmptyState
                 illustration="school"
@@ -338,7 +355,7 @@ export default function DashboardPage() {
                 description={<>분석 페이지에서 ♡를 눌러<br />관심 대학을 추가해보세요</>}
                 action={
                   <Link href="/analysis">
-                    <Button className="rounded-xl px-6">
+                    <Button className="px-6">
                       대학 둘러보기 <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
                   </Link>
@@ -366,7 +383,11 @@ export default function DashboardPage() {
                 reason = "경쟁 가능 범위예요";
               }
               return (
-                <Card key={school.n} className="p-3.5 rounded-2xl border border-border/60 bg-white dark:bg-card shadow-sm flex items-center gap-3">
+                <Card
+                  key={school.n}
+                  className="p-3.5 rounded-2xl border border-border/60 bg-card shadow-sm flex items-center gap-3 cursor-pointer hover:shadow-md active:scale-[0.98] transition-all"
+                  onClick={() => setSelectedSchool(school)}
+                >
                   <SchoolLogo domain={school.d} color={school.c} name={school.n} rank={school.rk} size="md" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
@@ -375,11 +396,11 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-2 mt-1.5">
                       <Progress value={school.prob} className="h-1 flex-1" />
-                      <Badge className={`${CAT_STYLE[school.cat || "Reach"].bg} border-none text-[10px] shrink-0 px-1.5 py-0 h-4 leading-4`}>
+                      <Badge className={`${CAT_STYLE[school.cat || "Reach"].bg} border-none text-2xs shrink-0 px-1.5 py-0 h-4 leading-4`}>
                         {school.cat}
                       </Badge>
                     </div>
-                    {hasSpecs && <p className="text-[11px] text-muted-foreground mt-1 truncate">{reason}</p>}
+                    {hasSpecs && <p className="text-2xs text-muted-foreground mt-1 truncate">{reason}</p>}
                   </div>
                   <button
                     onClick={() => toggleFavorite(school.n)}
@@ -398,7 +419,7 @@ export default function DashboardPage() {
         {/* Free user upgrade nudge */}
         {currentPlan === "free" && hasSpecs && (
           <Link href="/pricing">
-            <Card className="p-4 rounded-2xl border border-primary/20 bg-primary/5 shadow-none flex items-center gap-3 hover:bg-primary/10 transition-colors">
+            <Card className="p-4 rounded-2xl border border-primary/20 bg-primary/5 shadow-none flex items-center gap-3 hover:bg-primary/10 transition-all active:scale-[0.98]">
               <div className="w-10 h-10 rounded-xl bg-primary/12 flex items-center justify-center shrink-0">
                 <Crown className="w-4 h-4 text-primary" />
               </div>
@@ -421,7 +442,7 @@ export default function DashboardPage() {
           const probData = snapshots.filter((s) => s.dreamSchoolProb != null).map((s) => ({ x: s.date, y: s.dreamSchoolProb as number }));
 
           return (
-            <Card className="p-4 rounded-2xl bg-white dark:bg-card border border-border/60 shadow-sm">
+            <Card className="p-4 rounded-2xl bg-card border border-border/60 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <TrendingUp className="w-4 h-4 text-primary" />
                 <p className="text-sm font-bold">나의 성장</p>
@@ -430,22 +451,22 @@ export default function DashboardPage() {
 
               {probData.length >= 2 && (
                 <div className="mb-3">
-                  <p className="text-[11px] text-muted-foreground mb-1">{current.dreamSchool} 합격 확률</p>
+                  <p className="text-2xs text-muted-foreground mb-1">{current.dreamSchool} 합격 확률</p>
                   <Sparkline data={probData} height={48} showTooltip />
                 </div>
               )}
 
               <div className="flex items-center gap-2">
                 <div className="flex-1 bg-accent/30 rounded-xl p-2.5 text-center">
-                  <p className="text-[11px] text-muted-foreground">{first.date}</p>
+                  <p className="text-2xs text-muted-foreground">{first.date}</p>
                   {first.sat && <p className="text-sm font-bold mt-0.5">SAT {first.sat}</p>}
-                  {first.dreamSchoolProb != null && <p className="text-[11px] text-muted-foreground">{first.dreamSchoolProb}%</p>}
+                  {first.dreamSchoolProb != null && <p className="text-2xs text-muted-foreground">{first.dreamSchoolProb}%</p>}
                 </div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
                 <div className="flex-1 bg-primary/5 rounded-xl p-2.5 text-center border border-primary/15">
-                  <p className="text-[11px] text-primary font-medium">현재</p>
+                  <p className="text-2xs text-primary font-medium">현재</p>
                   {current.sat && <p className="text-sm font-bold mt-0.5">SAT {current.sat}</p>}
-                  {current.dreamSchoolProb != null && <p className="text-[11px] text-primary font-semibold">{current.dreamSchoolProb}%</p>}
+                  {current.dreamSchoolProb != null && <p className="text-2xs text-primary font-semibold">{current.dreamSchoolProb}%</p>}
                 </div>
               </div>
 
@@ -471,6 +492,21 @@ export default function DashboardPage() {
 
       <AdmissionResultModal open={showResultModal} onClose={() => setShowResultModal(false)} />
 
+      {/* School detail modal */}
+      <SchoolModal
+        school={selectedSchool}
+        open={!!selectedSchool}
+        onClose={() => setSelectedSchool(null)}
+        specs={{
+          gpaUW: profile?.gpa || "", gpaW: "", sat: profile?.sat || "", act: "",
+          toefl: profile?.toefl || "", ielts: "", apCount: "", apAvg: "",
+          satSubj: "", classRank: "", ecTier: 2, awardTier: 2,
+          essayQ: 3, recQ: 3, interviewQ: 3, legacy: false, firstGen: false,
+          earlyApp: "", needAid: false, gender: "", intl: true,
+          major: profile?.major || "Computer Science",
+        }}
+      />
+
       {/* Logout dialog */}
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
         <AlertDialogContent className="max-w-sm rounded-2xl">
@@ -482,7 +518,7 @@ export default function DashboardPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-xl">취소</AlertDialogCancel>
-            <AlertDialogAction onClick={logout} className="rounded-xl bg-red-500 hover:bg-red-600 text-white">
+            <AlertDialogAction onClick={logout} className="bg-red-500 hover:bg-red-600 text-white">
               로그아웃
             </AlertDialogAction>
           </AlertDialogFooter>

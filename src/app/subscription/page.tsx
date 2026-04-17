@@ -113,7 +113,7 @@ export default function SubscriptionPage() {
         </Card>
 
         {/* Features */}
-        <Card className="bg-white dark:bg-card border-none shadow-sm p-5">
+        <Card className="bg-card border-none shadow-sm p-5">
           <h3 className="font-bold text-sm mb-4">포함된 기능</h3>
           <ul className="space-y-3">
             {plan.features.map((f) => (
@@ -171,7 +171,7 @@ export default function SubscriptionPage() {
         </div>
 
         {/* Theme + Accent */}
-        <Card className="bg-white dark:bg-card border-none shadow-sm p-5 space-y-5">
+        <Card className="bg-card border-none shadow-sm p-5 space-y-5">
           <div className="space-y-3">
             <h3 className="font-bold text-sm">테마</h3>
             <div className="flex gap-2">
@@ -265,14 +265,14 @@ export default function SubscriptionPage() {
         </Card>
 
         {/* Data Management */}
-        <Card className="bg-white dark:bg-card border-none shadow-sm p-5 space-y-4">
+        <Card className="bg-card border-none shadow-sm p-5 space-y-4">
           <h3 className="font-bold text-sm">데이터 관리</h3>
           <p className="text-xs text-muted-foreground">에세이, 플래너, 성장 기록을 다른 기기로 옮기거나 백업할 수 있어요.</p>
           <div className="flex gap-3">
-            <Button variant="outline" size="sm" className="flex-1 rounded-xl gap-1.5" onClick={handleExport}>
+            <Button variant="outline" size="sm" className="flex-1 gap-1.5" onClick={handleExport}>
               <Download className="w-4 h-4" /> 내보내기
             </Button>
-            <Button variant="outline" size="sm" className="flex-1 rounded-xl gap-1.5" onClick={() => fileRef.current?.click()}>
+            <Button variant="outline" size="sm" className="flex-1 gap-1.5" onClick={() => fileRef.current?.click()}>
               <Upload className="w-4 h-4" /> 가져오기
             </Button>
             <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleImport} />

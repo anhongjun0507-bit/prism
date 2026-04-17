@@ -91,7 +91,7 @@ function SchoolLogoBase({
   const px = sizePx[size];
   return (
     <div
-      className={`${sizeMap[size]} shrink-0 shadow-sm overflow-hidden bg-white flex items-center justify-center border border-gray-100 ${className}`}
+      className={`${sizeMap[size]} shrink-0 shadow-sm overflow-hidden bg-card flex items-center justify-center border border-border ${className}`}
     >
       <Image
         src={src}

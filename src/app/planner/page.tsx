@@ -252,7 +252,7 @@ export default function PlannerPage() {
         <Card className="p-6 border-none shadow-sm flex items-center justify-between bg-primary text-white">
           <div className="space-y-1">
             <p className="text-xs text-white/70 font-medium">전체 진행률</p>
-            <p className="text-3xl font-bold font-headline">{progress}%</p>
+            <p key={progress} className="text-3xl font-bold font-headline animate-count-pulse">{progress}%</p>
             <p className="text-xs text-white/80">{completedCount}/{tasks.length} 완료</p>
           </div>
           <div className="w-16 h-16 rounded-full border-4 border-white/20 flex items-center justify-center relative">
@@ -268,7 +268,7 @@ export default function PlannerPage() {
               title="아직 등록된 일정이 없어요"
               description="입시 일정·마감일을 추가해 한눈에 관리하세요."
               action={
-                <Button onClick={openAddDialog} className="rounded-xl">
+                <Button onClick={openAddDialog}>
                   <Plus className="w-4 h-4 mr-1" /> 첫 일정 추가하기
                 </Button>
               }
@@ -297,7 +297,9 @@ export default function PlannerPage() {
                     )} />
                   </div>
                   <Card
-                    className={cn("flex-1 p-4 border-none shadow-sm cursor-pointer hover:shadow-md transition-shadow", isOverdue && "border-l-2 border-l-red-400")}
+                    variant="elevated"
+                    interactive
+                    className={cn("flex-1 p-4", isOverdue && "border-l-2 border-l-red-400")}
                     onClick={() => openEditDialog(t)}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -359,7 +361,9 @@ export default function PlannerPage() {
                       <CheckCircle2 size={16} />
                     </div>
                     <Card
-                      className="flex-1 p-4 border-none shadow-sm cursor-pointer"
+                      variant="elevated"
+                      interactive
+                      className="flex-1 p-4"
                       onClick={() => openEditDialog(t)}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -545,8 +549,8 @@ function TaskDialog({
             </Button>
           )}
           <div className="flex-1" />
-          <Button variant="outline" onClick={onClose} className="rounded-xl">취소</Button>
-          <Button onClick={handleSave} disabled={!title.trim()} className="rounded-xl">
+          <Button variant="outline" onClick={onClose}>취소</Button>
+          <Button onClick={handleSave} disabled={!title.trim()}>
             {isEdit ? "저장" : "추가"}
           </Button>
         </DialogFooter>

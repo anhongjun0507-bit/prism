@@ -113,7 +113,7 @@ export default function ParentReportPage() {
       </Card>
 
       {/* Academic stats */}
-      <Card className="p-5 bg-white dark:bg-card border-none shadow-sm space-y-3">
+      <Card className="p-5 bg-card border-none shadow-sm space-y-3">
         <h3 className="font-headline font-bold text-base flex items-center gap-2">
           <Award className="w-4 h-4 text-primary" /> 학업 성적
         </h3>
@@ -135,7 +135,7 @@ export default function ParentReportPage() {
 
       {/* Admission analysis */}
       {stats && (
-        <Card className="p-5 bg-white dark:bg-card border-none shadow-sm space-y-3">
+        <Card className="p-5 bg-card border-none shadow-sm space-y-3">
           <h3 className="font-headline font-bold text-base flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-primary" /> 합격 분석
           </h3>
@@ -167,7 +167,7 @@ export default function ParentReportPage() {
 
       {/* Growth */}
       {growth && (
-        <Card className="p-5 bg-white dark:bg-card border-none shadow-sm space-y-3">
+        <Card className="p-5 bg-card border-none shadow-sm space-y-3">
           <h3 className="font-headline font-bold text-base flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-emerald-500" /> 성장 기록
           </h3>
@@ -205,7 +205,7 @@ export default function ParentReportPage() {
 
       {/* Top schools */}
       {stats && stats.results.length > 0 && (
-        <Card className="p-5 bg-white dark:bg-card border-none shadow-sm space-y-3">
+        <Card className="p-5 bg-card border-none shadow-sm space-y-3">
           <h3 className="font-headline font-bold text-base flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-amber-500" /> 추천 대학 Top 5
           </h3>
@@ -225,7 +225,7 @@ export default function ParentReportPage() {
 
       {/* Action buttons */}
       <div className="flex gap-2 print:hidden">
-        <Button onClick={() => window.print()} className="flex-1 rounded-xl gap-2">
+        <Button onClick={() => window.print()} className="flex-1 gap-2">
           <Download className="w-4 h-4" /> PDF로 저장
         </Button>
       </div>

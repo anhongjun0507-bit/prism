@@ -223,7 +223,7 @@ export default function WelcomePage() {
               <button
                 onClick={handleKakao}
                 disabled={!!authLoading || !process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID}
-                className="w-full h-12 rounded-xl bg-[#FEE500] text-[#191919] font-bold text-base flex items-center justify-center gap-3 hover:brightness-[0.97] hover:shadow-lg hover:shadow-yellow-500/25 active:scale-[0.98] transition-all disabled:opacity-30 shadow-md shadow-yellow-500/15"
+                className="w-full h-12 rounded-xl bg-[#FEE500] text-[#191919] font-bold text-base flex items-center justify-center gap-3 hover:brightness-[0.97] hover:shadow-lg hover:shadow-yellow-500/25 active:scale-[0.98] transition-all disabled:opacity-50 shadow-md shadow-yellow-500/15"
               >
                 {authLoading === "kakao" ? <Spinner /> : (
                   <svg className="w-[20px] h-[20px]" viewBox="0 0 24 24">
@@ -330,18 +330,18 @@ export default function WelcomePage() {
               <button
                 type="submit"
                 disabled={!!authLoading}
-                className="w-full h-12 rounded-xl bg-blue-600 text-white font-semibold text-base hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-40 mt-1"
+                className="w-full h-12 rounded-xl bg-primary text-white font-semibold text-base hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-40 mt-1"
               >
                 {authLoading === "email" ? <Spinner /> : "로그인"}
               </button>
 
               <div className="flex justify-between pt-2">
                 <button type="button" onClick={() => { setView("email-signup"); setError(""); }}
-                  className="text-sm text-muted-foreground hover:text-blue-600 transition-colors">
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors">
                   회원가입
                 </button>
                 <button type="button" onClick={() => { setView("reset-password"); setError(""); }}
-                  className="text-sm text-muted-foreground hover:text-blue-600 transition-colors">
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors">
                   비밀번호 찾기
                 </button>
               </div>
@@ -388,12 +388,12 @@ export default function WelcomePage() {
               {error && <p className="text-destructive text-sm">{error}</p>}
 
               <button type="submit" disabled={!!authLoading || !ageConfirmed}
-                className="w-full h-12 rounded-xl bg-blue-600 text-white font-semibold text-base flex items-center justify-center gap-1.5 hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-30 mt-1">
+                className="w-full h-12 rounded-xl bg-primary text-white font-semibold text-base flex items-center justify-center gap-1.5 hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-50 mt-1">
                 {authLoading === "email" ? <Spinner /> : (<>가입하기 <ArrowRight className="w-4 h-4" /></>)}
               </button>
 
               <button type="button" onClick={() => { setView("email-login"); setError(""); }}
-                className="text-sm text-muted-foreground hover:text-blue-600 transition-colors w-full text-center pt-1">
+                className="text-sm text-muted-foreground hover:text-primary transition-colors w-full text-center pt-1">
                 이미 계정이 있으신가요? 로그인
               </button>
             </form>
@@ -420,7 +420,7 @@ export default function WelcomePage() {
                     onChange={(e) => setEmail(e.target.value)} className={inputClass} autoComplete="email" />
                   {error && <p className="text-destructive text-sm">{error}</p>}
                   <button type="submit" disabled={!!authLoading}
-                    className="w-full h-12 rounded-xl bg-blue-600 text-white font-semibold text-base hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-40">
+                    className="w-full h-12 rounded-xl bg-primary text-white font-semibold text-base hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-40">
                     {authLoading === "email" ? <Spinner /> : "재설정 링크 보내기"}
                   </button>
                 </>

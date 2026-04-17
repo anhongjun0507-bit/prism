@@ -89,7 +89,7 @@ export default function SpecAnalysisPage() {
   const reportContent = (
     <div className="space-y-6">
       {!analysis && !loading && (
-        <Card className="p-8 text-center bg-white dark:bg-card border-none shadow-sm">
+        <Card className="p-8 text-center bg-card border-none shadow-sm">
           <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <Sparkles className="w-10 h-10 text-primary" />
           </div>
@@ -99,7 +99,7 @@ export default function SpecAnalysisPage() {
             맞춤형 강점/약점/다음 단계를 제시합니다
           </p>
           {hasMinSpecs ? (
-            <Button onClick={runAnalysis} size="xl" className="rounded-xl gap-2">
+            <Button onClick={runAnalysis} size="xl" className="gap-2">
               <Sparkles className="w-4 h-4" /> AI 분석 시작
             </Button>
           ) : (
@@ -126,7 +126,7 @@ export default function SpecAnalysisPage() {
       {error && (
         <Card className="p-4 border-red-200 bg-red-50 dark:bg-red-950/20">
           <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-          <Button variant="outline" size="sm" onClick={runAnalysis} className="mt-3 rounded-xl">
+          <Button variant="outline" size="sm" onClick={runAnalysis} className="mt-3">
             다시 시도
           </Button>
         </Card>
@@ -206,7 +206,7 @@ export default function SpecAnalysisPage() {
           )}
 
           {/* All scores breakdown */}
-          <Card className="p-5 bg-white dark:bg-card border-none shadow-sm space-y-3">
+          <Card className="p-5 bg-card border-none shadow-sm space-y-3">
             <h3 className="font-headline font-bold text-base flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-primary" /> 항목별 점수
             </h3>
@@ -260,10 +260,10 @@ export default function SpecAnalysisPage() {
 
           {/* Action buttons */}
           <div className="flex gap-2 print:hidden">
-            <Button onClick={runAnalysis} variant="outline" className="flex-1 rounded-xl gap-2">
+            <Button onClick={runAnalysis} variant="outline" className="flex-1 gap-2">
               <Sparkles className="w-4 h-4" /> 다시 분석
             </Button>
-            <Button onClick={() => window.print()} className="flex-1 rounded-xl gap-2">
+            <Button onClick={() => window.print()} className="flex-1 gap-2">
               <Download className="w-4 h-4" /> PDF로 저장
             </Button>
           </div>

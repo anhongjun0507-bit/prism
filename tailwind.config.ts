@@ -73,16 +73,15 @@ export default {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
         },
+        hero: {
+          DEFAULT: 'hsl(var(--hero-text))',
+          muted: 'hsl(var(--hero-text-muted) / 0.75)',
+          overlay: 'hsl(var(--hero-overlay) / 0.12)',
+        },
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
-        chart: {
-          '1': 'hsl(var(--chart-1))',
-          '2': 'hsl(var(--chart-2))',
-          '3': 'hsl(var(--chart-3))',
-          '4': 'hsl(var(--chart-4))',
-          '5': 'hsl(var(--chart-5))',
-        },
+        // chart 토큰 제거 — CSS 변수(--chart-1~5) 미정의, 사용처 없음
         sidebar: {
           DEFAULT: 'hsl(var(--sidebar-background))',
           foreground: 'hsl(var(--sidebar-foreground))',
@@ -116,7 +115,7 @@ export default {
       //   - 카드 안쪽: p-card (작음) / p-card-lg (큼)
       //   - 섹션 간격: space-y-section / gap-section
       spacing: {
-        'card': '1rem',         // 16
+        'card': '1.25rem',      // 20 — 카드 안쪽 표준 패딩 (p-5 대체)
         'card-lg': '1.5rem',    // 24
         'section': '1.5rem',    // 24
         'section-lg': '2.5rem', // 40
@@ -191,6 +190,11 @@ export default {
           to: { opacity: '1', transform: 'translateX(0)' },
         },
       },
+      // Animation duration tiers:
+      //   Fast       0.2s  — micro-feedback (accordion, tooltip)
+      //   Default    0.3s  — standard entrance (fade, scale, slide)
+      //   Transition 0.4s  — emphasized entrance (fade-up, count-pulse)
+      //   Infinite   6s+   — ambient loops (float)
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
@@ -201,8 +205,8 @@ export default {
         'slide-right': 'slide-right 0.3s ease-out both',
         'count-pulse': 'count-pulse 0.4s ease-in-out',
         'page-enter': 'page-enter 0.3s ease-out both',
-        'page-forward': 'page-forward 0.32s cubic-bezier(0.22, 1, 0.36, 1) both',
-        'page-back': 'page-back 0.32s cubic-bezier(0.22, 1, 0.36, 1) both',
+        'page-forward': 'page-forward 0.3s cubic-bezier(0.22, 1, 0.36, 1) both',
+        'page-back': 'page-back 0.3s cubic-bezier(0.22, 1, 0.36, 1) both',
       },
     },
   },

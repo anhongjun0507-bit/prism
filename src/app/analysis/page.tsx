@@ -15,9 +15,10 @@ import { MAJOR_LIST } from "@/lib/constants";
 import {
   BarChart3, TrendingUp, Filter, DollarSign, Search,
   Sparkles, BookOpen, Share2,
-  ChevronDown, School as SchoolIcon, Briefcase,
+  ChevronDown, Briefcase,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { cn } from "@/lib/utils";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import { fetchWithAuth } from "@/lib/api-client";
 import { CAT_ORDER, CAT_ICON } from "@/lib/analysis-helpers";
@@ -27,6 +28,7 @@ import { FormField, TierSelector, ToggleRow } from "@/components/analysis/form-h
 import { List } from "react-window";
 import { readJSON, writeJSON, readString, writeString } from "@/lib/storage";
 import { PrismLoader } from "@/components/PrismLoader";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // 분리된 모듈:
 // - lib/analysis-helpers: 색상 상수·probGradient·story cache
@@ -289,6 +291,37 @@ export default function AnalysisPage() {
         />
         <div className="px-gutter pt-2 space-y-4">
 
+          {/* Emotion moment — dream school 확률 기반 격려/축하 */}
+          {(() => {
+            const dream = profile?.dreamSchool;
+            const dreamResult = dream ? results.find(s => s.n === dream) : null;
+            if (!dreamResult) return null;
+            const prob = dreamResult.prob ?? 0;
+            const isHigh = prob >= 60;
+            return (
+              <div className={cn(
+                "rounded-2xl p-4 flex items-center gap-3 animate-fade-up",
+                isHigh
+                  ? "bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900"
+                  : "bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900"
+              )}>
+                <span className="text-2xl shrink-0" aria-hidden="true">{isHigh ? "🎉" : "💪"}</span>
+                <div className="flex-1 min-w-0">
+                  <p className={cn("text-sm font-bold", isHigh ? "text-emerald-800 dark:text-emerald-200" : "text-blue-800 dark:text-blue-200")}>
+                    {isHigh
+                      ? `${dream}에 좋은 가능성이 보여요!`
+                      : `${dream}, 도전할 가치가 있어요`}
+                  </p>
+                  <p className={cn("text-xs mt-0.5", isHigh ? "text-emerald-700 dark:text-emerald-300" : "text-blue-700 dark:text-blue-300")}>
+                    {isHigh
+                      ? `합격 확률 ${prob}% — 에세이와 활동으로 더 높여보세요`
+                      : `합격 확률 ${prob}% — 전략적 준비로 충분히 가능해요`}
+                  </p>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Summary — interactive 4-cell stat가 필터 역할까지 겸함. 장식 orb·추천 포커스·
              "지원 추천 대학" count는 제거 (아래 School list와 중복) */}
           <Card className="dark-hero-gradient text-white border-none p-5 rounded-2xl">
@@ -298,14 +331,14 @@ export default function AnalysisPage() {
                 {filterCat && (
                   <button
                     onClick={() => setFilterCat(null)}
-                    className="text-[11px] text-white/80 underline underline-offset-2 hover:text-white"
+                    className="text-2xs text-white/80 underline underline-offset-2 hover:text-white"
                   >
                     필터 해제
                   </button>
                 )}
                 <button
                   onClick={() => setStep("form")}
-                  className="inline-flex items-center gap-1 bg-white/15 hover:bg-white/25 text-white text-[11px] font-semibold rounded-full px-2.5 h-7 transition-colors"
+                  className="inline-flex items-center gap-1 bg-white/15 hover:bg-white/25 text-white text-2xs font-semibold rounded-full px-2.5 h-7 transition-colors"
                   aria-label="스펙 입력 폼으로 돌아가 다시 분석"
                 >
                   <Sparkles className="w-3 h-3" />
@@ -328,7 +361,7 @@ export default function AnalysisPage() {
                   >
                     <CatIcon className="w-4 h-4 mx-auto mb-1 text-white/90" aria-hidden="true" />
                     <p className="text-xl font-bold tabular-nums leading-none">{count}</p>
-                    <p className="text-[11px] text-white/70 mt-1">{cat}</p>
+                    <p className="text-2xs text-white/70 mt-1">{cat}</p>
                   </button>
                 );
               })}
@@ -362,8 +395,21 @@ export default function AnalysisPage() {
 
         {/* School list (virtualized) */}
         {matchLoading && results.length === 0 ? (
-          <div className="py-12 text-center">
-            <PrismLoader size={36} label="분석 결과 불러오는 중..." className="mx-auto" />
+          <div className="px-gutter py-6 space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 p-4 rounded-2xl bg-card shadow-sm">
+                <Skeleton className="w-10 h-10 rounded-xl shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-2.5 w-full rounded-full" />
+                  <div className="flex gap-3">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-3 w-14" />
+                  </div>
+                </div>
+                <Skeleton className="h-4 w-9" />
+              </div>
+            ))}
           </div>
         ) : matchError ? (
           <div className="text-center py-12 px-6">
@@ -422,8 +468,12 @@ export default function AnalysisPage() {
     );
   }
 
-  /* ── FORM VIEW (4-Step Wizard) ── */
-  const formStepLabels = ["학업 성적", "AP 과목", "비교과", "학교/활동", "지원 정보"];
+  /* ── FORM VIEW (3-Step Wizard) ── */
+  const formStepLabels = ["학업 성적", "비교과 & 지원 정보", "확인 & 분석"];
+
+  // Summary helper for step 3
+  const ecTierLabel = ({ 1: "최상", 2: "우수", 3: "보통", 4: "기본" } as Record<number, string>)[specs.ecTier] || "-";
+  const earlyAppLabel = specs.earlyApp || "없음";
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -448,7 +498,7 @@ export default function AnalysisPage() {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold text-primary">
-              Step {formStep} / 5 · {formStepLabels[formStep - 1]}
+              Step {formStep} / 3 · {formStepLabels[formStep - 1]}
             </p>
             <div className="flex gap-1">
               {formStepLabels.map((label, i) => (
@@ -467,82 +517,80 @@ export default function AnalysisPage() {
               ))}
             </div>
           </div>
-          <Progress value={(formStep / 5) * 100} className="h-1" />
+          <Progress value={(formStep / 3) * 100} className="h-1" />
         </div>
       </div>
 
       <div className="px-gutter space-y-5">
-        {/* Step 1: 학업 성적 */}
+        {/* Step 1: 학업 성적 (GPA + Test Scores + AP) */}
         {formStep === 1 && (
-          <Card className="bg-white dark:bg-card border-none shadow-sm p-5 space-y-4">
-            <h3 className="font-bold text-sm flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary" /> 학업 성적
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              <FormField label="GPA (Unweighted)" placeholder="3.5" type="number" step="0.01"
-                value={specs.gpaUW} onChange={(v) => updateSpec("gpaUW", v)} />
-              <FormField label="GPA (Weighted)" placeholder="4.0" type="number" step="0.01"
-                value={specs.gpaW} onChange={(v) => updateSpec("gpaW", v)} />
-              <FormField label="SAT" placeholder="1250" type="number"
-                value={specs.sat} onChange={(v) => updateSpec("sat", v)} />
-              <FormField label="ACT" placeholder="28" type="number"
-                value={specs.act} onChange={(v) => updateSpec("act", v)} />
-              {(() => {
-                const sat = parseInt(specs.sat);
-                const act = parseInt(specs.act);
-                if (!sat || !act) return null;
-                // ACT to SAT concordance table
-                const actToSat: Record<number, number> = { 36: 1590, 35: 1540, 34: 1510, 33: 1480, 32: 1440, 31: 1410, 30: 1370, 29: 1340, 28: 1310, 27: 1280, 26: 1240, 25: 1210, 24: 1180, 23: 1140, 22: 1110, 21: 1080, 20: 1040 };
-                const clamped = Math.max(20, Math.min(36, act));
-                const estimated = actToSat[clamped] || Math.round(act * 36);
-                const diff = Math.abs(sat - estimated);
-                if (diff < 100) return null;
-                const higher = sat > estimated ? "SAT" : "ACT";
-                return (
-                  <div className="col-span-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 space-y-1">
-                    <p className="text-xs text-amber-800 dark:text-amber-300 font-medium">
-                      ACT {act}점은 SAT 약 {estimated}점에 해당해요. 현재 SAT {sat}점과 {diff}점 차이가 나요.
-                    </p>
-                    <p className="text-xs text-amber-600 dark:text-amber-400">
-                      점수를 확인해주세요. 분석에는 더 유리한 {higher} 점수가 반영돼요.
-                    </p>
-                  </div>
-                );
-              })()}
-              <FormField label="TOEFL" placeholder="110" type="number"
-                value={specs.toefl} onChange={(v) => updateSpec("toefl", v)} />
-              <FormField label="IELTS" placeholder="7.5" type="number" step="0.5"
-                value={specs.ielts} onChange={(v) => updateSpec("ielts", v)} />
-            </div>
-            <FormField label="Class Rank (%)" placeholder="5" type="number"
-              value={specs.classRank} onChange={(v) => updateSpec("classRank", v)} />
-          </Card>
-        )}
-
-        {/* Step 2: AP 과목 */}
-        {formStep === 2 && (
-          <Card className="bg-white dark:bg-card border-none shadow-sm p-5 space-y-4">
-            <h3 className="font-bold text-sm flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-primary" /> AP 과목
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              <FormField label="AP 과목 수" placeholder="8" type="number"
-                value={specs.apCount} onChange={(v) => updateSpec("apCount", v)} />
-              <FormField label="AP 평균 점수 (1-5)" placeholder="4.5" type="number" step="0.1"
-                value={specs.apAvg} onChange={(v) => updateSpec("apAvg", v)} />
-            </div>
-            <div className="bg-accent/30 rounded-xl p-4">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                AP 과목 수와 평균 점수를 입력해주세요. 과목이 많고 점수가 높을수록 학업 역량이 높게 평가됩니다.
-              </p>
-            </div>
-          </Card>
-        )}
-
-        {/* Step 3: 비교과 */}
-        {formStep === 3 && (
           <div className="space-y-4">
-            <Card className="bg-white dark:bg-card border-none shadow-sm p-5 space-y-4">
+            <Card className="bg-card border-none shadow-sm p-card space-y-4">
+              <h3 className="font-bold text-sm flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-primary" /> 학업 성적
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <FormField label="GPA (Unweighted)" placeholder="3.5" type="number" step="0.01"
+                  value={specs.gpaUW} onChange={(v) => updateSpec("gpaUW", v)} />
+                <FormField label="GPA (Weighted)" placeholder="4.0" type="number" step="0.01"
+                  value={specs.gpaW} onChange={(v) => updateSpec("gpaW", v)} />
+                <FormField label="SAT" placeholder="1250" type="number"
+                  value={specs.sat} onChange={(v) => updateSpec("sat", v)} />
+                <FormField label="ACT" placeholder="28" type="number"
+                  value={specs.act} onChange={(v) => updateSpec("act", v)} />
+                {(() => {
+                  const sat = parseInt(specs.sat);
+                  const act = parseInt(specs.act);
+                  if (!sat || !act) return null;
+                  const actToSat: Record<number, number> = { 36: 1590, 35: 1540, 34: 1510, 33: 1480, 32: 1440, 31: 1410, 30: 1370, 29: 1340, 28: 1310, 27: 1280, 26: 1240, 25: 1210, 24: 1180, 23: 1140, 22: 1110, 21: 1080, 20: 1040 };
+                  const clamped = Math.max(20, Math.min(36, act));
+                  const estimated = actToSat[clamped] || Math.round(act * 36);
+                  const diff = Math.abs(sat - estimated);
+                  if (diff < 100) return null;
+                  const higher = sat > estimated ? "SAT" : "ACT";
+                  return (
+                    <div className="col-span-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 space-y-1">
+                      <p className="text-xs text-amber-800 dark:text-amber-300 font-medium">
+                        ACT {act}점은 SAT 약 {estimated}점에 해당해요. 현재 SAT {sat}점과 {diff}점 차이가 나요.
+                      </p>
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        점수를 확인해주세요. 분석에는 더 유리한 {higher} 점수가 반영돼요.
+                      </p>
+                    </div>
+                  );
+                })()}
+                <FormField label="TOEFL" placeholder="110" type="number"
+                  value={specs.toefl} onChange={(v) => updateSpec("toefl", v)} />
+                <FormField label="IELTS" placeholder="7.5" type="number" step="0.5"
+                  value={specs.ielts} onChange={(v) => updateSpec("ielts", v)} />
+              </div>
+              <FormField label="Class Rank (%)" placeholder="5" type="number"
+                value={specs.classRank} onChange={(v) => updateSpec("classRank", v)} />
+            </Card>
+
+            <Card className="bg-card border-none shadow-sm p-card space-y-4">
+              <h3 className="font-bold text-sm flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-primary" /> AP 과목
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <FormField label="AP 과목 수" placeholder="8" type="number"
+                  value={specs.apCount} onChange={(v) => updateSpec("apCount", v)} />
+                <FormField label="AP 평균 점수 (1-5)" placeholder="4.5" type="number" step="0.1"
+                  value={specs.apAvg} onChange={(v) => updateSpec("apAvg", v)} />
+              </div>
+              <div className="bg-accent/30 rounded-xl p-4">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  AP 과목 수와 평균 점수를 입력해주세요. 과목이 많고 점수가 높을수록 학업 역량이 높게 평가됩니다.
+                </p>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Step 2: 비교과 & 지원 정보 */}
+        {formStep === 2 && (
+          <div className="space-y-4">
+            <Card className="bg-card border-none shadow-sm p-card space-y-4">
               <h3 className="font-bold text-sm flex items-center gap-2">
                 <Filter className="w-4 h-4 text-primary" /> 비교과 활동 & 수상
               </h3>
@@ -567,7 +615,7 @@ export default function AnalysisPage() {
             {/* Expandable detailed EC */}
             <button
               onClick={() => setShowDetailedEC(!showDetailedEC)}
-              className="w-full flex items-center justify-between bg-white dark:bg-card rounded-2xl shadow-sm p-4 text-sm font-semibold"
+              className="w-full flex items-center justify-between bg-card rounded-2xl shadow-sm p-4 text-sm font-semibold"
             >
               <span className="flex items-center gap-2">
                 <Briefcase className="w-4 h-4 text-primary" />
@@ -576,7 +624,7 @@ export default function AnalysisPage() {
               <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showDetailedEC ? "rotate-180" : ""}`} />
             </button>
             {showDetailedEC && (
-              <Card className="bg-white dark:bg-card border-none shadow-sm p-5 space-y-3">
+              <Card className="bg-card border-none shadow-sm p-card space-y-3">
                 <p className="text-xs text-muted-foreground">상세 활동을 입력하면 AI 분석이 더 정확해져요. 모든 항목은 선택사항이에요.</p>
                 <FormField label="동아리/클럽 활동" placeholder="예: 로봇 동아리 회장, 모의유엔 2년" type="text"
                   value={specs.clubs || ""} onChange={(v) => updateSpec("clubs", v)} />
@@ -594,72 +642,8 @@ export default function AnalysisPage() {
                   value={specs.specialTalent || ""} onChange={(v) => updateSpec("specialTalent", v)} />
               </Card>
             )}
-          </div>
-        )}
 
-        {/* Step 4: 학교 정보 */}
-        {formStep === 4 && (
-          <Card className="bg-white dark:bg-card border-none shadow-sm p-5 space-y-4">
-            <h3 className="font-bold text-sm flex items-center gap-2">
-              <SchoolIcon className="w-4 h-4 text-primary" /> 학교 정보
-            </h3>
-            <FormField label="고등학교명" placeholder="예: Seoul International School" type="text"
-              value={specs.highSchool || ""} onChange={(v) => updateSpec("highSchool", v)} />
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">학교 종류</Label>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { value: "", label: "선택 안 함" },
-                  { value: "international", label: "국제학교" },
-                  { value: "foreign_lang", label: "외국어고" },
-                  { value: "general", label: "일반고" },
-                  { value: "special", label: "특목고/자사고" },
-                  { value: "homeschool", label: "홈스쿨" },
-                ].map((opt) => (
-                  <Button
-                    key={opt.value}
-                    variant={(specs.schoolType || "") === opt.value ? "default" : "outline"}
-                    size="sm"
-                    className="rounded-xl text-xs"
-                    onClick={() => updateSpec("schoolType", opt.value)}
-                  >
-                    {opt.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">성별</Label>
-              <div className="flex gap-2">
-                {[
-                  { value: "", label: "선택 안 함" },
-                  { value: "M", label: "남성" },
-                  { value: "F", label: "여성" },
-                ].map((opt) => (
-                  <Button
-                    key={opt.value}
-                    variant={specs.gender === opt.value ? "default" : "outline"}
-                    size="sm"
-                    className="rounded-xl text-xs flex-1"
-                    onClick={() => updateSpec("gender", opt.value)}
-                  >
-                    {opt.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <div className="bg-accent/30 rounded-xl p-4">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                학교 정보는 선택사항이에요. 입력하면 AI가 학교 유형에 맞는 맞춤 분석을 제공해요.
-              </p>
-            </div>
-          </Card>
-        )}
-
-        {/* Step 5: 에세이 & 지원 정보 */}
-        {formStep === 5 && (
-          <div className="space-y-5">
-            <Card className="bg-white dark:bg-card border-none shadow-sm p-5 space-y-4">
+            <Card className="bg-card border-none shadow-sm p-card space-y-4">
               <h3 className="font-bold text-sm flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-primary" /> 에세이 & 추천서
               </h3>
@@ -668,12 +652,12 @@ export default function AnalysisPage() {
                   selected={specs.essayQ} onSelect={(v) => updateSpec("essayQ", v)} />
                 <TierSelector label="추천서 품질 (1-5)" options={[1,2,3,4,5].map(v => ({ value: v, label: `${v}` }))}
                   selected={specs.recQ} onSelect={(v) => updateSpec("recQ", v)} />
-            <TierSelector label="인터뷰 품질" options={[1,2,3,4,5].map(v => ({ value: v, label: `${v}` }))}
-              selected={specs.interviewQ} onSelect={(v) => updateSpec("interviewQ", v)} />
+                <TierSelector label="인터뷰 품질" options={[1,2,3,4,5].map(v => ({ value: v, label: `${v}` }))}
+                  selected={specs.interviewQ} onSelect={(v) => updateSpec("interviewQ", v)} />
               </div>
             </Card>
 
-            <Card className="bg-white dark:bg-card border-none shadow-sm p-5 space-y-4">
+            <Card className="bg-card border-none shadow-sm p-card space-y-4">
               <h3 className="font-bold text-sm flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-primary" /> 지원 정보
               </h3>
@@ -681,7 +665,7 @@ export default function AnalysisPage() {
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">지망 전공</Label>
                   <select value={specs.major} onChange={(e) => updateSpec("major", e.target.value)}
-                    className="w-full h-11 rounded-xl border px-3 text-sm bg-white dark:bg-card">
+                    className="w-full h-11 rounded-xl border px-3 text-sm bg-card">
                     {MAJOR_LIST.map((m) => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
@@ -697,9 +681,74 @@ export default function AnalysisPage() {
           </div>
         )}
 
+        {/* Step 3: 확인 & 분석 */}
+        {formStep === 3 && (
+          <div className="space-y-4">
+            <Card className="bg-card border-none shadow-sm p-card space-y-4">
+              <h3 className="font-bold text-sm flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-primary" /> 입력 내용 확인
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: "GPA (UW)", value: specs.gpaUW || "-" },
+                  { label: "GPA (W)", value: specs.gpaW || "-" },
+                  { label: "SAT", value: specs.sat || "-" },
+                  { label: "ACT", value: specs.act || "-" },
+                  { label: "TOEFL", value: specs.toefl || "-" },
+                  { label: "IELTS", value: specs.ielts || "-" },
+                  { label: "AP 과목 수", value: specs.apCount || "-" },
+                  { label: "AP 평균", value: specs.apAvg || "-" },
+                  { label: "비교과 수준", value: ecTierLabel },
+                  { label: "전공", value: specs.major || "-" },
+                  { label: "조기 지원", value: earlyAppLabel },
+                  { label: "에세이 품질", value: `${specs.essayQ}/5` },
+                ].map((item) => (
+                  <div key={item.label} className="bg-accent/30 rounded-xl p-3">
+                    <p className="text-2xs text-muted-foreground">{item.label}</p>
+                    <p className="text-sm font-semibold mt-0.5 truncate">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="bg-accent/30 rounded-xl p-4">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  입력한 내용을 확인해주세요. 수정이 필요하면 이전 단계로 돌아갈 수 있어요.
+                </p>
+              </div>
+            </Card>
+
+            <Button
+              onClick={() => { startAnalysis(); setFormStep(1); }}
+              disabled={!specs.gpaUW && !specs.gpaW}
+              className="w-full h-16 rounded-2xl text-lg font-bold shadow-xl"
+            >
+              <Sparkles className="w-5 h-5 mr-2" />
+              분석 시작
+            </Button>
+          </div>
+        )}
+
         {/* Navigation */}
-        <div className="flex gap-3 pt-2">
-          {formStep > 1 && (
+        {formStep < 3 && (
+          <div className="flex gap-3 pt-2">
+            {formStep > 1 && (
+              <Button
+                variant="outline"
+                onClick={() => setFormStep((s) => s - 1)}
+                className="h-14 flex-1 rounded-2xl text-base font-bold"
+              >
+                ← 이전
+              </Button>
+            )}
+            <Button
+              onClick={() => setFormStep((s) => s + 1)}
+              className="h-14 flex-1 rounded-2xl text-base font-bold"
+            >
+              다음 →
+            </Button>
+          </div>
+        )}
+        {formStep === 3 && formStep > 1 && (
+          <div className="flex gap-3 pt-2">
             <Button
               variant="outline"
               onClick={() => setFormStep((s) => s - 1)}
@@ -707,24 +756,8 @@ export default function AnalysisPage() {
             >
               ← 이전
             </Button>
-          )}
-          {formStep < 5 ? (
-            <Button
-              onClick={() => setFormStep((s) => s + 1)}
-              className="h-14 flex-1 rounded-2xl text-base font-bold"
-            >
-              다음 →
-            </Button>
-          ) : (
-            <Button
-              onClick={() => { startAnalysis(); setFormStep(1); }}
-              disabled={!specs.gpaUW && !specs.gpaW}
-              className="h-14 flex-1 rounded-2xl text-lg font-bold shadow-xl"
-            >
-              합격 확률 분석하기
-            </Button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
       <BottomNav />
     </div>
