@@ -30,6 +30,8 @@ import { readJSON, writeJSON, readString, writeString } from "@/lib/storage";
 import { PrismLoader } from "@/components/PrismLoader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SpecAnalysisPanel } from "@/components/analysis/SpecAnalysisPanel";
+import { SpecAnalysisView } from "@/components/analysis/SpecAnalysisView";
+import { SegmentedControl, SegmentedControlItem } from "@/components/ui/segmented-control";
 import { PLANS } from "@/lib/plans";
 
 // 분리된 모듈:
@@ -43,6 +45,7 @@ import { PLANS } from "@/lib/plans";
 export default function AnalysisPage() {
   const { profile, toggleFavorite, isFavorite, saveProfile, isMaster } = useAuth();
 
+  const [mode, setMode] = useState<"matching" | "spec">("matching");
   const [step, setStep] = useState<"form" | "analyzing" | "result">("form");
   const [formStep, setFormStep] = useState(1);
   const [analyzeProgress, setAnalyzeProgress] = useState(0);
@@ -486,21 +489,41 @@ export default function AnalysisPage() {
   return (
     <div className="min-h-screen bg-background pb-24">
       <PageHeader
-        title="합격 확률 분석"
-        subtitle="내 스펙을 입력하면 200개 대학의 합격 확률을 분석합니다."
+        title="분석"
         hideBack
         leading={<BarChart3 className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />}
         action={
-          (specsSaveStatus === "saving" || specsSaveStatus === "saved" || specLastUpdated) && (
+          mode === "matching" && (specsSaveStatus === "saving" || specsSaveStatus === "saved" || specLastUpdated) ? (
             <div className="flex items-center gap-1.5">
               {specsSaveStatus === "saving" && <span className="text-xs text-muted-foreground animate-pulse">저장 중...</span>}
               {specsSaveStatus === "saved" && <span className="text-xs text-emerald-600">저장됨</span>}
               {specLastUpdated && <span className="text-xs text-muted-foreground">· {specLastUpdated}</span>}
             </div>
-          )
+          ) : null
         }
       />
 
+      {/* Mode switcher */}
+      <div className="px-gutter pb-4">
+        <SegmentedControl value={mode} onValueChange={(v) => setMode(v as "matching" | "spec")} aria-label="분석 모드">
+          <SegmentedControlItem value="matching">대학 매칭</SegmentedControlItem>
+          <SegmentedControlItem value="spec">스펙 분석</SegmentedControlItem>
+        </SegmentedControl>
+      </div>
+
+      {/* Spec Analysis Mode */}
+      {mode === "spec" && (
+        <div className="pb-6">
+          <SpecAnalysisView
+            profile={profile as unknown as Record<string, unknown>}
+            hasAccess={isMaster || PLANS[profile?.plan || "free"].limits.specAnalysis}
+          />
+          <BottomNav />
+        </div>
+      )}
+
+      {/* Matching Mode — Form */}
+      {mode === "matching" && (<>
       <div className="px-gutter pb-4">
         {/* Progress — 단계 번호 + 현재 단계 라벨 + 바 */}
         <div className="space-y-2">
@@ -768,6 +791,7 @@ export default function AnalysisPage() {
         )}
       </div>
       <BottomNav />
+      </>)}
     </div>
   );
 }

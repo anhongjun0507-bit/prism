@@ -1,0 +1,330 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { fetchWithAuth, ApiError } from "@/lib/api-client";
+import { PrismLoader } from "@/components/PrismLoader";
+import { UpgradeCTA } from "@/components/UpgradeCTA";
+import {
+  BarChart3, AlertCircle, CheckCircle2, Lightbulb, Download,
+  Sparkles, Eye, Zap,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface AnalysisItem {
+  category: string;
+  score: number;
+  status: "강점" | "보통" | "약점";
+  feedback: string;
+  recommendation: string;
+}
+
+interface SpecAnalysis {
+  overallScore: number;
+  summary: string;
+  competitiveness: string;
+  items: AnalysisItem[];
+  nextSteps: string[];
+  hiddenStrengths: string;
+  watchOuts: string;
+}
+
+interface SpecAnalysisViewProps {
+  profile: Record<string, unknown> | null;
+  hasAccess: boolean;
+}
+
+const CACHE_KEY = "prism_spec_analysis";
+
+export function SpecAnalysisView({ profile, hasAccess }: SpecAnalysisViewProps) {
+  const [analysis, setAnalysis] = useState<SpecAnalysis | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const hasMinSpecs = !!((profile as Record<string, string>)?.gpa || (profile as Record<string, string>)?.sat);
+
+  useEffect(() => {
+    if (!profile) return;
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const { analysis: c, profileKey } = JSON.parse(cached);
+        const p = profile as Record<string, string>;
+        const currentKey = `${p.gpa}_${p.sat}_${p.toefl}_${p.major}_${p.dreamSchool}`;
+        if (profileKey === currentKey) setAnalysis(c);
+      }
+    } catch {}
+  }, [profile]);
+
+  const runAnalysis = async () => {
+    if (!profile) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchWithAuth<{ analysis: SpecAnalysis | null }>("/api/spec-analysis", {
+        method: "POST",
+        body: JSON.stringify({ profile }),
+      });
+      if (!data.analysis) { setError("분석을 완료하지 못했어요. 다시 시도해주세요."); return; }
+      setAnalysis(data.analysis);
+      const p = profile as Record<string, string>;
+      const profileKey = `${p.gpa}_${p.sat}_${p.toefl}_${p.major}_${p.dreamSchool}`;
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify({ analysis: data.analysis, profileKey }));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "연결에 문제가 있어요. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // No access — show blurred preview + upgrade CTA
+  if (!hasAccess) {
+    return (
+      <div className="px-gutter space-y-5">
+        <div className="relative">
+          <div className="pointer-events-none select-none blur-sm opacity-50">
+            <Card className="dark-hero-gradient text-white border-none p-6">
+              <h2 className="font-headline text-2xl font-bold">스펙 종합 점수</h2>
+              <p className="text-6xl font-bold font-headline mt-3">85</p>
+              <p className="text-sm text-white/70 mt-2">전반적으로 견고한 스펙입니다...</p>
+            </Card>
+          </div>
+          <div className="absolute inset-0 flex items-start justify-center pt-24">
+            <UpgradeCTA
+              title="AI 스펙 분석은 프리미엄 기능이에요"
+              description="GPA, SAT, TOEFL을 종합 분석해 강점·약점·숨겨진 가능성을 알려드려요."
+              planLabel="프리미엄으로 업그레이드"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Initial state — CTA to start analysis
+  if (!analysis && !loading && !error) {
+    return (
+      <div className="px-gutter">
+        <Card className="p-8 text-center bg-card border-none shadow-sm">
+          <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <Sparkles className="w-10 h-10 text-primary" />
+          </div>
+          <h3 className="font-headline text-lg font-bold mb-2">AI 스펙 분석</h3>
+          <p className="text-sm text-muted-foreground mb-1 leading-relaxed">
+            내 GPA, SAT, TOEFL을 AI가 분석하고
+          </p>
+          <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
+            강점·약점·숨겨진 가능성·다음 단계를 알려줘요
+          </p>
+
+          {/* Current specs summary */}
+          {hasMinSpecs && (
+            <div className="flex flex-wrap justify-center gap-2 mb-5">
+              {(profile as Record<string, string>)?.gpa && (
+                <Badge variant="secondary" className="text-xs">GPA {(profile as Record<string, string>).gpa}</Badge>
+              )}
+              {(profile as Record<string, string>)?.sat && (
+                <Badge variant="secondary" className="text-xs">SAT {(profile as Record<string, string>).sat}</Badge>
+              )}
+              {(profile as Record<string, string>)?.toefl && (
+                <Badge variant="secondary" className="text-xs">TOEFL {(profile as Record<string, string>).toefl}</Badge>
+              )}
+              {(profile as Record<string, string>)?.dreamSchool && (
+                <Badge variant="secondary" className="text-xs">{(profile as Record<string, string>).dreamSchool}</Badge>
+              )}
+            </div>
+          )}
+
+          {hasMinSpecs ? (
+            <Button onClick={runAnalysis} size="xl" className="gap-2">
+              <Sparkles className="w-4 h-4" /> 내 스펙 분석하기
+            </Button>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs text-amber-600">프로필에서 GPA, SAT를 먼저 입력해주세요</p>
+              <Button onClick={() => window.location.href = "/profile"}>
+                프로필 설정하기
+              </Button>
+            </div>
+          )}
+
+          <p className="text-2xs text-muted-foreground/60 mt-4">
+            프로필에 저장된 스펙으로 분석합니다 · 10-15초 소요
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-gutter space-y-5">
+      {/* Loading */}
+      {loading && (
+        <Card variant="elevated" className="p-12 text-center">
+          <div className="flex justify-center mb-4">
+            <PrismLoader size={56} />
+          </div>
+          <p className="font-bold mb-1">스펙을 분석하고 있어요</p>
+          <p className="text-xs text-muted-foreground">10-15초 정도 걸려요</p>
+        </Card>
+      )}
+
+      {/* Error */}
+      {error && (
+        <Card className="p-4 border-red-200 bg-red-50 dark:bg-red-950/20">
+          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+          <Button variant="outline" size="sm" onClick={runAnalysis} className="mt-3">다시 시도</Button>
+        </Card>
+      )}
+
+      {/* Results */}
+      {analysis && !loading && (
+        <>
+          {/* Overall Score Card */}
+          <Card className="dark-hero-gradient text-white border-none p-6 relative overflow-hidden">
+            <div className="absolute top-[-20%] right-[-10%] w-32 h-32 bg-primary/20 rounded-full blur-[60px]" />
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-2">
+                <Badge className="bg-white/10 text-white border-white/20">
+                  <Sparkles className="w-3 h-3 mr-1" /> AI 종합 분석
+                </Badge>
+                <Badge className="bg-amber-500/90 text-white border-none">
+                  {analysis.competitiveness}
+                </Badge>
+              </div>
+              <h2 className="font-headline text-2xl font-bold mt-2">스펙 종합 점수</h2>
+              <div className="flex items-end gap-2 mt-3">
+                <span key={analysis.overallScore} className="text-6xl font-bold font-headline animate-count-pulse">{analysis.overallScore}</span>
+                <span className="text-white/70 mb-2">/ 100</span>
+              </div>
+              <p className="text-sm text-white/80 mt-3 leading-relaxed">
+                {analysis.summary}
+              </p>
+            </div>
+          </Card>
+
+          {/* Strengths */}
+          {analysis.items.filter(i => i.status === "강점").length > 0 && (
+            <div className="space-y-2">
+              <h3 className="font-headline font-bold text-base flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                <CheckCircle2 className="w-4 h-4" /> 강점
+              </h3>
+              {analysis.items.filter(i => i.status === "강점").map(s => (
+                <Card key={s.category} className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-bold text-sm text-emerald-900 dark:text-emerald-300">{s.category}</p>
+                    <Badge className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-none text-xs">{s.score}점</Badge>
+                  </div>
+                  <p className="text-sm text-emerald-800 dark:text-emerald-400 leading-relaxed mb-2">{s.feedback}</p>
+                  <div className="bg-white/60 dark:bg-emerald-950/40 rounded-lg p-2">
+                    <p className="text-xs text-emerald-900 dark:text-emerald-300 flex gap-1">
+                      <Lightbulb className="w-3 h-3 shrink-0 mt-0.5" />
+                      <span>{s.recommendation}</span>
+                    </p>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Weaknesses */}
+          {analysis.items.filter(i => i.status === "약점").length > 0 && (
+            <div className="space-y-2">
+              <h3 className="font-headline font-bold text-base flex items-center gap-2 text-red-700 dark:text-red-400">
+                <AlertCircle className="w-4 h-4" /> 보강 필요
+              </h3>
+              {analysis.items.filter(i => i.status === "약점").map(s => (
+                <Card key={s.category} className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="font-bold text-sm text-red-900 dark:text-red-300">{s.category}</p>
+                    <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-none text-xs">{s.score}점</Badge>
+                  </div>
+                  <p className="text-sm text-red-800 dark:text-red-400 leading-relaxed">{s.feedback}</p>
+                  <div className="bg-white dark:bg-red-950/40 rounded-lg p-2">
+                    <p className="text-xs text-red-900 dark:text-red-300 flex gap-1">
+                      <Lightbulb className="w-3 h-3 shrink-0 mt-0.5" />
+                      <span>{s.recommendation}</span>
+                    </p>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* All scores breakdown */}
+          <Card className="p-card bg-card border-none shadow-sm space-y-3">
+            <h3 className="font-headline font-bold text-base flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-primary" /> 항목별 점수
+            </h3>
+            <div className="space-y-3">
+              {analysis.items.map(a => (
+                <div key={a.category}>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-sm font-medium">{a.category}</span>
+                    <span className={cn(
+                      "text-sm font-bold",
+                      a.status === "강점" ? "text-emerald-600" : a.status === "약점" ? "text-red-500" : "text-muted-foreground"
+                    )}>{a.score}점</span>
+                  </div>
+                  <Progress value={a.score} className="h-2" />
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* Hidden Strengths */}
+          {analysis.hiddenStrengths && (
+            <Card className="p-card bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 space-y-2">
+              <h3 className="font-headline font-bold text-base flex items-center gap-2 text-blue-900 dark:text-blue-300">
+                <Eye className="w-4 h-4" /> 숨겨진 강점
+              </h3>
+              <p className="text-sm text-blue-800 dark:text-blue-400 leading-relaxed">{analysis.hiddenStrengths}</p>
+            </Card>
+          )}
+
+          {/* Watch Outs */}
+          {analysis.watchOuts && (
+            <Card className="p-card bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 space-y-2">
+              <h3 className="font-headline font-bold text-base flex items-center gap-2 text-amber-900 dark:text-amber-300">
+                <Zap className="w-4 h-4" /> 주의할 점
+              </h3>
+              <p className="text-sm text-amber-800 dark:text-amber-400 leading-relaxed">{analysis.watchOuts}</p>
+            </Card>
+          )}
+
+          {/* Next Steps */}
+          <Card className="p-card bg-primary/5 border border-primary/20 space-y-3">
+            <h3 className="font-headline font-bold text-base flex items-center gap-2">
+              <Lightbulb className="w-4 h-4 text-primary" /> 다음 단계
+            </h3>
+            <ul className="space-y-2 text-sm">
+              {analysis.nextSteps.map((s, i) => (
+                <li key={i} className="flex gap-2">
+                  <span className="font-bold text-primary">{i + 1}.</span>
+                  <span>{s}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+
+          {/* Action buttons */}
+          <div className="flex gap-2">
+            <Button onClick={runAnalysis} variant="outline" className="flex-1 gap-2">
+              <Sparkles className="w-4 h-4" /> 다시 분석
+            </Button>
+            <Button onClick={() => window.print()} className="flex-1 gap-2">
+              <Download className="w-4 h-4" /> PDF로 저장
+            </Button>
+          </div>
+
+          <p className="text-xs text-muted-foreground/60 text-center leading-relaxed">
+            본 분석은 AI가 제공하며, 실제 합격 여부는 에세이·추천서·면접 등 다양한 요소에 따라 달라집니다.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
