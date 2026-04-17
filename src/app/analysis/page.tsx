@@ -29,6 +29,8 @@ import { List } from "react-window";
 import { readJSON, writeJSON, readString, writeString } from "@/lib/storage";
 import { PrismLoader } from "@/components/PrismLoader";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SpecAnalysisPanel } from "@/components/analysis/SpecAnalysisPanel";
+import { PLANS } from "@/lib/plans";
 
 // 분리된 모듈:
 // - lib/analysis-helpers: 색상 상수·probGradient·story cache
@@ -39,7 +41,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 /* ═══════════════ MAIN PAGE ═══════════════ */
 export default function AnalysisPage() {
-  const { profile, toggleFavorite, isFavorite, saveProfile } = useAuth();
+  const { profile, toggleFavorite, isFavorite, saveProfile, isMaster } = useAuth();
 
   const [step, setStep] = useState<"form" | "analyzing" | "result">("form");
   const [formStep, setFormStep] = useState(1);
@@ -438,6 +440,12 @@ export default function AnalysisPage() {
             />
           </div>
         )}
+
+        {/* AI Spec Analysis — 결과 화면에서 바로 강점/약점 분석 */}
+        <SpecAnalysisPanel
+          profile={profile as unknown as Record<string, unknown>}
+          hasAccess={isMaster || PLANS[profile?.plan || "free"].limits.specAnalysis}
+        />
 
         {/* Upgrade CTA — 서버가 알려준 lockedCount 사용 (DOM에 잠긴 학교 데이터 자체가 없음) */}
         {lockedCount > 0 && (
