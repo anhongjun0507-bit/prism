@@ -15,10 +15,13 @@
 import { initializeApp, getApps, cert, applicationDefault, type App } from "firebase-admin/app";
 import { getAuth, type Auth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
+import { validateServerEnv } from "./env";
 
 let cachedApp: App | null = null;
 
 function getApp(): App {
+  // 첫 Admin SDK 접근 시 env 검증도 함께 수행(한 번만). 하드 페일하지 않음.
+  validateServerEnv();
   if (cachedApp) return cachedApp;
   const existing = getApps()[0];
   if (existing) {

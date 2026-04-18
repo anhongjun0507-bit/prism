@@ -17,6 +17,7 @@ import { fetchWithAuth, ApiError } from "@/lib/api-client";
 import { BarChart3, AlertCircle, CheckCircle2, Lightbulb, Download, Sparkles, Eye, Zap, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { PrismLoader } from "@/components/PrismLoader";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { cn } from "@/lib/utils";
 
 interface AnalysisItem {
@@ -300,7 +301,7 @@ export default function SpecAnalysisPage() {
       )}
 
       {analysis && !loading && (
-        <>
+        <ErrorBoundary compact tag="spec-analysis-result">
           {/* Overall Score Card */}
           <Card className="dark-hero-gradient text-white border-none p-6 relative overflow-hidden">
             <div className="absolute top-[-20%] right-[-10%] w-32 h-32 bg-primary/20 rounded-full blur-[60px]" />
@@ -441,7 +442,7 @@ export default function SpecAnalysisPage() {
           <p className="text-xs text-muted-foreground/60 text-center leading-relaxed print:mt-8">
             본 분석은 Claude AI가 제공하며, 실제 합격 여부는 에세이/추천서/면접 등 다양한 요소에 따라 결정됩니다.
           </p>
-        </>
+        </ErrorBoundary>
       )}
     </div>
   );
