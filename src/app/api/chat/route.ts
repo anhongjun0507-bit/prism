@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import schoolsData from "@/data/schools.json";
 import type { School } from "@/lib/matching";
 import { requireAuth, enforceQuota } from "@/lib/api-auth";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { getAnthropicClient } from "@/lib/anthropic";
 import { ChatInputSchema, zodErrorResponse } from "@/lib/schemas";
 
@@ -88,6 +89,15 @@ export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth(req);
     if (session instanceof NextResponse) return session;
+
+    // burst 보호 — quota(일) 외 초 단위 남용 차단. 30/min은 정상 타이핑 속도의 넉넉한 상한.
+    const rateErr = await enforceRateLimit({
+      bucket: "ai_chat",
+      uid: session.uid,
+      windowMs: 60_000,
+      limit: 30,
+    });
+    if (rateErr) return rateErr;
 
     const quotaErr = await enforceQuota(session, "aiChat");
     if (quotaErr) return quotaErr;

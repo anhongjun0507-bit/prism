@@ -9,16 +9,32 @@
  * 사용자 자유 텍스트 필드(자기소개, 활동, 에세이 프롬프트 등)를 Claude 프롬프트에 끼워넣기 전 정화한다.
  *
  * - ``` (코드펜스)는 제거 — 모델 instruction boundary를 위조할 위험.
+ * - USER_DATA_TAGS로 감싸는 구분자는 제거 — 사용자가 </user_data> 등을 삽입해
+ *   래퍼 밖으로 탈출하는 것을 차단.
  * - 연속 개행은 2줄까지만 허용 — 시각적 구분으로 injection 구역을 만드는 것 억제.
  * - 200자 이상 1줄에 대한 축약은 하지 않음 (학생 서술을 잘라내면 분석 품질 손상).
  * - 길이 상한은 Zod 스키마에서 이미 처리됨.
  */
+const USER_DATA_TAGS = /<\/?(user_data|student_profile|essay_body|essay_prompt|school_data)[^>]*>/gi;
+
 export function sanitizeUserText(v: unknown): string {
   if (typeof v !== "string") return "";
   return v
     .replace(/```+/g, "")
+    .replace(USER_DATA_TAGS, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+/**
+ * 사용자 자유 텍스트 블록을 모델이 "데이터"로 인식하도록 XML 태그로 감싼다.
+ * 구분자 안의 문자열은 sanitizeUserText로 탈출 방지 처리되어 있어야 함.
+ *
+ * 사용 예:
+ *   wrapUserData("essay_body", sanitizeUserText(essay))
+ */
+export function wrapUserData(tag: "user_data" | "student_profile" | "essay_body" | "essay_prompt" | "school_data", body: string): string {
+  return `<${tag}>\n${body}\n</${tag}>`;
 }
 
 function stripFences(s: string): string {
