@@ -22,31 +22,37 @@ import { DesktopSidebar } from "@/components/DesktopSidebar";
 import { StorageQuotaBanner } from "@/components/StorageQuotaBanner";
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://prism-app-3ab7d.web.app'),
+  metadataBase: new URL('https://prismedu.kr'),
   title: {
     default: 'PRISM — 미국 대학 입시 매니저',
     template: '%s | PRISM',
   },
-  description: '한국 국제학교 학생들을 위한 AI 기반 미국 대학 입시 가이드. 1001개 대학의 합격 확률, 에세이 첨삭, 입시 플래너를 한곳에서.',
-  keywords: ['미국 대학 입시', '합격 예측', 'AI 첨삭', '에세이', 'Common App', '국제학교', 'SAT', 'GPA', 'PRISM'],
+  description: '한국 국제학교 학생들을 위한 AI 기반 미국 대학 입시 가이드. 1,001개 대학 합격 확률 분석, AI 에세이 첨삭, 맞춤 입시 플래너를 한곳에서.',
+  keywords: ['미국 대학 입시', '합격 예측', 'AI 첨삭', '에세이', 'Common App', '국제학교', 'SAT', 'GPA', 'PRISM', '미국 유학', '대학 지원'],
   authors: [{ name: 'PRISM' }],
   openGraph: {
     type: 'website',
     locale: 'ko_KR',
+    url: 'https://prismedu.kr',
     title: 'PRISM — 미국 대학 입시 매니저',
-    description: 'AI가 분석하는 1001개 미국 대학 합격 확률, 맞춤 에세이 첨삭, 입시 플래너.',
+    description: 'AI가 분석하는 1,001개 미국 대학 합격 확률. 내 스펙으로 갈 수 있는 대학, 3초면 알 수 있어요.',
     siteName: 'PRISM',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'PRISM — AI 기반 미국 대학 입시 매니저' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'PRISM — 미국 대학 입시 매니저',
-    description: 'AI가 분석하는 1001개 미국 대학 합격 확률, 맞춤 에세이 첨삭, 입시 플래너.',
+    description: 'AI가 분석하는 1,001개 미국 대학 합격 확률. 내 스펙으로 갈 수 있는 대학, 3초면 알 수 있어요.',
+    images: ['/og-image.png'],
   },
   robots: {
     index: true,
     follow: true,
   },
   manifest: '/manifest.json',
+  alternates: {
+    canonical: 'https://prismedu.kr',
+  },
 };
 
 export const viewport: Viewport = {
@@ -118,7 +124,7 @@ export default function RootLayout({
         />
       </head>
       {/* lg+에서는 사이드바(w-64 fixed) 자리만큼 좌측 reserve.
-          모바일 BottomNav 클리어런스는 각 페이지가 자체 pb-24/pb-28로 처리함 —
+          모바일 BottomNav 클리어런스는 각 페이지가 자체 pb-nav로 처리함(safe-area 포함) —
           body에 전역 pb를 두면 chat 같은 full-height 페이지에서 document 오버플로 발생. */}
       <body className="font-body antialiased min-h-screen lg:pl-64">
         <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[200] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-xl focus:shadow-lg">

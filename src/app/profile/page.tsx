@@ -95,7 +95,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-nav">
       <PageHeader
         title="프로필 설정"
         subtitle="이름·사진·학년 등 내 정보를 관리해요"
@@ -143,10 +143,17 @@ export default function ProfilePage() {
 
         {/* Basic info */}
         <Card className="p-5 rounded-2xl border border-border/60 bg-card shadow-sm space-y-4">
-          <h2 className="text-sm font-bold">기본 정보</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold">기본 정보</h2>
+            <p className="text-2xs text-muted-foreground/80">
+              <span className="text-red-500" aria-hidden="true">*</span> 필수 입력
+            </p>
+          </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">이름</Label>
+            <Label className="text-xs text-muted-foreground">
+              이름 <span className="text-red-500" aria-hidden="true">*</span>
+            </Label>
             <Input
               type="text"
               placeholder="홍길동"
@@ -154,6 +161,7 @@ export default function ProfilePage() {
               onChange={(e) => setName(e.target.value)}
               className="h-11 rounded-xl text-sm"
               autoComplete="name"
+              aria-required="true"
             />
           </div>
 
@@ -178,7 +186,7 @@ export default function ProfilePage() {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">목표 대학</Label>
+            <Label className="text-xs text-muted-foreground">목표 대학교</Label>
             <Input
               type="text"
               placeholder="예: Harvard University"

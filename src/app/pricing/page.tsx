@@ -27,7 +27,7 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-nav">
       <PageHeader title="요금제 선택" />
 
       <div className="px-gutter space-y-5">
@@ -160,7 +160,7 @@ export default function PricingPage() {
           <h3 className="font-bold text-sm">한눈에 비교</h3>
           <div className="space-y-2">
             {[
-              { label: "대학 분석", free: "5개", basic: "200개", premium: "1,001개" },
+              { label: "대학교 분석", free: "5개", basic: "200개", premium: "1,001개" },
               { label: "AI 상담", free: "5회/일", basic: "무제한", premium: "무제한" },
               { label: "에세이 첨삭", free: "1회", basic: "무제한", premium: "무제한" },
               { label: "학부모 리포트", free: "—", basic: "—", premium: "매월" },
@@ -214,7 +214,7 @@ export default function PricingPage() {
         </Card>
 
         <p className="text-xs text-muted-foreground/60 text-center leading-relaxed px-4">
-          합격 예측은 각 대학의 공개 합격률 및 지원자 통계 기반입니다.
+          합격 예측은 각 대학교의 공개 합격률 및 지원자 통계 기반입니다.
           실제 합격 여부를 보장하지 않습니다.
         </p>
       </div>

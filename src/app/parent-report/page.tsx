@@ -101,7 +101,7 @@ export default function ParentReportPage() {
               <p className="text-sm font-bold">{profile.grade || "-"}</p>
             </div>
             <div>
-              <p className="text-xs text-white/60">목표 대학</p>
+              <p className="text-xs text-white/60">목표 대학교</p>
               <p className="text-sm font-bold truncate">{profile.dreamSchool || "-"}</p>
             </div>
             <div>
@@ -190,7 +190,7 @@ export default function ParentReportPage() {
             )}
             {growth.probDiff != null && growth.probDiff !== 0 && (
               <div className="flex justify-between">
-                <span className="text-muted-foreground">목표 대학 합격률</span>
+                <span className="text-muted-foreground">목표 대학교 합격률</span>
                 <span className={`font-bold ${growth.probDiff > 0 ? "text-emerald-600" : "text-red-500"}`}>
                   {growth.probDiff > 0 ? "+" : ""}{growth.probDiff}%p
                 </span>
@@ -207,7 +207,7 @@ export default function ParentReportPage() {
       {stats && stats.results.length > 0 && (
         <Card className="p-5 bg-card border-none shadow-sm space-y-3">
           <h3 className="font-headline font-bold text-base flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-500" /> 추천 대학 Top 5
+            <Sparkles className="w-4 h-4 text-amber-500" /> 추천 대학교 Top 5
           </h3>
           <div className="space-y-2">
             {stats.results.slice(0, 5).map(s => (
@@ -238,7 +238,7 @@ export default function ParentReportPage() {
   );
 
   return (
-    <main className="min-h-screen bg-background pb-28 print:pb-0">
+    <main className="min-h-screen bg-background pb-nav print:pb-0">
       <PageHeader
         title="학부모 리포트"
         className="print:hidden"
@@ -254,7 +254,7 @@ export default function ParentReportPage() {
             <div className="absolute inset-0 flex items-start justify-center pt-32">
               <UpgradeCTA
                 title="학부모 리포트는 프리미엄 기능이에요"
-                description="자녀의 GPA/SAT 변화, 합격 가능성, 추천 대학을 한 페이지에 정리해서 PDF로 저장하거나 인쇄할 수 있습니다."
+                description="자녀의 GPA/SAT 변화, 합격 가능성, 추천 대학교를 한 페이지에 정리해서 PDF로 저장하거나 인쇄할 수 있습니다."
                 planLabel="프리미엄으로 업그레이드"
               />
             </div>

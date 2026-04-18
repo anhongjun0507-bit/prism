@@ -94,7 +94,7 @@ export default function SubscriptionPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-nav">
       <PageHeader title="구독 관리" />
 
       <div className="px-gutter space-y-6">

@@ -1,12 +1,7 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, enforceQuota } from "@/lib/api-auth";
-
-function getClient() {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key || key === "your_anthropic_api_key_here") return null;
-  return new Anthropic({ apiKey: key });
-}
+import { getAnthropicClient } from "@/lib/anthropic";
+import { EssayReviewInputSchema, zodErrorResponse } from "@/lib/schemas";
 
 const SYSTEM_PROMPT = `당신은 미국 명문대 (Ivy League + Top 30) 입학사정관 출신 에세이 코치입니다.
 지난 15년간 5,000편 이상의 미국 대학 입시 에세이를 평가했습니다.
@@ -85,16 +80,17 @@ export async function POST(req: NextRequest) {
     const quotaErr = await enforceQuota(session, "essayReview");
     if (quotaErr) return quotaErr;
 
-    const anthropic = getClient();
+    const anthropic = getAnthropicClient();
     if (!anthropic) {
       return NextResponse.json({ error: "API 키 미설정" }, { status: 503 });
     }
 
-    const { essay, prompt: essayPrompt, university, grade, gpa, sat, major } = await req.json();
-
-    if (!essay) {
-      return NextResponse.json({ error: "에세이 내용이 필요해요" }, { status: 400 });
+    const body = await req.json().catch(() => null);
+    const parsedInput = EssayReviewInputSchema.safeParse(body);
+    if (!parsedInput.success) {
+      return NextResponse.json(zodErrorResponse(parsedInput.error), { status: 400 });
     }
+    const { essay, prompt: essayPrompt, university, grade, gpa, sat, major } = parsedInput.data;
 
     if (essay.length < 250) {
       return NextResponse.json({

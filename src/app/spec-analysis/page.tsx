@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { PLANS } from "@/lib/plans";
 import { UNI_LIST, MAJOR_LIST } from "@/lib/constants";
@@ -15,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
-import { BarChart3, AlertCircle, CheckCircle2, Lightbulb, Download, Sparkles, Eye, Zap, ChevronDown, Pencil } from "lucide-react";
+import { BarChart3, AlertCircle, CheckCircle2, Lightbulb, Download, Sparkles, Eye, Zap, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { PrismLoader } from "@/components/PrismLoader";
 import { cn } from "@/lib/utils";
@@ -41,7 +40,6 @@ interface SpecAnalysis {
 const CACHE_KEY = "prism_spec_analysis";
 
 export default function SpecAnalysisPage() {
-  const router = useRouter();
   const { profile, isMaster } = useAuth();
   const currentPlan = profile?.plan || "free";
   const hasAccess = isMaster || PLANS[currentPlan].limits.specAnalysis;
@@ -166,9 +164,9 @@ export default function SpecAnalysisPage() {
       </div>
 
       <div className="space-y-1.5 relative">
-        <Label className="text-xs text-muted-foreground">목표 대학</Label>
+        <Label className="text-xs text-muted-foreground">목표 대학교</Label>
         <Input
-          placeholder="대학 이름 검색..."
+          placeholder="대학교 이름 검색..."
           value={editDreamSchool || uniSearch}
           onChange={(e) => {
             setUniSearch(e.target.value);
@@ -209,7 +207,7 @@ export default function SpecAnalysisPage() {
           className="h-10 rounded-xl"
         />
         {filteredUnis.length > 0 && !editDreamSchool && (
-          <div role="listbox" aria-label="대학 검색 결과" className="absolute top-full left-0 right-0 z-10 bg-card rounded-xl shadow-lg border mt-1 max-h-48 overflow-y-auto overscroll-contain">
+          <div role="listbox" aria-label="대학교 검색 결과" className="absolute top-full left-0 right-0 z-10 bg-card rounded-xl shadow-lg border mt-1 max-h-48 overflow-y-auto overscroll-contain">
             {filteredUnis.map((u, idx) => (
               <button
                 key={u}
@@ -311,7 +309,7 @@ export default function SpecAnalysisPage() {
                 <Badge className="bg-white/10 text-white border-white/20">
                   <Sparkles className="w-3 h-3 mr-1" /> AI 종합 분석
                 </Badge>
-                <Badge className="bg-amber-500/90 text-white border-none">
+                <Badge className="bg-amber-400 text-amber-950 border-none font-bold">
                   {analysis.competitiveness}
                 </Badge>
               </div>
@@ -449,7 +447,7 @@ export default function SpecAnalysisPage() {
   );
 
   return (
-    <main className="min-h-screen bg-background pb-28 print:pb-0">
+    <main className="min-h-screen bg-background pb-nav print:pb-0">
       <PageHeader
         title="AI 스펙 분석"
         className="print:hidden"

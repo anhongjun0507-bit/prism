@@ -38,43 +38,40 @@ const SUGGESTION_STYLES: Record<SuggestedCategory, {
 }> = {
   "지원준비": {
     icon: GraduationCap,
-    gradient: "from-blue-500/10 to-blue-500/0 dark:from-blue-500/15",
+    gradient: "from-blue-500/5 to-transparent dark:from-blue-500/10",
     iconBg: "bg-blue-500/15 dark:bg-blue-500/25",
     iconColor: "text-blue-600 dark:text-blue-400",
-    accent: "border-blue-500/20 hover:border-blue-500/40",
+    accent: "border-border hover:border-blue-500/40",
     label: "지원 준비",
   },
   "에세이": {
     icon: PenLine,
-    gradient: "from-purple-500/10 to-purple-500/0 dark:from-purple-500/15",
+    gradient: "from-purple-500/5 to-transparent dark:from-purple-500/10",
     iconBg: "bg-purple-500/15 dark:bg-purple-500/25",
     iconColor: "text-purple-600 dark:text-purple-400",
-    accent: "border-purple-500/20 hover:border-purple-500/40",
+    accent: "border-border hover:border-purple-500/40",
     label: "에세이",
   },
   "시험": {
     icon: TrendingUp,
-    gradient: "from-emerald-500/10 to-emerald-500/0 dark:from-emerald-500/15",
+    gradient: "from-emerald-500/5 to-transparent dark:from-emerald-500/10",
     iconBg: "bg-emerald-500/15 dark:bg-emerald-500/25",
     iconColor: "text-emerald-600 dark:text-emerald-400",
-    accent: "border-emerald-500/20 hover:border-emerald-500/40",
+    accent: "border-border hover:border-emerald-500/40",
     label: "시험 점수",
   },
   "활동": {
     icon: Trophy,
-    gradient: "from-amber-500/10 to-amber-500/0 dark:from-amber-500/15",
+    gradient: "from-amber-500/5 to-transparent dark:from-amber-500/10",
     iconBg: "bg-amber-500/15 dark:bg-amber-500/25",
     iconColor: "text-amber-600 dark:text-amber-400",
-    accent: "border-amber-500/20 hover:border-amber-500/40",
+    accent: "border-border hover:border-amber-500/40",
     label: "과외활동",
   },
 };
 
 function highlightProfile(text: string): React.ReactNode {
-  const keywords = [
-    typeof window !== "undefined" ? "" : "", // placeholder
-  ];
-  // Dynamically collect profile keywords to highlight
+  // 프로필 키워드는 HighlightedGreeting 내부에서 useAuth로 동적 수집.
   return <HighlightedGreeting text={text} />;
 }
 
@@ -166,7 +163,7 @@ export default function ChatPage() {
     const parts: string[] = [];
     if (profile.name) parts.push(`학생 이름: ${profile.name}`);
     if (profile.grade) parts.push(`학년: ${profile.grade}`);
-    if (profile.dreamSchool) parts.push(`목표 대학: ${profile.dreamSchool}`);
+    if (profile.dreamSchool) parts.push(`목표 대학교: ${profile.dreamSchool}`);
     if (profile.major) parts.push(`지망 전공: ${profile.major}`);
     if (profile.gpa) parts.push(`GPA: ${profile.gpa}`);
     if (profile.sat) parts.push(`SAT: ${profile.sat}`);
@@ -205,6 +202,9 @@ export default function ChatPage() {
         const serverUsed = typeof details.used === "number" ? details.used : dailyLimit;
         // 로컬 상태를 서버 used 값으로 override → remaining 표시 즉시 정정.
         await saveProfile({ aiChatCount: serverUsed, aiChatDate: todayKey });
+        // 답을 못 받을 것이 확정된 낙관적 user 메시지를 제거 — 사용자가 모달 닫을 때
+        // "보낸 메시지가 남아 있는데 답이 없는" 혼란을 방지.
+        setMessages(prev => prev[prev.length - 1]?.role === "user" ? prev.slice(0, -1) : prev);
         setShowLimitModal(true);
         return;
       }

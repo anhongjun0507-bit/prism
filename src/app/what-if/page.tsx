@@ -303,7 +303,7 @@ export default function WhatIfPage() {
   );
 
   return (
-    <main className="min-h-screen bg-background pb-28">
+    <main className="min-h-screen bg-background pb-nav">
       <PageHeader
         title="What-If 시뮬레이터"
         backHref="/analysis"

@@ -104,13 +104,14 @@ export function AdmissionFeed() {
           const config = RESULT_CONFIG[item.result];
           const Icon = config.icon;
           // "나와 비슷한 스펙" — GPA ±0.3 또는 SAT ±100 내면 similar로 간주 (둘 중 하나라도 맞으면).
-          const gpaSimilar = !!(userGpa && item.gpaRange && Math.abs(userGpa - parseFloat(item.gpaRange)) <= 0.3);
-          const satSimilar = !!(userSat && item.satRange && Math.abs(userSat - parseInt(item.satRange)) <= 100);
+          // userGpa/userSat이 NaN이면 Number.isFinite가 false → 매칭 false (조용한 NaN 비교 방지).
+          const gpaSimilar = Number.isFinite(userGpa) && !!item.gpaRange && Math.abs((userGpa as number) - parseFloat(item.gpaRange)) <= 0.3;
+          const satSimilar = Number.isFinite(userSat) && !!item.satRange && Math.abs((userSat as number) - parseInt(item.satRange)) <= 100;
           const isSimlar = gpaSimilar || satSimilar;
 
           return (
             <div
-              key={i}
+              key={`${item.school}-${item.submittedAt}-${i}`}
               className={`flex items-center gap-2.5 p-2.5 rounded-xl text-sm transition-colors ${
                 isSimlar && canFilter ? "bg-primary/5 border border-primary/10" : ""
               }`}

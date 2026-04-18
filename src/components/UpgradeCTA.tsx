@@ -16,8 +16,8 @@ interface UpgradeCTAProps {
 }
 
 export function UpgradeCTA({
-  title = "200개 대학의 합격 확률을 확인하세요",
-  description = "지금 보이지 않는 대학 중에 나에게 딱 맞는 학교가 있을 수 있어요.",
+  title = "200개 대학교의 합격 확률을 확인하세요",
+  description = "지금 보이지 않는 대학교 중에 나에게 딱 맞는 학교가 있을 수 있어요.",
   planLabel = "베이직 시작하기 — ₩9,900/월",
   variant = "default",
 }: UpgradeCTAProps) {

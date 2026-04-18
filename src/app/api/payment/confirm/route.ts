@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { requireAuth } from "@/lib/api-auth";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { parseOrderId, VALID_AMOUNTS } from "./parse-order";
 
 /**
@@ -24,6 +25,16 @@ export async function POST(req: NextRequest) {
     /* ── 1. 인증 ── */
     const session = await requireAuth(req);
     if (session instanceof NextResponse) return session;
+
+    /* ── 1b. Rate limit — 브루트포스 / 중복 paymentKey 대입 차단.
+            1분 창 10회. 정상 사용자는 한 번에 한 번만 결제하므로 여유.  ── */
+    const rateErr = await enforceRateLimit({
+      bucket: "payment_confirm",
+      uid: session.uid,
+      windowMs: 60_000,
+      limit: 10,
+    });
+    if (rateErr) return rateErr;
 
     /* ── 2. 입력 검증 ── */
     const body = await req.json();
@@ -52,17 +63,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "본인 계정의 결제만 처리할 수 있어요." }, { status: 403 });
     }
 
-    /* ── 4b. timestamp 유효성 — 30일 이상 된 orderId는 replay 가능성. ── */
+    /* ── 4b. timestamp 유효성 — Toss 결제 플로우는 몇 분 안에 끝나므로 30분 창으로 강한 replay 차단.
+            미래 시계 편차 2분까지만 허용 (클라 시계 skew 대비). ── */
     const tsMs = Number(timestamp);
-    if (!Number.isFinite(tsMs) || Math.abs(Date.now() - tsMs) > 30 * 24 * 60 * 60 * 1000) {
-      console.warn(`[payment] suspicious timestamp: ${timestamp}`);
+    const now = Date.now();
+    const ageMs = now - tsMs;
+    if (!Number.isFinite(tsMs) || ageMs > 30 * 60 * 1000 || ageMs < -2 * 60 * 1000) {
+      console.warn(`[payment] suspicious timestamp: orderId=${orderId} ageMs=${ageMs}`);
       return NextResponse.json({ error: "만료된 주문 번호입니다. 다시 결제를 시작해주세요." }, { status: 400 });
     }
 
     /* ── 5. 클라이언트가 보낸 amount가 플랜·주기에 맞는 정상 가격인지 1차 검증 ── */
     const expectedAmount = VALID_AMOUNTS[plan]?.[billing];
     if (!expectedAmount || amount !== expectedAmount) {
-      return NextResponse.json({ error: "결제 금액이 플랜과 일치하지 않습니다." }, { status: 400 });
+      return NextResponse.json({ error: "결제 금액이 플랜과 일치하지 않아요." }, { status: 400 });
     }
 
     /* ── 6. Idempotency — 이미 처리된 orderId면 기존 결과 즉시 반환 ── */
@@ -103,14 +117,14 @@ export async function POST(req: NextRequest) {
     const tossData = await tossRes.json();
 
     if (!tossRes.ok) {
-      // 실패 기록을 남겨 분쟁 시 추적 가능하게 함
+      // 실패 기록 — paymentKey는 Toss 내부 자격 증명이므로 Firestore에 남기지 않는다.
+      // 분쟁 추적에는 orderId + tossErrorCode만으로 Toss 콘솔에서 조회 가능.
       try {
         await paymentRef.set({
           status: "failed",
           uid: session.uid,
           plan,
           billing,
-          paymentKey,
           requestedAmount: amount,
           tossError: tossData?.message || "unknown",
           tossErrorCode: tossData?.code || null,
@@ -119,8 +133,9 @@ export async function POST(req: NextRequest) {
       } catch (e) {
         console.error("[payment] failure log write failed:", e);
       }
+      // Toss 원문 에러 메시지 대신 정적 문구 반환 — 내부 에러 상세 노출 차단.
       return NextResponse.json(
-        { error: tossData?.message || "결제 승인에 실패했습니다." },
+        { error: "결제 승인에 실패했어요. 잠시 후 다시 시도해주세요." },
         { status: tossRes.status }
       );
     }
@@ -158,6 +173,8 @@ export async function POST(req: NextRequest) {
           return; // 다른 동시 요청이 이미 처리함
         }
 
+        // payments/{orderId}: 서버 전용 레코드. Firestore rules로 사용자 read 차단 시
+        // paymentKey 저장 가능 (환불·분쟁 대응에 필요). 규칙 상태 확인 후 유지.
         tx.set(paymentRef, {
           status: "approved",
           uid: session.uid,
@@ -169,11 +186,12 @@ export async function POST(req: NextRequest) {
           createdAt: FieldValue.serverTimestamp(),
         });
 
+        // users/{uid}.lastPayment: 사용자가 읽는 필드 → paymentKey 제외.
         tx.set(userRef, {
           plan,
           planBilling: billing,
           planActivatedAt: new Date().toISOString(),
-          lastPayment: { ...paymentRecord, paymentKey },
+          lastPayment: paymentRecord,
         }, { merge: true });
       });
     } catch (txError) {
@@ -195,7 +213,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("[payment] unexpected error:", error);
     return NextResponse.json(
-      { error: "결제 처리 중 오류가 발생했습니다." },
+      { error: "결제 처리 중 오류가 발생했어요." },
       { status: 500 }
     );
   }

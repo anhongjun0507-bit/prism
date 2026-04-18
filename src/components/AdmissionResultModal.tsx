@@ -138,7 +138,7 @@ export function AdmissionResultModal({
           <Input
             value={schoolInput}
             onChange={(e) => setSchoolInput(e.target.value)}
-            placeholder="대학 이름 입력..."
+            placeholder="대학교 이름 입력..."
             className="h-11 rounded-xl"
           />
           <div className="grid grid-cols-2 gap-2">

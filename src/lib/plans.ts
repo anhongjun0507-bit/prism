@@ -40,7 +40,7 @@ export const PLANS: Record<PlanType, PlanInfo> = {
     features: [
       "합격 예측 5개교",
       "AI 상담 5회/일",
-      "대학 기본 정보 열람",
+      "대학교 기본 정보 열람",
       "에세이 관리 (로컬 저장)",
       "플래너",
     ],

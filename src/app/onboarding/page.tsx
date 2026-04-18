@@ -211,31 +211,39 @@ export default function OnboardingPage() {
           <div className="space-y-2">
             <h2 className="font-headline text-3xl font-bold">반가워요!<br />기본 정보를 알려주세요</h2>
             <p className="text-muted-foreground text-sm">맞춤형 입시 분석을 위해 필요해요.</p>
+            <p className="text-2xs text-muted-foreground/80">
+              <span className="text-red-500" aria-hidden="true">*</span> 표시는 필수 입력
+            </p>
           </div>
 
           {/* Name */}
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">이름</Label>
+            <Label className="text-xs text-muted-foreground">
+              이름 <span className="text-red-500" aria-hidden="true">*</span>
+            </Label>
             <Input
               placeholder="이름을 입력해주세요"
               className="h-12 rounded-xl border-2"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              aria-required="true"
             />
           </div>
 
           {/* Grade */}
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">학년</Label>
-            <div className="flex flex-wrap gap-2">
+            <Label className="text-xs text-muted-foreground">
+              학년 <span className="text-red-500" aria-hidden="true">*</span>
+            </Label>
+            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="학년 선택">
               {grades.map((grade) => (
                 <button
                   key={grade}
                   onClick={() => setFormData({ ...formData, grade })}
                   className={cn(
-                    "px-5 py-2.5 rounded-xl border-2 transition-all text-sm font-medium",
+                    "px-5 py-2.5 rounded-xl border-2 transition-colors text-sm font-medium",
                     formData.grade === grade
-                      ? "bg-primary border-primary text-white shadow-sm"
+                      ? "bg-primary border-primary text-primary-foreground shadow-sm"
                       : "bg-card border-border text-foreground hover:border-primary/50"
                   )}
                 >
@@ -247,10 +255,13 @@ export default function OnboardingPage() {
 
           {/* Dream School */}
           <div className="space-y-1.5 relative">
-            <Label className="text-xs text-muted-foreground">지망 대학교</Label>
+            <Label className="text-xs text-muted-foreground">
+              지망 대학교 <span className="text-red-500" aria-hidden="true">*</span>
+            </Label>
             <Input
-              placeholder="대학 이름 검색..."
+              placeholder="대학교 이름 검색..."
               className="h-12 rounded-xl border-2 text-sm"
+              aria-required="true"
               value={formData.dreamSchool || uniSearch}
               onChange={(e) => {
                 setUniSearch(e.target.value);
@@ -286,7 +297,7 @@ export default function OnboardingPage() {
               autoComplete="off"
             />
             {filteredUnis.length > 0 && !formData.dreamSchool && (
-              <div role="listbox" aria-label="대학 검색 결과" className="absolute top-full left-0 right-0 z-10 bg-card rounded-xl shadow-lg border mt-1 max-h-48 overflow-y-auto overscroll-contain">
+              <div role="listbox" aria-label="대학교 검색 결과" className="absolute top-full left-0 right-0 z-10 bg-card rounded-xl shadow-lg border mt-1 max-h-48 overflow-y-auto overscroll-contain">
                 {filteredUnis.map((u, idx) => (
                   <button
                     key={u}
@@ -312,10 +323,13 @@ export default function OnboardingPage() {
 
           {/* Major */}
           <div className="space-y-1.5 relative">
-            <Label className="text-xs text-muted-foreground">지망 전공</Label>
+            <Label className="text-xs text-muted-foreground">
+              지망 전공 <span className="text-red-500" aria-hidden="true">*</span>
+            </Label>
             <Input
               placeholder="전공 검색..."
               className="h-12 rounded-xl border-2 text-sm"
+              aria-required="true"
               value={formData.major || majorSearch}
               onChange={(e) => {
                 setMajorSearch(e.target.value);
@@ -399,7 +413,7 @@ export default function OnboardingPage() {
           <div className="space-y-2">
             <h2 className="font-headline text-3xl font-bold">성적을<br />입력해볼까요?</h2>
             <p className="text-muted-foreground text-sm">
-              나중에 입력해도 괜찮아요. 지금 입력하면 바로 추천 대학을 볼 수 있어요!
+              나중에 입력해도 괜찮아요. 지금 입력하면 바로 추천 대학교를 볼 수 있어요!
             </p>
           </div>
 
@@ -483,7 +497,7 @@ export default function OnboardingPage() {
               >
                 <span className="text-xs font-bold text-primary flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" />
-                  {previewSchools.length}개 대학 추천됨
+                  {previewSchools.length}개 대학교 추천됨
                 </span>
                 <ChevronUp className={cn(
                   "w-4 h-4 text-primary transition-transform duration-200",
@@ -532,7 +546,7 @@ export default function OnboardingPage() {
 
           {previewSchools.length > 0 && (
             <div className="w-full space-y-2">
-              <p className="text-xs font-bold text-muted-foreground">나의 추천 대학 미리보기</p>
+              <p className="text-xs font-bold text-muted-foreground">나의 추천 대학교 미리보기</p>
               {previewSchools.map((s) => (
                 <Card key={s.n} className="p-4 bg-card border-none shadow-sm flex items-center gap-3">
                   <div

@@ -128,9 +128,15 @@ export function OverviewTab({
 
       {/* AI Detailed Admission Analysis */}
       {aiDetailLoading && (
-        <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 flex items-center gap-2">
-          <Loader2 className="w-4 h-4 animate-spin text-primary" />
-          <span className="text-xs text-muted-foreground">AI 합격 분석 중...</span>
+        <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <span className="text-sm font-semibold text-foreground">AI가 합격 가능성을 분석하고 있어요</span>
+          </div>
+          <div className="h-1.5 bg-primary/10 rounded-full overflow-hidden">
+            <div className="h-full bg-primary/40 rounded-full animate-pulse" style={{ width: "60%" }} />
+          </div>
+          <p className="text-xs text-muted-foreground">입학 데이터와 스펙을 비교 중이에요. 최대 10초 정도 걸릴 수 있어요.</p>
         </div>
       )}
       {aiDetailError && !aiDetailLoading && (
@@ -233,9 +239,14 @@ export function OverviewTab({
           <MessageSquare className="w-3.5 h-3.5" /> AI 입학 사정관 한 줄 평
         </p>
         {storyLoading ? (
-          <div className="flex items-center gap-2 py-2">
-            <Loader2 className="w-4 h-4 animate-spin text-primary" />
-            <span className="text-xs text-muted-foreground">프로필 기반 분석 생성 중...</span>
+          <div className="space-y-2 py-2">
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              <span className="text-sm font-medium text-foreground">프로필 기반 분석을 작성 중이에요</span>
+            </div>
+            <div className="h-1 bg-primary/10 rounded-full overflow-hidden">
+              <div className="h-full bg-primary/30 rounded-full animate-pulse" style={{ width: "45%" }} />
+            </div>
           </div>
         ) : storyError ? (
           <p className="text-xs text-muted-foreground">분석을 불러올 수 없습니다.</p>
@@ -313,7 +324,7 @@ function ScoreCard({ label, value, sub, raw, maxVal }: { label: string; value: s
     <div className={`${bgColor} rounded-xl p-4`}>
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className={`text-xl font-bold mt-0.5 ${color}`}>{value}<span className="text-xs font-normal text-muted-foreground ml-1">점</span></p>
-      <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mt-1.5 mb-1 overflow-hidden">
+      <div className="h-1.5 bg-muted rounded-full mt-1.5 mb-1 overflow-hidden">
         <div
           className={`h-full rounded-full transition-all ${num > 5 ? "bg-emerald-500" : num >= -5 ? "bg-blue-400" : "bg-red-400"}`}
           style={{ width: `${barPct}%` }}

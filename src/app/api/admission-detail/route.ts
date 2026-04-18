@@ -1,13 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { getCachedResponse, setCachedResponse, makeCacheKey } from "@/lib/ai-cache";
 import { requireAuth, enforceQuota } from "@/lib/api-auth";
-
-function getClient() {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key || key === "your_anthropic_api_key_here") return null;
-  return new Anthropic({ apiKey: key });
-}
+import { extractJSON, sanitizeUserText } from "@/lib/api-helpers";
+import { getAnthropicClient } from "@/lib/anthropic";
+import { AdmissionDetailInputSchema, zodErrorResponse } from "@/lib/schemas";
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,15 +13,17 @@ export async function POST(req: NextRequest) {
     const quotaErr = await enforceQuota(session, "admissionDetail");
     if (quotaErr) return quotaErr;
 
-    const anthropic = getClient();
+    const anthropic = getAnthropicClient();
     if (!anthropic) {
       return NextResponse.json({ error: "API 키 미설정" }, { status: 503 });
     }
 
-    const { school, profile } = await req.json();
-    if (!school?.name || !profile) {
-      return NextResponse.json({ error: "필수 정보가 누락되었어요" }, { status: 400 });
+    const body = await req.json().catch(() => null);
+    const parsedInput = AdmissionDetailInputSchema.safeParse(body);
+    if (!parsedInput.success) {
+      return NextResponse.json(zodErrorResponse(parsedInput.error), { status: 400 });
     }
+    const { school, profile } = parsedInput.data;
 
     // Check Firestore cache first
     const cacheKey = makeCacheKey("admission", {
@@ -81,17 +79,18 @@ export async function POST(req: NextRequest) {
   "internationalStudentNote": "<이 학교의 국제학생 관련 특이사항. Need-blind 여부, 국제학생 비율, 한국 학생 지원 경쟁 등. 1~2문장>"
 }`;
 
-    const userPrompt = `다음 학생의 ${school.name} 합격 가능성을 분석해주세요.
+    const safeSchoolName = sanitizeUserText(school.name);
+    const userPrompt = `다음 학생의 ${safeSchoolName} 합격 가능성을 분석해주세요.
 
 학생 정보:
-- 학년: ${profile.grade || "미입력"}
+- 학년: ${sanitizeUserText(profile.grade) || "미입력"}
 - GPA: ${profile.gpa || "미입력"}/4.0
 - SAT: ${profile.sat || "미입력"}
 - TOEFL: ${profile.toefl || "미입력"}
-- 지망 전공: ${profile.major || "미입력"}
+- 지망 전공: ${sanitizeUserText(profile.major) || "미입력"}
 
-대상 학교: ${school.name}
-- US News 순위: ${school.rank > 0 ? `#${school.rank}` : "Unranked"}
+대상 학교: ${safeSchoolName}
+- US News 순위: ${school.rank && school.rank > 0 ? `#${school.rank}` : "Unranked"}
 - 합격률: ${school.acceptRate}%
 - SAT 범위: ${school.satRange === "0-0" ? "정보 없음" : school.satRange}
 - GPA 중앙값: ${school.gpa === "0" || school.gpa === 0 ? "정보 없음" : school.gpa}
@@ -110,25 +109,19 @@ export async function POST(req: NextRequest) {
     const textBlock = response.content.find((b) => b.type === "text");
     const raw = textBlock?.text || "";
 
-    let parsed: unknown = null;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      const match = raw.match(/\{[\s\S]*\}/);
-      if (match) {
-        try { parsed = JSON.parse(match[0]); } catch {}
-      }
-    }
-
+    const parsed = extractJSON(raw);
     if (parsed) {
-      // Cache successful response
-      setCachedResponse(cacheKey, parsed); // fire and forget
+      setCachedResponse(cacheKey, parsed);
       return NextResponse.json({ detail: parsed });
     }
 
-    return NextResponse.json({ detail: null, raw }, { status: 500 });
+    console.error("Admission detail JSON parse failed. Raw length:", raw.length);
+    return NextResponse.json(
+      { error: "AI 응답을 해석하지 못했어요. 다시 시도해주세요." },
+      { status: 502 }
+    );
   } catch (error) {
     console.error("Admission detail error:", error);
-    return NextResponse.json({ error: "분석 생성에 실패했습니다." }, { status: 500 });
+    return NextResponse.json({ error: "분석 생성에 실패했어요." }, { status: 500 });
   }
 }

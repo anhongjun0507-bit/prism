@@ -91,13 +91,13 @@ function SchoolLogoBase({
   const px = sizePx[size];
   return (
     <div
-      className={`${sizeMap[size]} shrink-0 shadow-sm overflow-hidden bg-card flex items-center justify-center border border-border ${className}`}
+      className={`${sizeMap[size]} shrink-0 shadow-sm overflow-hidden bg-white dark:bg-card flex items-center justify-center border border-border p-1.5 ${className}`}
     >
       <Image
         src={src}
         alt=""
-        width={Math.round(px * 0.7)}
-        height={Math.round(px * 0.7)}
+        width={Math.round(px * 0.55)}
+        height={Math.round(px * 0.55)}
         className="object-contain"
         loading="lazy"
         unoptimized

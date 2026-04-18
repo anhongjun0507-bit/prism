@@ -26,7 +26,7 @@ export function MajorTab({ school }: MajorTabProps) {
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
                 rank <= 3 ? "bg-amber-100 text-amber-700" :
                 rank <= 10 ? "bg-blue-100 text-blue-700" :
-                "bg-gray-100 text-gray-600"
+                "bg-muted text-muted-foreground"
               }`}>
                 #{rank}
               </div>
@@ -37,10 +37,10 @@ export function MajorTab({ school }: MajorTabProps) {
                 </p>
               </div>
               <div className="w-16">
-                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full ${
-                      rank <= 3 ? "bg-amber-500" : rank <= 10 ? "bg-blue-500" : "bg-gray-400"
+                      rank <= 3 ? "bg-amber-500" : rank <= 10 ? "bg-blue-500" : "bg-muted-foreground/40"
                     }`}
                     style={{ width: `${Math.max(10, 100 - rank * 2)}%` }}
                   />

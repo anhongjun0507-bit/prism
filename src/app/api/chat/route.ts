@@ -1,14 +1,10 @@
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import schoolsData from "@/data/schools.json";
 import type { School } from "@/lib/matching";
 import { requireAuth, enforceQuota } from "@/lib/api-auth";
-
-function getClient() {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key || key === "your_anthropic_api_key_here") return null;
-  return new Anthropic({ apiKey: key });
-}
+import { getAnthropicClient } from "@/lib/anthropic";
+import { ChatInputSchema, zodErrorResponse } from "@/lib/schemas";
 
 // schools.json의 literal 타입이 School의 Record<string, number>와 구조적 비교 불가 →
 // unknown 경유 cast. 런타임에 필요한 필드만 읽으므로 안전.
@@ -96,9 +92,14 @@ export async function POST(req: NextRequest) {
     const quotaErr = await enforceQuota(session, "aiChat");
     if (quotaErr) return quotaErr;
 
-    const { message, history } = await req.json();
+    const body = await req.json().catch(() => null);
+    const parsedInput = ChatInputSchema.safeParse(body);
+    if (!parsedInput.success) {
+      return NextResponse.json(zodErrorResponse(parsedInput.error), { status: 400 });
+    }
+    const { message, history } = parsedInput.data;
 
-    const anthropic = getClient();
+    const anthropic = getAnthropicClient();
     if (!anthropic) {
       return NextResponse.json(
         { error: "AI 기능을 사용하려면 .env.local에 ANTHROPIC_API_KEY를 설정해주세요." },
@@ -106,12 +107,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!message || typeof message !== "string") {
-      return NextResponse.json(
-        { error: "message is required" },
-        { status: 400 }
-      );
-    }
+    // 히스토리 길이 예산 — Claude 입력 토큰 보호.
+    const MAX_HISTORY_TURNS = 20;
+    const MAX_HISTORY_CHAR = 8000;
 
     // RAG: find mentioned schools and inject their data
     const mentionedSchools = findMentionedSchools(message);
@@ -120,15 +118,22 @@ export async function POST(req: NextRequest) {
       ? message + schoolContext
       : message;
 
-    // Build messages array from history + new message
+    // history 검증 — 엘리먼트마다 role/content 타입 확인, 최근 N턴만, 총량 상한.
     const messages: Anthropic.MessageParam[] = [];
-
-    if (history && Array.isArray(history)) {
-      for (const msg of history) {
+    if (Array.isArray(history)) {
+      const trimmed = history.slice(-MAX_HISTORY_TURNS);
+      let charBudget = MAX_HISTORY_CHAR;
+      for (const msg of trimmed) {
+        if (!msg || typeof msg !== "object") continue;
+        const m = msg as { role?: unknown; content?: unknown };
+        if (typeof m.content !== "string" || m.content.length === 0) continue;
+        const content = m.content.length > charBudget ? m.content.slice(0, charBudget) : m.content;
+        charBudget -= content.length;
         messages.push({
-          role: msg.role === "ai" ? "assistant" : "user",
-          content: msg.content,
+          role: m.role === "ai" || m.role === "assistant" ? "assistant" : "user",
+          content,
         });
+        if (charBudget <= 0) break;
       }
     }
 
@@ -148,7 +153,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Chat API error:", error);
     return NextResponse.json(
-      { error: "AI 응답 생성에 실패했습니다." },
+      { error: "AI 응답 생성에 실패했어요." },
       { status: 500 }
     );
   }

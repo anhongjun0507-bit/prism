@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { matchSchools, type Specs, type School } from "@/lib/matching";
 import { requireAuth } from "@/lib/api-auth";
 import { getAdminDb } from "@/lib/firebase-admin";
+import { isMasterEmail } from "@/lib/master";
 import type { PlanType } from "@/lib/plans";
 
 const FREE_PREVIEW_COUNT = 20;
@@ -51,15 +52,6 @@ function selectFreePreviewIds(results: School[]): Set<string> {
   return new Set(picks.slice(0, FREE_PREVIEW_COUNT));
 }
 
-const HARDCODED_MASTER_EMAILS = ["hongjunan100@gmail.com"];
-const MASTER_EMAILS = Array.from(new Set([
-  ...HARDCODED_MASTER_EMAILS,
-  ...(process.env.NEXT_PUBLIC_MASTER_EMAILS || "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean),
-]));
-
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth(req);
@@ -81,7 +73,7 @@ export async function POST(req: NextRequest) {
       console.error("[match] plan fetch failed:", e);
     }
     // 마스터 이메일은 항상 premium
-    if (session.email && MASTER_EMAILS.includes(session.email.toLowerCase())) {
+    if (isMasterEmail(session.email)) {
       plan = "premium";
     }
 
@@ -116,6 +108,6 @@ export async function POST(req: NextRequest) {
     );
   } catch (error) {
     console.error("[match] unexpected error:", error);
-    return NextResponse.json({ error: "분석 중 오류가 발생했습니다." }, { status: 500 });
+    return NextResponse.json({ error: "분석 중 오류가 발생했어요." }, { status: 500 });
   }
 }

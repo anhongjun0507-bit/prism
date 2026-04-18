@@ -23,7 +23,7 @@ export default function PrivacyPolicyPage() {
               <li>SAT 점수</li>
               <li>TOEFL 점수</li>
               <li>희망 전공</li>
-              <li>목표 대학</li>
+              <li>목표 대학교</li>
               <li>소셜 로그인 시 제공되는 프로필 정보 (Google, 카카오, Apple)</li>
             </ul>
           </section>

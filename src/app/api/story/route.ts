@@ -1,12 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, enforceQuota } from "@/lib/api-auth";
-
-function getClient() {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key || key === "your_anthropic_api_key_here") return null;
-  return new Anthropic({ apiKey: key });
-}
+import { getAnthropicClient } from "@/lib/anthropic";
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,7 +10,7 @@ export async function POST(req: NextRequest) {
     const quotaErr = await enforceQuota(session, "story");
     if (quotaErr) return quotaErr;
 
-    const anthropic = getClient();
+    const anthropic = getAnthropicClient();
     if (!anthropic) {
       return NextResponse.json({ error: "API 키 미설정" }, { status: 503 });
     }

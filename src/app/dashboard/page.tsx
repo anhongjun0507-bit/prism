@@ -143,16 +143,16 @@ export default function DashboardPage() {
   ] as const;
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-nav">
       {/* ── Clean header: avatar · name · plan · icons ── */}
-      <header className="px-gutter pt-6 pb-4 flex items-center gap-3">
+      <header className="px-gutter pt-safe pb-4 flex items-center gap-3">
         {/* 아바타 탭 → 프로필 설정 페이지. 사용자가 직접 이름/사진/학년 수정 가능. */}
         <Link href="/profile" aria-label="프로필 설정" className="shrink-0">
           <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm overflow-hidden hover:ring-2 hover:ring-primary/30 transition-all">
             {(profile?.photoURL || user?.photoURL) ? (
               // OAuth provider가 URL을 다양하게 반환 — plain <img>로 유지
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={profile?.photoURL || user?.photoURL || ""} alt="" className="w-full h-full object-cover" />
+              <img src={profile?.photoURL || user?.photoURL || ""} alt={`${profile?.name || "내"} 프로필 사진`} className="w-full h-full object-cover" />
             ) : initials}
           </div>
         </Link>
@@ -184,7 +184,7 @@ export default function DashboardPage() {
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <Input
-            placeholder="대학 검색..."
+            placeholder="대학교 검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 h-11 rounded-xl bg-muted/50 dark:bg-card/60 border-none text-sm focus-visible:ring-primary/20"
@@ -212,7 +212,7 @@ export default function DashboardPage() {
           {/* subtle radial overlay only — no parallax orbs */}
           <div className="absolute inset-0 bg-hero-overlay pointer-events-none" style={{ background: "radial-gradient(ellipse at top right, hsl(var(--hero-overlay) / 0.12), transparent 60%)" }} aria-hidden="true" />
           <div className="relative">
-            <p className="text-2xs text-hero-muted uppercase tracking-wide mb-1.5 font-medium">목표 대학</p>
+            <p className="text-2xs text-hero-muted uppercase tracking-wide mb-1.5 font-medium">목표 대학교</p>
             <h2 className="text-xl leading-tight font-headline font-bold truncate">
               {profile?.dreamSchool || "아직 미설정"}
             </h2>
@@ -234,7 +234,7 @@ export default function DashboardPage() {
               ) : hasSpecs ? null : (
                 <div className="text-right pl-4 border-l border-hero-muted self-center">
                   <Link href="/onboarding" className="text-2xs text-hero underline underline-offset-2 hover:text-hero-muted">
-                    목표 대학 설정 →
+                    목표 대학교 설정 →
                   </Link>
                 </div>
               )}
@@ -260,7 +260,7 @@ export default function DashboardPage() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-red-900 dark:text-red-200">마감 임박</p>
               <p className="text-xs text-red-700 dark:text-red-300/80 mt-0.5 truncate">
-                {profile?.dreamSchool || "지원 대학"} 마감까지 {nextDeadline}일
+                {profile?.dreamSchool || "지원 대학교"} 마감까지 {nextDeadline}일
               </p>
             </div>
           </div>
@@ -288,26 +288,30 @@ export default function DashboardPage() {
           </Link>
         )}
 
-        {/* Stats row — compact 3-cell inline */}
-        {hasSpecs && quickResults.length > 0 && (
-          <div className="grid grid-cols-3 rounded-2xl bg-muted/30 dark:bg-card/60 border border-border/50 overflow-hidden">
-            {[
-              { label: "Reach", count: reachCount, color: "text-red-500", bg: "bg-red-50 dark:bg-red-950/30", Icon: Target },
-              { label: "Target", count: targetCount, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-950/30", Icon: GraduationCap },
-              { label: "Safety", count: safetyCount, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/30", Icon: BookOpen },
-            ].map(({ label, count, color, bg, Icon }, i) => (
-              <div key={label} className={`p-4 text-center ${i < 2 ? "border-r border-border/50" : ""}`}>
-                <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center mx-auto mb-1.5`}>
-                  <Icon className={`w-4 h-4 ${color}`} />
+        {/* Stats row — 0개인 항목은 숨기고, 남은 항목만 균등 배치 */}
+        {hasSpecs && quickResults.length > 0 && (() => {
+          const items = [
+            { label: "Reach", count: reachCount, color: "text-red-500", bg: "bg-red-50 dark:bg-red-950/30", Icon: Target },
+            { label: "Target", count: targetCount, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-950/30", Icon: GraduationCap },
+            { label: "Safety", count: safetyCount, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/30", Icon: BookOpen },
+          ].filter(item => item.count > 0);
+          if (items.length === 0) return null;
+          return (
+            <div className={`grid rounded-2xl bg-muted/30 dark:bg-card/60 border border-border/50 overflow-hidden`} style={{ gridTemplateColumns: `repeat(${items.length}, 1fr)` }}>
+              {items.map(({ label, count, color, bg, Icon }, i) => (
+                <div key={label} className={`p-4 text-center ${i < items.length - 1 ? "border-r border-border/50" : ""}`}>
+                  <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center mx-auto mb-1.5`}>
+                    <Icon className={`w-4 h-4 ${color}`} />
+                  </div>
+                  <p className="text-2xs text-muted-foreground">{label}</p>
+                  <p className="text-lg font-bold tabular-nums leading-tight mt-0.5">
+                    {count}<span className="text-2xs font-normal text-muted-foreground ml-0.5">개</span>
+                  </p>
                 </div>
-                <p className="text-2xs text-muted-foreground">{label}</p>
-                <p className="text-lg font-bold tabular-nums leading-tight mt-0.5">
-                  {count}<span className="text-2xs font-normal text-muted-foreground ml-0.5">개</span>
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Tools — BottomNav에 없는 특수 기능 4개. 2x2 카드 그리드. */}
         <div className="grid grid-cols-2 gap-3">
@@ -329,7 +333,7 @@ export default function DashboardPage() {
         {/* My schools */}
         <div className="space-y-2.5">
           <div className="flex justify-between items-center">
-            <h2 className="font-headline text-base font-bold">나의 지원 대학</h2>
+            <h2 className="font-headline text-base font-bold">나의 지원 대학교</h2>
             {savedSchoolResults.length > 0 && (
               <Link href="/analysis" className="text-xs text-primary font-semibold flex items-center">
                 전체 보기 <ChevronRight className="w-3 h-3" />
@@ -351,12 +355,12 @@ export default function DashboardPage() {
             <Card variant="elevated" className="overflow-hidden">
               <EmptyState
                 illustration="school"
-                title="아직 저장한 대학이 없어요"
-                description={<>분석 페이지에서 ♡를 눌러<br />관심 대학을 추가해보세요</>}
+                title="아직 저장한 대학교가 없어요"
+                description={<>분석 페이지에서 ♡를 눌러<br />관심 대학교를 추가해보세요</>}
                 action={
                   <Link href="/analysis">
                     <Button className="px-6">
-                      대학 둘러보기 <ChevronRight className="w-4 h-4 ml-1" />
+                      대학교 둘러보기 <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
                   </Link>
                 }
@@ -424,7 +428,7 @@ export default function DashboardPage() {
                 <Crown className="w-4 h-4 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold">더 많은 대학을 분석해보세요</p>
+                <p className="text-sm font-semibold">더 많은 대학교를 분석해보세요</p>
                 <p className="text-xs text-muted-foreground mt-0.5">베이직 플랜으로 전체 학교 상세 분석</p>
               </div>
               <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />

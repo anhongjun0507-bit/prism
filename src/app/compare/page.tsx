@@ -234,7 +234,7 @@ export default function ComparePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-nav">
       <PageHeader title="대학 비교" backHref="/analysis" sticky />
 
       <div className="max-w-2xl mx-auto px-gutter py-6 space-y-6">

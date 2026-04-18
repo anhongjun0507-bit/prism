@@ -29,7 +29,7 @@ export function StorageQuotaBanner() {
   return (
     <div
       role="alert"
-      className="fixed top-0 inset-x-0 z-[60] bg-amber-50 dark:bg-amber-950/80 border-b border-amber-200 dark:border-amber-800 backdrop-blur-sm"
+      className="fixed top-0 inset-x-0 z-[60] bg-amber-50 dark:bg-amber-950 border-b border-amber-200 dark:border-amber-800"
     >
       <div className="max-w-md md:max-w-2xl lg:max-w-5xl mx-auto px-4 py-2.5 flex items-start gap-2">
         <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />

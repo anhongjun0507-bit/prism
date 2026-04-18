@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -24,7 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { db } from "@/lib/firebase";
 import {
-  collection, doc, setDoc, deleteDoc, onSnapshot,
+  collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch,
 } from "firebase/firestore";
 import { Calendar as CalendarIcon, CheckCircle2, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { readJSON, writeJSON } from "@/lib/storage";
@@ -139,15 +139,54 @@ export default function PlannerPage() {
 
   /* ─── Storage sync ─── */
   // Logged-in: subscribe to Firestore subcollection (real-time)
+  // 첫 로그인 시 localStorage 태스크를 Firestore로 마이그레이션
+  const migrationDoneRef = useRef(false);
   useEffect(() => {
     if (!user) {
+      migrationDoneRef.current = false;
       setTasks(loadLocalTasks());
       return;
     }
     const colRef = collection(db, "users", user.uid, "tasks");
-    const unsub = onSnapshot(colRef, (snap) => {
+    const unsub = onSnapshot(colRef, async (snap) => {
       const list = snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<PlannerTask, "id">) }));
-      setTasks(list);
+
+      if (list.length > 0) {
+        // Firestore에 데이터 있음 → 그대로 사용
+        setTasks(list);
+        return;
+      }
+
+      // Firestore 비어있음 → localStorage 태스크를 마이그레이션 (1회만)
+      if (migrationDoneRef.current) {
+        setTasks([]);
+        return;
+      }
+      migrationDoneRef.current = true;
+
+      const localTasks = loadLocalTasks();
+      if (localTasks.length === 0) {
+        setTasks([]);
+        return;
+      }
+
+      // Batch write: localStorage → Firestore
+      try {
+        const batch = writeBatch(db);
+        for (const t of localTasks) {
+          const payload: Record<string, unknown> = {
+            title: t.title, category: t.category,
+            dueDate: t.dueDate, completed: t.completed,
+          };
+          if (t.notes) payload.notes = t.notes;
+          batch.set(doc(db, "users", user.uid, "tasks", t.id), payload);
+        }
+        await batch.commit();
+        // onSnapshot이 자동으로 새 데이터를 수신하여 setTasks 갱신
+      } catch {
+        // 마이그레이션 실패 시 로컬 데이터로 폴백
+        setTasks(localTasks);
+      }
     }, () => { /* ignore errors, keep local state */ });
     return unsub;
   }, [user]);
@@ -217,7 +256,7 @@ export default function PlannerPage() {
   const closeDialog = () => { setDialogOpen(false); setEditingTask(null); };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-nav">
       <PageHeader
         title="입시 플래너"
         subtitle="합격을 향한 중요한 일정을 관리하세요."
@@ -248,15 +287,29 @@ export default function PlannerPage() {
           </Card>
         )}
 
-        {/* Progress Card */}
-        <Card className="p-6 border-none shadow-sm flex items-center justify-between bg-primary text-white">
-          <div className="space-y-1">
-            <p className="text-xs text-white/70 font-medium">전체 진행률</p>
-            <p key={progress} className="text-3xl font-bold font-headline animate-count-pulse">{progress}%</p>
-            <p className="text-xs text-white/80">{completedCount}/{tasks.length} 완료</p>
+        {/* Progress Card — 진행률에 따라 톤 조절 */}
+        <Card className={cn(
+          "p-4 border shadow-sm flex items-center justify-between gap-3",
+          progress >= 50
+            ? "bg-primary text-white border-none"
+            : "bg-card border-border"
+        )}>
+          <div className="space-y-0.5 flex-1 min-w-0">
+            <p className={cn("text-xs font-medium", progress >= 50 ? "text-white/70" : "text-muted-foreground")}>전체 진행률</p>
+            <div className="flex items-baseline gap-1.5">
+              <p key={progress} className="text-2xl font-bold font-headline">{progress}%</p>
+              <p className={cn("text-xs", progress >= 50 ? "text-white/80" : "text-muted-foreground")}>{completedCount}/{tasks.length} 완료</p>
+            </div>
+            {/* Mini progress bar */}
+            <div className={cn("h-1.5 rounded-full overflow-hidden mt-1", progress >= 50 ? "bg-white/20" : "bg-muted")}>
+              <div className={cn("h-full rounded-full transition-all", progress >= 50 ? "bg-white/70" : "bg-primary")} style={{ width: `${progress}%` }} />
+            </div>
           </div>
-          <div className="w-16 h-16 rounded-full border-4 border-white/20 flex items-center justify-center relative">
-             <CheckCircle2 className="w-8 h-8 text-white" />
+          <div className={cn(
+            "w-12 h-12 rounded-full flex items-center justify-center shrink-0",
+            progress >= 50 ? "bg-white/15" : "bg-primary/10"
+          )}>
+            <CheckCircle2 className={cn("w-6 h-6", progress >= 50 ? "text-white" : "text-primary")} />
           </div>
         </Card>
 

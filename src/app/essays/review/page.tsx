@@ -13,7 +13,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import { db } from "@/lib/firebase";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, query, orderBy, limit as fsLimit, getDocs } from "firebase/firestore";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
 import { readJSON, writeJSON, removeKey } from "@/lib/storage";
 import { haptic } from "@/hooks/use-haptic";
@@ -34,6 +34,31 @@ type ReviewResult = Omit<EssayReview, "id" | "createdAt">;
 
 const ESSAYS_KEY = "prism_essays";
 const DRAFT_KEY = "prism_review_draft";
+
+/** 타임스탬프를 상대 시간("3분 전", "오늘 오전 10시", "4월 15일")으로 변환 */
+function relativeTime(ts: number | string): string {
+  const date = new Date(ts);
+  const now = Date.now();
+  const diffMs = now - date.getTime();
+  const diffMin = Math.floor(diffMs / 60_000);
+  const diffHr = Math.floor(diffMs / 3_600_000);
+
+  if (diffMin < 1) return "방금 전";
+  if (diffMin < 60) return `${diffMin}분 전`;
+  if (diffHr < 6) return `${diffHr}시간 전`;
+
+  const today = new Date();
+  const isToday = date.toDateString() === today.toDateString();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+
+  const timeStr = date.toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit", hour12: true });
+
+  if (isToday) return `오늘 ${timeStr}`;
+  if (isYesterday) return `어제 ${timeStr}`;
+  return date.toLocaleDateString("ko-KR", { month: "long", day: "numeric" });
+}
 
 function loadEssays(): Essay[] {
   return readJSON<Essay[]>(ESSAYS_KEY) ?? [];
@@ -150,7 +175,28 @@ export default function EssayReviewPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkedEssay?.id]);
 
-  // If essayId is present but not found in localStorage cache, try Firestore once.
+  // localStorage가 비어있으면 Firestore에서 전체 에세이 목록 복원 (새 디바이스/브라우저)
+  useEffect(() => {
+    if (!user) return;
+    if (essays.length > 0) return; // 이미 로컬에 데이터가 있으면 스킵
+    let cancelled = false;
+    const colRef = query(
+      collection(db, "users", user.uid, "essays"),
+      orderBy("updatedAt", "desc"),
+      fsLimit(50)
+    );
+    getDocs(colRef)
+      .then(snap => {
+        if (cancelled || snap.empty) return;
+        const list = snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Essay, "id">) }));
+        setEssays(list);
+        saveEssaysCache(list);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [user, essays.length]);
+
+  // If essayId is present but not found in local state, try Firestore once.
   useEffect(() => {
     if (!essayId || !user) return;
     if (essays.some(e => e.id === essayId)) return; // already have it
@@ -315,7 +361,7 @@ export default function EssayReviewPage() {
         const limitMatch = prompt.match(/(\d+)자/);
         const newEssay: Essay = {
           id: newEssayId,
-          university: university.trim() || "(대학 미지정)",
+          university: university.trim() || "(대학교 미지정)",
           prompt: prompt.trim(),
           content: essay,
           lastSaved: new Date().toISOString().split("T")[0],
@@ -369,7 +415,7 @@ export default function EssayReviewPage() {
   const isLinkedLoading = essayId && !linkedEssay;
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-nav">
       <PageHeader
         title="AI 에세이 첨삭"
         subtitle={
@@ -388,7 +434,7 @@ export default function EssayReviewPage() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">이전에 작성 중이던 내용이 있어요</p>
               <p className="text-xs text-amber-700 dark:text-amber-300/80 mt-0.5">
-                {new Date(draftPrompt.savedAt).toLocaleString("ko-KR")} · 불러올까요?
+                {relativeTime(draftPrompt.savedAt)} · 불러올까요?
               </p>
               <div className="flex gap-2 mt-2">
                 <Button size="sm" className="h-8 rounded-lg text-xs" onClick={handleLoadDraft}>
@@ -527,7 +573,7 @@ export default function EssayReviewPage() {
                 <span>
                   <strong className="text-foreground">이전 첨삭 결과</strong>
                   {" · "}
-                  {new Date(priorReviewMeta.createdAt).toLocaleString("ko-KR")}
+                  {relativeTime(priorReviewMeta.createdAt)}
                   {priorReviewMeta.count > 1 && ` · 총 ${priorReviewMeta.count}개`}
                   {" · "}
                   새 리뷰를 받으려면 위 버튼을 눌러주세요

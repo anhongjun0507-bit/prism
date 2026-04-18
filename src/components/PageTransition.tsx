@@ -1,52 +1,21 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useRef } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 /**
- * PageTransition — Framer Motion 기반 directional spring transition.
+ * PageTransition — 경량 CSS 기반 페이지 전환.
  *
- * 깊이 비교로 forward/back 방향 자동 감지:
- *   - 새 경로 segments가 더 많음 → forward (오른쪽에서 슬라이드)
- *   - 더 적음 → back (왼쪽에서)
- *   - 같은 깊이 → fade
+ * 이전: framer-motion AnimatePresence mode="wait" → exit 애니메이션(0.32s) 끝날 때까지
+ * 새 페이지 렌더 차단 + 60KB 번들 추가. CSS animation으로 교체해 즉시 전환.
  *
- * prefers-reduced-motion 사용자는 즉시 표시 (Framer Motion 내장 가드).
+ * prefers-reduced-motion 사용자는 애니메이션 자동 비활성화 (CSS에서 처리).
  */
-
-function depth(pathname: string): number {
-  return pathname.split("/").filter(Boolean).length;
-}
-
 export function PageTransition({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const prevPathname = useRef(pathname);
-  const prevDepth = depth(prevPathname.current);
-  const newDepth = depth(pathname);
-  const direction: 1 | -1 | 0 =
-    newDepth > prevDepth ? 1 :
-    newDepth < prevDepth ? -1 :
-    0;
-  prevPathname.current = pathname;
-
-  const reduced = useReducedMotion();
-  const xDelta = reduced ? 0 : 16 * direction;
 
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={pathname}
-        initial={{ opacity: 0, x: xDelta, y: direction === 0 && !reduced ? 6 : 0 }}
-        animate={{ opacity: 1, x: 0, y: 0 }}
-        exit={{ opacity: 0, x: -xDelta, y: 0 }}
-        transition={{
-          duration: 0.32,
-          ease: [0.22, 1, 0.36, 1], // easeOutExpo
-        }}
-      >
-        {children}
-      </motion.div>
-    </AnimatePresence>
+    <div key={pathname} className="animate-page-in">
+      {children}
+    </div>
   );
 }

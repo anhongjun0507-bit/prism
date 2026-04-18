@@ -14,6 +14,22 @@
       transform: scale(0.97);
     }
   }
+
+  /* ── Safe-area utilities ── */
+  /* BottomNav 내부: 하단에 safe-area 만큼 패딩 추가 */
+  .pb-safe {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  /* 페이지 콘텐츠: BottomNav(64px) + safe-area 영역 확보 */
+  .pb-nav {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* 상단 safe-area: Safari 주소창/노치와 페이지 헤더 사이 여유 확보 */
+  .pt-safe {
+    padding-top: max(1rem, env(safe-area-inset-top, 0px));
+  }
 }
 
 /* Dark mode shadow boost — make cards stand out on dark background */
@@ -176,12 +192,16 @@ body {
   }
 }
 
-/* Reduced motion: disable all animations for motion-sensitive users */
+/* Reduced motion: disable all animations for motion-sensitive users.
+   animation-delay도 0으로 덮어써야 함 — 그렇지 않으면 duration은 0이지만
+   delay(ex. 0.55s) 동안 요소가 초기 상태(opacity:0 등)에서 멈춰 "빈 화면"처럼 보임. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
     scroll-behavior: auto !important;
   }
 }
@@ -480,6 +500,18 @@ body {
 
 .animate-view-enter {
   animation: welcome-view-enter 0.35s ease-out both;
+}
+
+/* Page transition — framer-motion 대체, GPU 가속 opacity+transform만 사용 */
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-page-in {
+  animation: page-in 0.15s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-page-in { animation: none; }
 }
 
 .prism-logo-spectrum {

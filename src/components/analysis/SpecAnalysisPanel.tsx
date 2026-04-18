@@ -44,14 +44,20 @@ export function SpecAnalysisPanel({ profile, hasAccess }: SpecAnalysisPanelProps
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const buildProfileKey = (p: Record<string, unknown>) => {
+    const s = p as Record<string, string | number | undefined>;
+    return [s.gpa, s.sat, s.toefl, s.major, s.dreamSchool, s.grade]
+      .map((v) => v ?? "")
+      .join("|");
+  };
+
   useEffect(() => {
     if (!profile) return;
     try {
       const cached = sessionStorage.getItem(CACHE_KEY);
       if (cached) {
         const { analysis: c, profileKey } = JSON.parse(cached);
-        const currentKey = `${(profile as Record<string, string>).gpa}_${(profile as Record<string, string>).sat}_${(profile as Record<string, string>).toefl}`;
-        if (profileKey === currentKey) setAnalysis(c);
+        if (profileKey === buildProfileKey(profile)) setAnalysis(c);
       }
     } catch {}
   }, [profile]);
@@ -68,8 +74,10 @@ export function SpecAnalysisPanel({ profile, hasAccess }: SpecAnalysisPanelProps
       });
       if (!data.analysis) { setError("분석을 완료하지 못했어요."); return; }
       setAnalysis(data.analysis);
-      const profileKey = `${(profile as Record<string, string>).gpa}_${(profile as Record<string, string>).sat}_${(profile as Record<string, string>).toefl}`;
-      sessionStorage.setItem(CACHE_KEY, JSON.stringify({ analysis: data.analysis, profileKey }));
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+        analysis: data.analysis,
+        profileKey: buildProfileKey(profile),
+      }));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "연결에 문제가 있어요.");
     } finally {
@@ -153,7 +161,7 @@ export function SpecAnalysisPanel({ profile, hasAccess }: SpecAnalysisPanelProps
                     <span className="text-white/60 text-sm ml-1">/ 100</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <Badge className="bg-amber-500/90 text-white border-none text-xs mb-1">
+                    <Badge className="bg-amber-400 text-amber-950 border-none text-xs font-bold mb-1">
                       {analysis.competitiveness}
                     </Badge>
                     <p className="text-xs text-white/75 leading-relaxed line-clamp-2">{analysis.summary}</p>

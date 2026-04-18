@@ -14,10 +14,9 @@ const navItems = [
 ];
 
 /**
- * Approximate rendered height of the BottomNav (excluding iOS safe-area inset).
- * Use this in pages that need to reserve space above the nav (e.g. chat input).
- * Pair with `env(safe-area-inset-bottom)` for full clearance on devices with
- * a home indicator.
+ * BottomNav 높이 (safe-area 제외).
+ * 실제 전체 높이 = BOTTOM_NAV_HEIGHT + env(safe-area-inset-bottom).
+ * 페이지 하단 여유는 CSS 변수 `--bottom-nav-clearance`로 통일.
  */
 export const BOTTOM_NAV_HEIGHT = 64;
 
@@ -30,8 +29,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="주요 메뉴"
-      className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-xl border-t border-border/50 px-gutter py-2 flex justify-between items-center z-50 max-w-md md:max-w-2xl lg:hidden mx-auto"
-      style={{ paddingBottom: `calc(0.5rem + env(safe-area-inset-bottom))` }}
+      className="fixed bottom-0 left-0 right-0 bg-background/95 border-t border-border/50 px-gutter flex justify-between items-center z-50 max-w-md md:max-w-2xl lg:hidden mx-auto pb-safe pt-2"
     >
       {navItems.map((item) => {
         const isActive = pathname === item.href;
@@ -41,7 +39,7 @@ export function BottomNav() {
             href={item.href}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all relative",
+              "flex flex-col items-center justify-center gap-0.5 px-3 min-h-[44px] min-w-[44px] rounded-xl transition-colors relative",
               isActive ? "text-primary bg-primary/8" : "text-muted-foreground hover:text-foreground"
             )}
           >

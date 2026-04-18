@@ -132,7 +132,7 @@ export function EssayEditor({
               <h3 className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
                 <History className="w-3.5 h-3.5" /> 버전 기록
               </h3>
-              <Button variant="ghost" size="sm" onClick={() => { onSetShowVersions(false); onSetViewingVersion(null); }} className="text-xs h-7 px-2">
+              <Button variant="ghost" size="sm" onClick={() => { onSetShowVersions(false); onSetViewingVersion(null); }} className="text-xs h-9 px-3">
                 닫기
               </Button>
             </div>
@@ -236,7 +236,7 @@ export function EssayEditor({
                           key={r.id}
                           type="button"
                           onClick={() => onSetActiveReviewIndex(i)}
-                          className={`px-2.5 h-7 rounded-full text-xs font-medium border transition-colors ${
+                          className={`px-3 h-9 rounded-full text-xs font-medium border transition-colors ${
                             i === idx
                               ? "bg-primary text-primary-foreground border-primary"
                               : "bg-muted/50 text-foreground border-border hover:bg-muted"

@@ -52,7 +52,7 @@ const DialogContent = React.forwardRef<
         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
         "data-[state=closed]:slide-out-to-bottom-2 data-[state=open]:slide-in-from-bottom-2",
         "data-[state=open]:duration-300 data-[state=closed]:duration-200",
-        "data-[state=open]:ease-[cubic-bezier(0.22,1,0.36,1)]",
+        "data-[state=open]:[transition-timing-function:cubic-bezier(0.22,1,0.36,1)]",
         className
       )}
       {...props}

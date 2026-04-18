@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { cn } from "@/lib/utils";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import { fetchWithAuth } from "@/lib/api-client";
 import { CAT_ORDER, CAT_ICON } from "@/lib/analysis-helpers";
@@ -30,7 +29,6 @@ import { List } from "react-window";
 import { readJSON, writeJSON, readString, writeString } from "@/lib/storage";
 import { PrismLoader } from "@/components/PrismLoader";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PLANS } from "@/lib/plans";
 
 // 분리된 모듈:
 // - lib/analysis-helpers: 색상 상수·probGradient·story cache
@@ -41,7 +39,7 @@ import { PLANS } from "@/lib/plans";
 
 /* ═══════════════ MAIN PAGE ═══════════════ */
 export default function AnalysisPage() {
-  const { profile, toggleFavorite, isFavorite, saveProfile, isMaster } = useAuth();
+  const { profile, toggleFavorite, isFavorite, saveProfile } = useAuth();
 
   const [step, setStep] = useState<"form" | "analyzing" | "result">("form");
   const [formStep, setFormStep] = useState(1);
@@ -115,31 +113,33 @@ export default function AnalysisPage() {
   const [showDetailedEC, setShowDetailedEC] = useState(false);
   const specsSaveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  // Auto-save specs (debounced 3s) — fast localStorage + Firestore as source of truth
+  // Auto-save specs (debounced 3s) — fast localStorage + Firestore as source of truth.
+  // race 방지: 타이머 콜백이 최신 specs 클로저를 참조하도록 snapshot을 effect 본문에서 캡처.
   useEffect(() => {
     if (specsSaveTimer.current) clearTimeout(specsSaveTimer.current);
     setSpecsSaveStatus("saving");
     // Write localStorage immediately for snappy reload
     writeJSON("prism_specs", specs);
+    const specsSnapshot = specs;
     specsSaveTimer.current = setTimeout(() => {
       // Persist to Firestore (cross-device sync)
-      if (profile && (specs.gpaUW || specs.sat)) {
+      if (profile && (specsSnapshot.gpaUW || specsSnapshot.sat)) {
         const profileUpdate: Record<string, unknown> = {
-          specs,
+          specs: specsSnapshot,
           specLastUpdated: new Date().toISOString(),
         };
         // Mirror key fields to profile root for cross-feature use (dashboard, etc.)
-        if (specs.gpaUW) profileUpdate.gpa = specs.gpaUW;
-        if (specs.sat) profileUpdate.sat = specs.sat;
-        if (specs.toefl) profileUpdate.toefl = specs.toefl;
-        if (specs.highSchool) profileUpdate.highSchool = specs.highSchool;
-        if (specs.schoolType) profileUpdate.schoolType = specs.schoolType;
-        if (specs.clubs) profileUpdate.clubs = specs.clubs;
-        if (specs.leadership) profileUpdate.leadership = specs.leadership;
-        if (specs.research) profileUpdate.research = specs.research;
-        if (specs.internship) profileUpdate.internship = specs.internship;
-        if (specs.athletics) profileUpdate.athletics = specs.athletics;
-        if (specs.specialTalent) profileUpdate.specialTalent = specs.specialTalent;
+        if (specsSnapshot.gpaUW) profileUpdate.gpa = specsSnapshot.gpaUW;
+        if (specsSnapshot.sat) profileUpdate.sat = specsSnapshot.sat;
+        if (specsSnapshot.toefl) profileUpdate.toefl = specsSnapshot.toefl;
+        if (specsSnapshot.highSchool) profileUpdate.highSchool = specsSnapshot.highSchool;
+        if (specsSnapshot.schoolType) profileUpdate.schoolType = specsSnapshot.schoolType;
+        if (specsSnapshot.clubs) profileUpdate.clubs = specsSnapshot.clubs;
+        if (specsSnapshot.leadership) profileUpdate.leadership = specsSnapshot.leadership;
+        if (specsSnapshot.research) profileUpdate.research = specsSnapshot.research;
+        if (specsSnapshot.internship) profileUpdate.internship = specsSnapshot.internship;
+        if (specsSnapshot.athletics) profileUpdate.athletics = specsSnapshot.athletics;
+        if (specsSnapshot.specialTalent) profileUpdate.specialTalent = specsSnapshot.specialTalent;
         saveProfile(profileUpdate).catch(() => {});
       }
       setSpecsSaveStatus("saved");
@@ -170,7 +170,7 @@ export default function AnalysisPage() {
     setAnalyzeProgress(0);
     setAnalyzeMsg("학생 프로필 분석 중...");
     const msgs = [
-      { at: 400, msg: "200개 대학 데이터 비교 중...", pct: 35 },
+      { at: 400, msg: "200개 대학교 데이터 비교 중...", pct: 35 },
       { at: 900, msg: "합격 확률 계산 중...", pct: 65 },
       { at: 1400, msg: "결과 생성 완료!", pct: 100 },
     ];
@@ -246,17 +246,17 @@ export default function AnalysisPage() {
   /* ── ANALYZING VIEW ── */
   if (step === "analyzing") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <div className="min-h-screen bg-background flex items-center justify-center p-6" role="status" aria-live="polite" aria-busy="true">
         <div className="max-w-xs w-full text-center space-y-6 animate-scale-in">
           <div className="flex justify-center">
             <PrismLoader size={88} />
           </div>
           <div className="space-y-1.5">
             <h2 className="font-headline text-xl font-bold">{analyzeMsg}</h2>
-            <p className="text-sm text-muted-foreground">200개 대학을 분석하고 있어요</p>
+            <p className="text-sm text-muted-foreground">200개 대학교를 분석하고 있어요</p>
           </div>
           <div className="space-y-2">
-            <Progress value={analyzeProgress} className="h-1.5" />
+            <Progress value={analyzeProgress} className="h-1.5" aria-label="분석 진행률" />
             <p className="text-xs text-muted-foreground tabular-nums">{analyzeProgress}%</p>
           </div>
         </div>
@@ -267,10 +267,10 @@ export default function AnalysisPage() {
   /* ── RESULT VIEW ── */
   if (step === "result") {
     return (
-      <div className="min-h-screen bg-background pb-24">
+      <div className="min-h-screen bg-background pb-nav">
         <PageHeader
           title="분석 결과"
-          subtitle={`${results.length}개 대학 분석 완료`}
+          subtitle={`${results.length}개 대학교 분석 완료`}
           onBack={() => setStep("form")}
           action={
             <Button
@@ -307,11 +307,10 @@ export default function AnalysisPage() {
             </Card>
           </Link>
 
-          {/* Summary — interactive 4-cell stat가 필터 역할까지 겸함. 장식 orb·추천 포커스·
-             "지원 추천 대학" count는 제거 (아래 School list와 중복) */}
+          {/* Summary — interactive 4-cell stat가 필터 역할까지 겸함 */}
           <Card className="dark-hero-gradient text-white border-none p-5 rounded-2xl">
             <div className="flex items-center justify-between mb-3 gap-2">
-              <p className="text-xs text-white/70">{results.length}개 대학 분석</p>
+              <p className="text-xs text-white/70">{results.length}개 대학교 분석</p>
               <div className="flex items-center gap-2">
                 {filterCat && (
                   <button
@@ -331,26 +330,35 @@ export default function AnalysisPage() {
                 </button>
               </div>
             </div>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 gap-1.5">
               {CAT_ORDER.map((cat) => {
                 const count = results.filter((s) => s.cat === cat).length;
                 const CatIcon = CAT_ICON[cat];
                 const isActive = filterCat === cat;
+                const shortLabel: Record<string, string> = { Reach: "Reach", "Hard Target": "Hard", Target: "Target", Safety: "Safety" };
+                const hint: Record<string, string> = {
+                  Reach: "합격 가능성 낮음 (<15%)",
+                  "Hard Target": "도전적 (15~39%)",
+                  Target: "적정 지원 (40~69%)",
+                  Safety: "합격 유력 (70%+)",
+                };
                 return (
                   <button
                     key={cat}
                     onClick={() => setFilterCat(isActive ? null : cat)}
-                    className={`rounded-xl p-3 transition-all ${isActive ? "bg-white/20 ring-1 ring-white/40" : "bg-white/5 hover:bg-white/10"}`}
+                    title={`${cat}: ${hint[cat]}`}
+                    className={`rounded-xl px-1 py-3 transition-colors ${isActive ? "bg-white/20 ring-1 ring-white/40" : "bg-white/5 hover:bg-white/10"}`}
                     aria-pressed={isActive}
-                    aria-label={`${cat} 카테고리 ${count}개, ${isActive ? "필터 해제" : "필터 적용"}`}
+                    aria-label={`${cat} — ${hint[cat]}, ${count}개`}
                   >
                     <CatIcon className="w-4 h-4 mx-auto mb-1 text-white/90" aria-hidden="true" />
                     <p className="text-xl font-bold tabular-nums leading-none">{count}</p>
-                    <p className="text-2xs text-white/70 mt-1">{cat}</p>
+                    <p className="text-2xs text-white/70 mt-1 truncate">{shortLabel[cat]}</p>
                   </button>
                 );
               })}
             </div>
+            <p className="text-2xs text-white/40 mt-3 text-center">탭하여 카테고리별 필터</p>
           </Card>
 
           {/* Toolbar — 검색 + 정렬 */}
@@ -358,7 +366,7 @@ export default function AnalysisPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
               <Input
-                placeholder="대학 검색..."
+                placeholder="대학교 검색..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 h-10 rounded-xl bg-muted/50 dark:bg-card/60 border-none text-sm"
@@ -398,7 +406,7 @@ export default function AnalysisPage() {
           </div>
         ) : matchError ? (
           <div className="text-center py-12 px-6">
-            <p className="text-sm text-red-600 mb-3">{matchError}</p>
+            <p className="text-sm text-destructive mb-3">{matchError}</p>
             <Button variant="outline" size="sm" onClick={() => setStep("form")}>다시 시도</Button>
           </div>
         ) : filtered.length === 0 ? (
@@ -428,8 +436,8 @@ export default function AnalysisPage() {
         {lockedCount > 0 && (
           <div className="px-6 mt-4 space-y-3">
             <UpgradeCTA
-              title={`나머지 ${lockedCount}개 대학 결과 보기`}
-              description="숨겨진 대학 중에 나에게 딱 맞는 학교가 있을 수 있어요."
+              title={`나머지 ${lockedCount}개 대학교 결과 보기`}
+              description="숨겨진 대학교 중에 나에게 딱 맞는 학교가 있을 수 있어요."
               planLabel="베이직 시작하기 — 7일 무료 체험"
             />
           </div>
@@ -438,7 +446,7 @@ export default function AnalysisPage() {
         {/* Prediction disclaimer */}
         <div className="mt-6 px-8">
           <p className="text-xs text-muted-foreground/70 leading-relaxed text-center">
-            합격 예측은 각 대학의 공개 합격률, SAT/GPA 범위, 지원자 통계를 기반으로 산출됩니다.
+            합격 예측은 각 대학교의 공개 합격률, SAT/GPA 범위, 지원자 통계를 기반으로 산출됩니다.
             실제 합격 여부는 에세이, 추천서, 과외활동 등 다양한 요소에 따라 달라질 수 있습니다.
           </p>
         </div>
@@ -461,7 +469,7 @@ export default function AnalysisPage() {
   const earlyAppLabel = specs.earlyApp || "없음";
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-nav">
       <PageHeader
         title="분석"
         hideBack

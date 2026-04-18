@@ -1,13 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { getCachedResponse, setCachedResponse, makeCacheKey } from "@/lib/ai-cache";
 import { requireAuth, enforceQuota } from "@/lib/api-auth";
-
-function getClient() {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key || key === "your_anthropic_api_key_here") return null;
-  return new Anthropic({ apiKey: key });
-}
+import { extractJSON, sanitizeUserText } from "@/lib/api-helpers";
+import { getAnthropicClient } from "@/lib/anthropic";
+import { SpecAnalysisInputSchema, zodErrorResponse } from "@/lib/schemas";
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,15 +13,17 @@ export async function POST(req: NextRequest) {
     const quotaErr = await enforceQuota(session, "specAnalysis");
     if (quotaErr) return quotaErr;
 
-    const anthropic = getClient();
+    const anthropic = getAnthropicClient();
     if (!anthropic) {
       return NextResponse.json({ error: "API 키 미설정" }, { status: 503 });
     }
 
-    const { profile } = await req.json();
-    if (!profile) {
-      return NextResponse.json({ error: "프로필 정보가 필요해요" }, { status: 400 });
+    const body = await req.json().catch(() => null);
+    const parsedInput = SpecAnalysisInputSchema.safeParse(body);
+    if (!parsedInput.success) {
+      return NextResponse.json(zodErrorResponse(parsedInput.error), { status: 400 });
     }
+    const { profile } = parsedInput.data;
 
     // Check Firestore cache first
     const cacheKey = makeCacheKey("spec", {
@@ -109,28 +107,47 @@ export async function POST(req: NextRequest) {
   "watchOuts": "<솔직하게 짚어야 할 현실적 도전. 응원하되 거짓 희망 X>"
 }`;
 
+    // 사용자 자유 입력은 프롬프트 주입 대비 sanitize.
+    const p = {
+      name: sanitizeUserText(profile.name) || "학생",
+      grade: sanitizeUserText(profile.grade) || "미입력",
+      gpa: profile.gpa || "미입력",
+      sat: profile.sat || "미입력",
+      toefl: profile.toefl || "미입력",
+      major: sanitizeUserText(profile.major) || "미입력",
+      dreamSchool: sanitizeUserText(profile.dreamSchool) || "미입력",
+      highSchool: sanitizeUserText(profile.highSchool),
+      schoolType: sanitizeUserText(profile.schoolType),
+      clubs: sanitizeUserText(profile.clubs),
+      leadership: sanitizeUserText(profile.leadership),
+      research: sanitizeUserText(profile.research),
+      internship: sanitizeUserText(profile.internship),
+      athletics: sanitizeUserText(profile.athletics),
+      specialTalent: sanitizeUserText(profile.specialTalent),
+    };
+
     const userPrompt = `다음 학생의 스펙을 분석해주세요:
 
 학생 정보:
-- 이름: ${profile.name || "학생"}
-- 학년: ${profile.grade || "미입력"}
-- GPA: ${profile.gpa || "미입력"} (Unweighted, 4.0 scale)
-- SAT: ${profile.sat || "미입력"}
-- TOEFL: ${profile.toefl || "미입력"}
-- 지망 전공: ${profile.major || "미입력"}
-- 목표 대학: ${profile.dreamSchool || "미입력"}
-${profile.highSchool ? `- 고등학교: ${profile.highSchool}` : ""}
-${profile.schoolType ? `- 학교 유형: ${profile.schoolType}` : ""}
-${profile.clubs ? `- 동아리/클럽: ${profile.clubs}` : ""}
-${profile.leadership ? `- 리더십: ${profile.leadership}` : ""}
-${profile.research ? `- 연구 경험: ${profile.research}` : ""}
-${profile.internship ? `- 인턴/알바: ${profile.internship}` : ""}
-${profile.athletics ? `- 운동/예술: ${profile.athletics}` : ""}
-${profile.specialTalent ? `- 특기: ${profile.specialTalent}` : ""}
+- 이름: ${p.name}
+- 학년: ${p.grade}
+- GPA: ${p.gpa} (Unweighted, 4.0 scale)
+- SAT: ${p.sat}
+- TOEFL: ${p.toefl}
+- 지망 전공: ${p.major}
+- 목표 대학교: ${p.dreamSchool}
+${p.highSchool ? `- 고등학교: ${p.highSchool}` : ""}
+${p.schoolType ? `- 학교 유형: ${p.schoolType}` : ""}
+${p.clubs ? `- 동아리/클럽: ${p.clubs}` : ""}
+${p.leadership ? `- 리더십: ${p.leadership}` : ""}
+${p.research ? `- 연구 경험: ${p.research}` : ""}
+${p.internship ? `- 인턴/알바: ${p.internship}` : ""}
+${p.athletics ? `- 운동/예술: ${p.athletics}` : ""}
+${p.specialTalent ? `- 특기: ${p.specialTalent}` : ""}
 
-이 학생의 스펙을 입학사정관 관점에서 분석하고, 목표 대학 합격을 위한 맞춤 피드백을 제공해주세요.
-${profile.research ? "연구 경험이 있으므로 Research 매치 학교에 대한 분석도 포함해주세요." : ""}
-${profile.internship ? "실무 경험이 있으므로 이를 어떻게 강조할 수 있는지도 언급해주세요." : ""}`;
+이 학생의 스펙을 입학사정관 관점에서 분석하고, 목표 대학교 합격을 위한 맞춤 피드백을 제공해주세요.
+${p.research ? "연구 경험이 있으므로 Research 매치 학교에 대한 분석도 포함해주세요." : ""}
+${p.internship ? "실무 경험이 있으므로 이를 어떻게 강조할 수 있는지도 언급해주세요." : ""}`;
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
@@ -142,24 +159,20 @@ ${profile.internship ? "실무 경험이 있으므로 이를 어떻게 강조할
     const textBlock = response.content.find((b) => b.type === "text");
     const raw = textBlock?.text || "";
 
-    let parsed: unknown = null;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      const match = raw.match(/\{[\s\S]*\}/);
-      if (match) {
-        try { parsed = JSON.parse(match[0]); } catch {}
-      }
-    }
-
+    const parsed = extractJSON(raw);
     if (parsed) {
       setCachedResponse(cacheKey, parsed);
       return NextResponse.json({ analysis: parsed });
     }
 
-    return NextResponse.json({ analysis: null, raw }, { status: 500 });
+    // raw 응답은 로그로만. 클라이언트에 흘리면 시스템 프롬프트 누설 가능성.
+    console.error("Spec analysis JSON parse failed. Raw length:", raw.length);
+    return NextResponse.json(
+      { error: "AI 응답을 해석하지 못했어요. 다시 시도해주세요." },
+      { status: 502 }
+    );
   } catch (error) {
     console.error("Spec analysis error:", error);
-    return NextResponse.json({ error: "분석 생성에 실패했습니다." }, { status: 500 });
+    return NextResponse.json({ error: "분석 생성에 실패했어요." }, { status: 500 });
   }
 }

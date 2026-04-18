@@ -1,12 +1,8 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, enforceQuota } from "@/lib/api-auth";
-
-function getClient() {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key || key === "your_anthropic_api_key_here") return null;
-  return new Anthropic({ apiKey: key });
-}
+import { extractJSON, sanitizeUserText } from "@/lib/api-helpers";
+import { getAnthropicClient } from "@/lib/anthropic";
+import { EssayOutlineInputSchema, zodErrorResponse } from "@/lib/schemas";
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,25 +12,28 @@ export async function POST(req: NextRequest) {
     const quotaErr = await enforceQuota(session, "essayOutline");
     if (quotaErr) return quotaErr;
 
-    const anthropic = getClient();
+    const anthropic = getAnthropicClient();
     if (!anthropic) {
       return NextResponse.json({ error: "API 키 미설정" }, { status: 503 });
     }
 
-    const { prompt, university, profile } = await req.json();
-
-    if (!prompt) {
-      return NextResponse.json({ error: "프롬프트가 필요해요" }, { status: 400 });
+    const body = await req.json().catch(() => null);
+    const parsedInput = EssayOutlineInputSchema.safeParse(body);
+    if (!parsedInput.success) {
+      return NextResponse.json(zodErrorResponse(parsedInput.error), { status: 400 });
     }
+    const { prompt, university, profile } = parsedInput.data;
 
     const studentCtx = [
-      profile?.name && `이름: ${profile.name}`,
-      profile?.grade && `학년: ${profile.grade}`,
-      profile?.dreamSchool && `목표 대학: ${profile.dreamSchool}`,
-      profile?.major && `전공: ${profile.major}`,
+      profile?.name && `이름: ${sanitizeUserText(profile.name)}`,
+      profile?.grade && `학년: ${sanitizeUserText(profile.grade)}`,
+      profile?.dreamSchool && `목표 대학교: ${sanitizeUserText(profile.dreamSchool)}`,
+      profile?.major && `전공: ${sanitizeUserText(profile.major)}`,
       profile?.gpa && `GPA: ${profile.gpa}`,
       profile?.sat && `SAT: ${profile.sat}`,
     ].filter(Boolean).join("\n");
+    const safePrompt = sanitizeUserText(prompt);
+    const safeUniversity = sanitizeUserText(university);
 
     const systemPrompt = `미국 대학 에세이의 구조(아웃라인)를 만들어주는 전문 코치입니다.
 
@@ -80,10 +79,10 @@ export async function POST(req: NextRequest) {
 학생 정보:
 ${studentCtx || "정보 없음"}
 
-대상 학교: ${university || "미정"}
+대상 학교: ${safeUniversity || "미정"}
 
 에세이 프롬프트:
-${prompt}`;
+${safePrompt}`;
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
@@ -95,60 +94,41 @@ ${prompt}`;
     const textBlock = response.content.find((b) => b.type === "text");
     const raw = textBlock?.text || "";
 
-    // Strip markdown code fences if Claude wrapped the JSON despite instructions.
-    // Handles ```json ... ```, ``` ... ```, and stray prose around the JSON object.
-    const stripFences = (s: string): string => {
-      let out = s.trim();
-      // Remove ```json or ``` opener
-      out = out.replace(/^```(?:json)?\s*\n?/i, "");
-      // Remove trailing ```
-      out = out.replace(/\n?```\s*$/i, "");
-      // If there's still leading/trailing prose, extract the outermost {...} block.
-      const firstBrace = out.indexOf("{");
-      const lastBrace = out.lastIndexOf("}");
-      if (firstBrace > 0 || (lastBrace > -1 && lastBrace < out.length - 1)) {
-        if (firstBrace > -1 && lastBrace > firstBrace) {
-          out = out.slice(firstBrace, lastBrace + 1);
-        }
-      }
-      return out.trim();
-    };
-
-    const cleaned = stripFences(raw);
-
-    try {
-      const parsed = JSON.parse(cleaned);
-      // Normalize: ensure every section exposes both legacy (hint/starter)
-      // and new (korean_guide/english_starter) fields so older consumers keep working.
-      const normalize = (s: unknown) => {
-        if (!s || typeof s !== "object") return s;
-        const obj = s as Record<string, unknown>;
-        return {
-          title: obj.title,
-          korean_guide: obj.korean_guide ?? obj.hint ?? "",
-          english_starter: obj.english_starter ?? obj.starter ?? "",
-          hint: obj.korean_guide ?? obj.hint ?? "",
-          starter: obj.english_starter ?? obj.starter ?? "",
-        };
-      };
-      const p = parsed as Record<string, unknown>;
-      const outline = {
-        past: normalize(p.past),
-        turning: normalize(p.turning),
-        growth: normalize(p.growth),
-        connection: normalize(p.connection),
-      };
-      return NextResponse.json({ outline });
-    } catch (parseErr) {
-      console.error("Essay outline JSON parse failed:", parseErr, "\nRaw response:", raw);
+    const parsed = extractJSON<Record<string, unknown>>(raw);
+    if (!parsed) {
+      // raw 응답은 서버 로그에만 남긴다. 클라이언트에 반환하면 모델 내부 프롬프트 누설 위험.
+      console.error("Essay outline JSON parse failed. Raw length:", raw.length);
       return NextResponse.json(
-        { error: "AI 응답을 해석하지 못했어요. 다시 시도해주세요.", raw },
+        { error: "AI 응답을 해석하지 못했어요. 다시 시도해주세요." },
         { status: 502 }
       );
     }
+
+    // 레거시 소비자를 위해 hint/starter·korean_guide/english_starter 양쪽을 노출.
+    const normalize = (s: unknown) => {
+      if (!s || typeof s !== "object") return s;
+      const obj = s as Record<string, unknown>;
+      return {
+        title: obj.title,
+        korean_guide: obj.korean_guide ?? obj.hint ?? "",
+        english_starter: obj.english_starter ?? obj.starter ?? "",
+        hint: obj.korean_guide ?? obj.hint ?? "",
+        starter: obj.english_starter ?? obj.starter ?? "",
+      };
+    };
+    const outline = {
+      past: normalize(parsed.past),
+      turning: normalize(parsed.turning),
+      growth: normalize(parsed.growth),
+      connection: normalize(parsed.connection),
+    };
+    return NextResponse.json({ outline });
   } catch (error: unknown) {
     console.error("Essay outline error:", error);
-    const message = error instanceof Error ? error.message : "에세이 구조 생성에 실패했어요";
-    return NextResponse.json({ error: message }, { status: 500 });
+    // 내부 에러 메시지 노출 방지 — 정적 문구만 반환.
+    return NextResponse.json(
+      { error: "에세이 구조 생성에 실패했어요. 잠시 후 다시 시도해주세요." },
+      { status: 500 }
+    );
   }
 }

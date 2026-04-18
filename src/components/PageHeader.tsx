@@ -23,8 +23,9 @@ import { cn } from "@/lib/utils";
  *   단, hideBack=true 면 back 자체 숨김 (welcome/onboarding 등 entry 페이지)
  * - title 스타일: 항상 font-headline text-xl font-bold
  * - subtitle: text-sm text-muted-foreground (1줄)
- * - 패딩: px-gutter py-4 (모바일), md:py-5 (태블릿+)
- * - sticky 사용 시 backdrop-blur + border-bottom (chat·analysis 결과 화면 등)
+ * - 패딩: px-gutter pt-safe pb-4 (모바일), md:pb-5 (태블릿+)
+ * - pt-safe: env(safe-area-inset-top) 반영 → Safari 주소창과 타이틀 겹침 방지
+ * - sticky 사용 시 border-bottom (chat·analysis 결과 화면 등)
  */
 
 export interface PageHeaderProps {
@@ -57,10 +58,25 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   const router = useRouter();
+  // sticky 헤더는 항상 border를 달면 entry 시에도 이질적 → 실제 스크롤되었을 때만 표시.
+  const [scrolled, setScrolled] = React.useState(false);
+  React.useEffect(() => {
+    if (!sticky) return;
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [sticky]);
 
   const handleBack = () => {
-    if (onBack) onBack();
-    else router.back();
+    if (onBack) { onBack(); return; }
+    // 공유 링크로 직접 진입한 경우 router.back()은 앱 바깥 페이지로 이동해 혼란.
+    // history가 1 이하면 대시보드로 안전 fallback.
+    if (typeof window !== "undefined" && window.history.length <= 1) {
+      router.replace("/dashboard");
+      return;
+    }
+    router.back();
   };
 
   const backButton = !hideBack && (
@@ -80,8 +96,9 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "flex items-center gap-2 px-gutter py-4 md:py-5",
-        sticky && "sticky top-0 z-40 bg-background/85 backdrop-blur-xl border-b border-border/60",
+        "flex items-center gap-2 px-gutter pt-safe pb-4 md:pb-5",
+        sticky && "sticky top-0 z-40 bg-background/95 border-b transition-colors",
+        sticky && (scrolled ? "border-border/60" : "border-transparent"),
         className
       )}
     >

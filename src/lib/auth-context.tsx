@@ -15,6 +15,9 @@ import type { PlanType, BillingCycle } from "./plans";
 // (이 파일은 client-side context이므로 server-only 모듈을 import할 수 없음)
 // Specs 타입은 type-only import — 번들에 영향 없음
 import type { Specs } from "./matching";
+import { STORAGE_KEYS } from "./storage-keys";
+import { isMasterEmail } from "./master";
+export { isMasterEmail } from "./master";
 
 const SPECS_LS_KEY = "prism_specs";
 
@@ -34,7 +37,6 @@ export interface UserProfile {
     totalAmount: number;
     method?: string;
     approvedAt?: string;
-    paymentKey?: string;
   };
   aiChatCount?: number;
   aiChatDate?: string;
@@ -47,6 +49,7 @@ export interface UserProfile {
   favoriteSchools?: string[];
   specLastUpdated?: string;
   specs?: Specs;
+  snapshots?: ProfileSnapshot[];
 }
 
 export interface ProfileSnapshot {
@@ -80,23 +83,7 @@ interface AuthContextValue {
   isFavorite: (schoolName: string) => boolean;
 }
 
-/* ── Master account: bypasses all plan restrictions ──
- * NEXT_PUBLIC_MASTER_EMAILS는 build-time에 inlining되므로 프로덕션 배포 환경에 미설정이면
- * 클라이언트가 마스터를 인지하지 못함. 그래서 `HARDCODED_MASTER_EMAILS`로 안전망을 둠.
- */
-const HARDCODED_MASTER_EMAILS = ["hongjunan100@gmail.com"];
-const MASTER_EMAILS = Array.from(new Set([
-  ...HARDCODED_MASTER_EMAILS,
-  ...(process.env.NEXT_PUBLIC_MASTER_EMAILS || "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean),
-]));
-
-export function isMasterEmail(email: string | null | undefined): boolean {
-  if (!email) return false;
-  return MASTER_EMAILS.includes(email.toLowerCase());
-}
+/* Master account: bypasses all plan restrictions. `isMasterEmail`은 `@/lib/master` 단일화 모듈에서 공급. */
 
 const SNAPSHOT_KEY = "prism_snapshots";
 
@@ -108,22 +95,18 @@ function loadSnapshots(): ProfileSnapshot[] {
   } catch { return []; }
 }
 
-function saveSnapshot(profile: UserProfile, prev: UserProfile | null) {
+/** 스펙 변경 시 스냅샷 저장. 변경이 있으면 trimmed 배열 반환, 없으면 null. */
+function saveSnapshot(profile: UserProfile, prev: UserProfile | null): ProfileSnapshot[] | null {
   const specChanged =
     profile.gpa !== prev?.gpa ||
     profile.sat !== prev?.sat ||
     profile.toefl !== prev?.toefl ||
     profile.major !== prev?.major;
 
-  if (!specChanged || (!profile.gpa && !profile.sat)) return;
+  if (!specChanged || (!profile.gpa && !profile.sat)) return null;
 
   const today = new Date().toISOString().split("T")[0];
   const snaps = loadSnapshots();
-
-  // dreamProb·catCounts는 클라이언트에서 매칭이 불가능하므로 생략.
-  // 분석 페이지에서 결과를 얻은 직후 별도로 saveSnapshot에 채워주는 식으로 추후 보강 가능.
-  const dreamProb: number | undefined = undefined;
-  const catCounts: { reach?: number; target?: number; safety?: number } = {};
 
   const filtered = snaps.filter(s => s.date !== today);
   filtered.push({
@@ -133,12 +116,11 @@ function saveSnapshot(profile: UserProfile, prev: UserProfile | null) {
     toefl: profile.toefl,
     major: profile.major,
     dreamSchool: profile.dreamSchool,
-    dreamSchoolProb: dreamProb,
-    ...catCounts,
   });
 
   const trimmed = filtered.slice(-20);
   try { localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(trimmed)); } catch {}
+  return trimmed;
 }
 
 const AuthContext = createContext<AuthContextValue>({} as AuthContextValue);
@@ -188,6 +170,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 // Sync Firestore specs → localStorage cache (cross-device hydration)
                 if (data.specs && typeof window !== "undefined") {
                   try { localStorage.setItem(SPECS_LS_KEY, JSON.stringify(data.specs)); } catch {}
+                }
+                // Sync Firestore snapshots → localStorage + state (cross-device)
+                if (data.snapshots && Array.isArray(data.snapshots) && typeof window !== "undefined") {
+                  try { localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(data.snapshots)); } catch {}
+                  setSnapshots(data.snapshots);
                 }
               } else if (isMasterEmail(u.email)) {
                 // Master account without Firestore profile yet
@@ -329,12 +316,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await signOut(auth);
     setProfile(null);
-    // Clear local caches
+    setSnapshots([]);
+    // Clear all user-data caches — UI preferences (theme, accent 등)는 유지
     try {
-      localStorage.removeItem(SPECS_LS_KEY);
-      localStorage.removeItem("prism_saved_specs"); // legacy key
-      localStorage.removeItem("prism_chat_history");
-      localStorage.removeItem("prism_tasks");
+      const userDataKeys = [
+        STORAGE_KEYS.SPECS,
+        STORAGE_KEYS.SNAPSHOTS,
+        STORAGE_KEYS.ESSAYS,
+        STORAGE_KEYS.TASKS,
+        STORAGE_KEYS.CHAT_HISTORY,
+        STORAGE_KEYS.ESSAY_REVIEW_DRAFT,
+        STORAGE_KEYS.SPEC_ANALYSIS_CACHE,
+        STORAGE_KEYS.ANALYSIS_SORT,
+        "prism_saved_specs", // legacy key
+      ];
+      for (const key of userDataKeys) {
+        localStorage.removeItem(key);
+      }
     } catch {}
     // Redirect to login page
     window.location.href = "/";
@@ -360,8 +358,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    saveSnapshot(merged, prev);
-    setSnapshots(loadSnapshots());
+    const newSnaps = saveSnapshot(merged, prev);
+    if (newSnaps) {
+      setSnapshots(newSnaps);
+      // Snapshots를 Firestore에도 동기화 (cross-device 복원)
+      if (user) {
+        setDoc(doc(db, "users", user.uid), { snapshots: newSnaps }, { merge: true }).catch(() => {});
+      }
+    }
     setProfile(merged); // in-memory에는 plan 포함 (마스터·서버 응답 등)
   }, [user]);
 

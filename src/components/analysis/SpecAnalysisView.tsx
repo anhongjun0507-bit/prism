@@ -191,7 +191,7 @@ export function SpecAnalysisView({ profile, hasAccess }: SpecAnalysisViewProps) 
                 <Badge className="bg-white/10 text-white border-white/20">
                   <Sparkles className="w-3 h-3 mr-1" /> AI 종합 분석
                 </Badge>
-                <Badge className="bg-amber-500/90 text-white border-none">
+                <Badge className="bg-amber-400 text-amber-950 border-none font-bold">
                   {analysis.competitiveness}
                 </Badge>
               </div>

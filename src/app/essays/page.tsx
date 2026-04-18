@@ -20,7 +20,7 @@ import { ToastAction } from "@/components/ui/toast";
 import { useAuth } from "@/lib/auth-context";
 import Link from "next/link";
 import { PLANS } from "@/lib/plans";
-import { collection, doc, setDoc, getDoc, deleteDoc, onSnapshot, writeBatch, query, orderBy, limit as fsLimit } from "firebase/firestore";
+import { collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch, query, orderBy, limit as fsLimit, runTransaction } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { fetchWithAuth } from "@/lib/api-client";
 import { SCHOOLS_INDEX, schoolMatchesQuery } from "@/lib/schools-index";
@@ -179,13 +179,21 @@ export default function EssaysPage() {
       if (migrationDone) return;
       migrationDone = true;
       try {
-        const legacy = await getDoc(doc(db, "users", user.uid, "data", "essays"));
-        if (!legacy.exists()) return;
-        const data = legacy.data();
-        if (data?.migrated) return;
-        const oldEssays = (data?.essays as Essay[]) || [];
+        // 트랜잭션으로 래핑 — 다중 탭에서 동시에 migration이 돌아도 한 번만 수행되도록.
+        // 트랜잭션 내에서 migrated 플래그를 읽고 세팅해야 race 없이 일관성 유지 가능.
+        const legacyRef = doc(db, "users", user.uid, "data", "essays");
+        const oldEssays = await runTransaction(db, async (tx) => {
+          const legacy = await tx.get(legacyRef);
+          if (!legacy.exists()) return [] as Essay[];
+          const data = legacy.data();
+          if (data?.migrated) return [] as Essay[];
+          const list = (data?.essays as Essay[]) || [];
+          tx.set(legacyRef, { migrated: true, migratedAt: new Date().toISOString() }, { merge: true });
+          return list;
+        });
         if (oldEssays.length === 0) return;
 
+        // 본 essay 쓰기는 트랜잭션 바깥에서 배치로. merge:true라 재실행해도 안전.
         const batch = writeBatch(db);
         const colRef = collection(db, "users", user.uid, "essays");
         const now = new Date().toISOString();
@@ -193,7 +201,6 @@ export default function EssaysPage() {
           if (!e.id) continue;
           batch.set(doc(colRef, e.id), { ...e, updatedAt: e.updatedAt || now }, { merge: true });
         }
-        batch.set(doc(db, "users", user.uid, "data", "essays"), { migrated: true, migratedAt: now }, { merge: true });
         await batch.commit();
       } catch (e) {
         console.error("[essays] legacy migration failed:", e);
@@ -405,7 +412,6 @@ export default function EssaysPage() {
     const controller = new AbortController();
     outlineAbortRef.current = controller;
 
-    console.log("[outline] start", { university: activeEssay.university, prompt: activeEssay.prompt?.slice(0, 60) });
     setOutlineLoading(true);
     try {
       const data = await fetchWithAuth<{ outline: EssayOutline }>("/api/essay-outline", {
@@ -429,7 +435,6 @@ export default function EssaysPage() {
         throw new Error("AI 응답이 비어있어요. 다시 시도해주세요.");
       }
 
-      console.log("[outline] parsed", Object.keys(data.outline));
       const savedOutline: EssayOutline = { ...data.outline, createdAt: new Date().toISOString() };
       setOutline(savedOutline);
       setShowOutline(true);
@@ -446,7 +451,6 @@ export default function EssaysPage() {
       }
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") {
-        console.log("[outline] aborted");
         return;
       }
       console.error("[outline] failed", err);
@@ -555,7 +559,7 @@ export default function EssaysPage() {
                 새 에세이 쓰기
               </DialogTitle>
               <DialogDescription>
-                대학 supplemental이 아닌 자유 형식의 글을 작성할 수 있어요. 제목과 주제는 나중에 바꿀 수 있어요.
+                대학교 supplemental이 아닌 자유 형식의 글을 작성할 수 있어요. 제목과 주제는 나중에 바꿀 수 있어요.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 pt-1">
@@ -628,10 +632,10 @@ export default function EssaysPage() {
 
   // List View
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-nav">
       <PageHeader
         title="에세이 관리"
-        subtitle="대학별 프롬프트로 에세이를 작성하세요."
+        subtitle="대학교별 프롬프트로 에세이를 작성하세요."
         hideBack
         action={
           <Button onClick={() => setView("picker")} size="icon" className="rounded-full w-12 h-12 shadow-lg" aria-label="새 에세이 추가">
@@ -674,7 +678,7 @@ export default function EssaysPage() {
             <EmptyState
               illustration="essay"
               title="에세이를 시작해볼까요?"
-              description={<>Common App·대학 supplemental 뿐만 아니라<br />자유 주제의 일반 에세이도 작성할 수 있어요</>}
+              description={<>Common App·대학교 supplemental 뿐만 아니라<br />자유 주제의 일반 에세이도 작성할 수 있어요</>}
               action={
                 <Button onClick={() => setView("picker")} size="lg" className="px-8">
                   에세이 시작하기 <ChevronRight className="w-4 h-4 ml-1" />
@@ -772,7 +776,7 @@ export default function EssaysPage() {
             <Button variant="outline" className="flex-1" onClick={() => setDeleteTarget(null)}>
               취소
             </Button>
-            <Button className="flex-1 bg-red-500 hover:bg-red-600 text-white" onClick={confirmDeleteEssay}>
+            <Button variant="destructive" className="flex-1" onClick={confirmDeleteEssay}>
               삭제
             </Button>
           </div>
