@@ -49,6 +49,19 @@ export async function enforceRateLimit(
 
     if (result.blocked) {
       const retrySec = Math.ceil(result.retryAfterMs / 1000);
+      // 어뷰즈 탐지용 구조화 로그. 특정 uid가 특정 bucket에 반복 hit하면
+      // 운영에서 즉시 패턴 파악 가능.
+      console.warn(
+        JSON.stringify({
+          type: "rate_limit_exceeded",
+          bucket,
+          uid,
+          limit,
+          windowMs,
+          retryAfterMs: result.retryAfterMs,
+          at: new Date(now).toISOString(),
+        })
+      );
       return NextResponse.json(
         { error: `요청이 너무 잦아요. ${retrySec}초 후 다시 시도해주세요.` },
         { status: 429, headers: { "Retry-After": String(retrySec) } }

@@ -16,6 +16,8 @@ export function getAnthropicClient(): Anthropic | null {
     cached = null;
     return null;
   }
-  cached = new Anthropic({ apiKey: key });
+  // maxRetries: 일시적 408/429/5xx에 대해 지수 백오프로 자동 재시도.
+  // timeout: 60s — perfectExample(6000 tok) 생성이 길어질 때 대비.
+  cached = new Anthropic({ apiKey: key, maxRetries: 2, timeout: 60_000 });
   return cached;
 }
