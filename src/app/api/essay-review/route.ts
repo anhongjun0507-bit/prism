@@ -155,7 +155,7 @@ ${wrapUserData("essay_body", safeEssay)}
       // perfectExample(에세이 전체 재작성) 때문에 3000→6000으로 상향.
       // Common App 650 words ≒ 한국어 ~1,200자 기준, 나머지 피드백 포함 시 필요 토큰이 3000을 넘김.
       max_tokens: 6000,
-      system: SYSTEM_PROMPT,
+      system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
       messages: [{
         role: "user",
         content: userPrompt,

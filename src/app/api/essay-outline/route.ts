@@ -95,7 +95,7 @@ ${wrapUserData("essay_prompt", safePrompt)}`;
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 800,
-      system: systemPrompt,
+      system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: userPrompt }],
     });
 
@@ -112,16 +112,15 @@ ${wrapUserData("essay_prompt", safePrompt)}`;
       );
     }
 
-    // 레거시 소비자를 위해 hint/starter·korean_guide/english_starter 양쪽을 노출.
+    // 새 스키마(korean_guide/english_starter)만 노출. 레거시 hint/starter 입력도
+    // fallback으로 받지만 출력은 새 필드만. 클라이언트는 normalizeOutline으로 모두 처리.
     const normalize = (s: unknown) => {
       if (!s || typeof s !== "object") return s;
       const obj = s as Record<string, unknown>;
       return {
-        title: obj.title,
+        title: obj.title ?? "",
         korean_guide: obj.korean_guide ?? obj.hint ?? "",
         english_starter: obj.english_starter ?? obj.starter ?? "",
-        hint: obj.korean_guide ?? obj.hint ?? "",
-        starter: obj.english_starter ?? obj.starter ?? "",
       };
     };
     const outline = {

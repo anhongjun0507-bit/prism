@@ -16,12 +16,27 @@ export interface EssayVersion {
 /** AI 타임머신 에세이 구조의 단일 섹션 (과거/전환점/성장/연결). */
 export interface OutlineSection {
   title: string;
-  // New fields (preferred)
-  korean_guide?: string;
-  english_starter?: string;
-  // Legacy fields (fallback for older API responses / cached data)
+  korean_guide: string;
+  english_starter: string;
+}
+
+/**
+ * 레거시 OutlineSection 모양. 과거 API 응답·Firestore 캐시는 hint/starter 필드만 가짐.
+ * Firestore에서 읽은 직후 `normalizeOutlineSection`으로 새 모양으로 변환.
+ */
+type LegacyOutlineSection = Partial<OutlineSection> & {
+  title?: string;
   hint?: string;
   starter?: string;
+};
+
+function normalizeOutlineSection(raw: unknown): OutlineSection {
+  const s = (raw ?? {}) as LegacyOutlineSection;
+  return {
+    title: s.title ?? "",
+    korean_guide: s.korean_guide ?? s.hint ?? "",
+    english_starter: s.english_starter ?? s.starter ?? "",
+  };
 }
 
 export interface EssayOutline {
@@ -31,6 +46,30 @@ export interface EssayOutline {
   connection?: OutlineSection;
   /** ISO — 저장 시각. 레거시 outline(필드 없음)도 허용. */
   createdAt?: string;
+}
+
+/**
+ * Firestore/캐시에서 읽은 outline을 새 스키마(korean_guide/english_starter)로 정규화.
+ * 레거시 hint/starter만 가진 데이터도 안전하게 변환. 읽기 경계에서 한 번만 호출하면
+ * 이후 컴포넌트는 새 필드만 다루면 된다.
+ */
+export function normalizeOutline(raw: unknown): EssayOutline | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const o = raw as Record<string, unknown>;
+  const past = normalizeOutlineSection(o.past);
+  const turning = normalizeOutlineSection(o.turning);
+  const growth = normalizeOutlineSection(o.growth);
+  // 4개 섹션 중 본문이 하나도 없으면 outline 없는 것으로 간주.
+  if (!past.korean_guide && !turning.korean_guide && !growth.korean_guide) {
+    return undefined;
+  }
+  return {
+    past,
+    turning,
+    growth,
+    connection: o.connection ? normalizeOutlineSection(o.connection) : undefined,
+    createdAt: typeof o.createdAt === "string" ? o.createdAt : undefined,
+  };
 }
 
 export interface EssayReview {

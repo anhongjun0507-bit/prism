@@ -16,8 +16,8 @@ import { ScoreBadge } from "./EssayHelpers";
 import Link from "next/link";
 import type { Essay, EssayReview, EssayVersion, EssayOutline, OutlineSection } from "@/types/essay";
 
-const getKoreanGuide = (s: OutlineSection) => s.korean_guide ?? s.hint ?? "";
-const getEnglishStarter = (s: OutlineSection) => s.english_starter ?? s.starter ?? "";
+const getKoreanGuide = (s: OutlineSection) => s.korean_guide;
+const getEnglishStarter = (s: OutlineSection) => s.english_starter;
 
 export interface EssayEditorProps {
   activeEssay: Essay;

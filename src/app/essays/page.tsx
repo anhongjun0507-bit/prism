@@ -25,7 +25,7 @@ import { db } from "@/lib/firebase";
 import { fetchWithAuth } from "@/lib/api-client";
 import { SCHOOLS_INDEX, schoolMatchesQuery } from "@/lib/schools-index";
 import type { Essay, EssayReview, EssayVersion, EssayOutline, OutlineSection } from "@/types/essay";
-import { slimEssaysForCache } from "@/types/essay";
+import { slimEssaysForCache, normalizeOutline } from "@/types/essay";
 import { readJSON, writeJSON, removeKey } from "@/lib/storage";
 import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,8 +33,8 @@ import { EssayEditor } from "@/components/essays/EssayEditor";
 import { EssayPicker } from "@/components/essays/EssayPicker";
 import { ReviewSubCard, ReviewDetailDialog } from "@/components/essays/EssayHelpers";
 
-const getKoreanGuide = (s: OutlineSection) => s.korean_guide ?? s.hint ?? "";
-const getEnglishStarter = (s: OutlineSection) => s.english_starter ?? s.starter ?? "";
+const getKoreanGuide = (s: OutlineSection) => s.korean_guide;
+const getEnglishStarter = (s: OutlineSection) => s.english_starter;
 
 type SchoolDetail = {
   n: string; c: string; rk: number; d: string;
@@ -215,7 +215,12 @@ export default function EssaysPage() {
     const unsub = onSnapshot(
       colRef,
       (snap) => {
-        const list = snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Essay, "id">) }));
+        // 레거시 outline 모양(hint/starter) → 새 모양(korean_guide/english_starter)으로 정규화.
+        // 읽기 경계에서 한 번만 변환해두면 컴포넌트는 새 필드만 다루면 됨.
+        const list = snap.docs.map((d) => {
+          const raw = d.data() as Omit<Essay, "id">;
+          return { id: d.id, ...raw, outline: normalizeOutline(raw.outline) } as Essay;
+        });
         if (list.length === 0) {
           tryMigrateLegacy();
           setEssaysLoading(false);
