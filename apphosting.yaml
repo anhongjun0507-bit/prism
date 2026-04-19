@@ -13,3 +13,11 @@ runConfig:
   # CPU/메모리 — Next.js + Firebase Admin + Anthropic SDK 기준
   cpu: 1
   memoryMiB: 512
+
+env:
+  # 마스터 계정 (쿼터/카운터 우회). 콤마 구분. NEXT_PUBLIC_ 접두어로 client/server 양쪽에 inline.
+  - variable: NEXT_PUBLIC_MASTER_EMAILS
+    value: hongjunan100@gmail.com
+    availability:
+      - BUILD
+      - RUNTIME
