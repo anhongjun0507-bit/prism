@@ -52,6 +52,25 @@ export const SpecAnalysisInputSchema = z.object({
   profile: ProfileSchema,
 });
 
+export const StoryInputSchema = z.object({
+  school: z.object({
+    name: shortStr,
+    rank: z.number().optional(),
+    prob: z.number().min(0).max(100).optional(),
+    cat: shortStr.optional(),
+    satRange: z.string().max(20).optional(),
+    gpa: z.union([z.number(), z.string().max(20)]).optional(),
+    acceptRate: z.union([z.number(), z.string().max(20)]).optional(),
+  }).passthrough(),
+  specs: z.object({
+    gpa: z.union([z.coerce.number().min(0).max(4.5), z.literal(""), z.undefined()]).optional(),
+    sat: z.union([z.coerce.number().min(400).max(1600), z.literal(""), z.undefined()]).optional(),
+    toefl: z.union([z.coerce.number().min(0).max(120), z.literal(""), z.undefined()]).optional(),
+    major: shortStr.optional().or(z.literal("")),
+    ecTier: z.union([z.coerce.number().min(1).max(4), z.literal(""), z.undefined()]).optional(),
+  }).passthrough(),
+});
+
 export const AdmissionDetailInputSchema = z.object({
   school: z.object({
     name: shortStr,
