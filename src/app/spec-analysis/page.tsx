@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
 import { PLANS } from "@/lib/plans";
 import { UNI_LIST, MAJOR_LIST } from "@/lib/constants";
@@ -41,7 +43,7 @@ interface SpecAnalysis {
 const CACHE_KEY = "prism_spec_analysis";
 
 export default function SpecAnalysisPage() {
-  const { profile, isMaster } = useAuth();
+  const { profile, isMaster, user } = useAuth();
   const currentPlan = profile?.plan || "free";
   const hasAccess = isMaster || PLANS[currentPlan].limits.specAnalysis;
 
@@ -76,20 +78,41 @@ export default function SpecAnalysisPage() {
     setEditGrade(profile.grade || "");
   }, [profile]);
 
-  // Try to load cached analysis
+  // 캐시 복원: sessionStorage 우선(당일 빠른 이동), 없으면 Firestore(새로고침·다른 기기).
+  // profileKey가 현재 프로필과 맞는 경우에만 복원 — 스펙이 바뀌었으면 stale 데이터 표시 금지.
   useEffect(() => {
     if (!profile) return;
+    const currentKey = `${profile.gpa}_${profile.sat}_${profile.toefl}_${profile.major}_${profile.dreamSchool}`;
     try {
       const cached = sessionStorage.getItem(CACHE_KEY);
       if (cached) {
         const { analysis: cachedAnalysis, profileKey } = JSON.parse(cached);
-        const currentKey = `${profile.gpa}_${profile.sat}_${profile.toefl}_${profile.major}_${profile.dreamSchool}`;
         if (profileKey === currentKey) {
           setAnalysis(cachedAnalysis);
+          return;
         }
       }
     } catch {}
-  }, [profile]);
+
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, "users", user.uid));
+        if (cancelled || !snap.exists()) return;
+        const stored = snap.data().specAnalysis as
+          | { analysis: SpecAnalysis; profileKey: string }
+          | undefined;
+        if (stored && stored.profileKey === currentKey) {
+          setAnalysis(stored.analysis);
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify(stored));
+        }
+      } catch {}
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [profile, user]);
 
   const buildProfile = () => ({
     ...profile,
@@ -117,7 +140,16 @@ export default function SpecAnalysisPage() {
       }
       setAnalysis(data.analysis);
       const profileKey = `${editGpa}_${editSat}_${editToefl}_${editMajor}_${editDreamSchool}`;
-      sessionStorage.setItem(CACHE_KEY, JSON.stringify({ analysis: data.analysis, profileKey }));
+      const payload = { analysis: data.analysis, profileKey };
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify(payload));
+      // Firestore에도 저장 — 새로고침·다른 기기에서 복원 가능.
+      if (user) {
+        setDoc(
+          doc(db, "users", user.uid),
+          { specAnalysis: { ...payload, updatedAt: Date.now() } },
+          { merge: true }
+        ).catch((e) => console.warn("[spec-analysis] Firestore write failed:", e));
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "연결에 문제가 있어요. 잠시 후 다시 시도해주세요.");
     } finally {
@@ -144,15 +176,15 @@ export default function SpecAnalysisPage() {
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">GPA (UW)</Label>
-          <Input placeholder="4.0" type="number" step="0.01" value={editGpa} onChange={(e) => setEditGpa(e.target.value)} className="h-10 rounded-xl" />
+          <Input placeholder="4.0" type="number" inputMode="decimal" step="0.01" value={editGpa} onChange={(e) => setEditGpa(e.target.value)} className="h-10 rounded-xl" />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">SAT</Label>
-          <Input placeholder="1400" type="number" value={editSat} onChange={(e) => setEditSat(e.target.value)} className="h-10 rounded-xl" />
+          <Input placeholder="1400" type="number" inputMode="numeric" value={editSat} onChange={(e) => setEditSat(e.target.value)} className="h-10 rounded-xl" />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">TOEFL</Label>
-          <Input placeholder="110" type="number" value={editToefl} onChange={(e) => setEditToefl(e.target.value)} className="h-10 rounded-xl" />
+          <Input placeholder="110" type="number" inputMode="numeric" value={editToefl} onChange={(e) => setEditToefl(e.target.value)} className="h-10 rounded-xl" />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">학년</Label>
