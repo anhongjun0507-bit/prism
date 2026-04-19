@@ -149,6 +149,7 @@ export default function WhatIfPage() {
           <label className="text-xs font-medium text-muted-foreground">GPA (Unweighted)</label>
           <Input
             type="number"
+            inputMode="decimal"
             step={0.01}
             min={0}
             max={4}
@@ -164,6 +165,7 @@ export default function WhatIfPage() {
           <label className="text-xs font-medium text-muted-foreground">SAT</label>
           <Input
             type="number"
+            inputMode="numeric"
             min={400}
             max={1600}
             value={sat}
@@ -178,6 +180,7 @@ export default function WhatIfPage() {
           <label className="text-xs font-medium text-muted-foreground">TOEFL</label>
           <Input
             type="number"
+            inputMode="numeric"
             min={0}
             max={120}
             value={toefl}

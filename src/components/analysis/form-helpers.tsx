@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -10,21 +11,33 @@ import { Switch } from "@/components/ui/switch";
  */
 
 export function FormField({
-  label, ...props
+  label, inputMode, ...props
 }: {
   label: string;
   placeholder: string;
   type: string;
   step?: string;
+  /** 모바일 키보드 힌트. 미지정 시 type="number"는 step에 따라 decimal/numeric 자동 추론. */
+  inputMode?: "text" | "decimal" | "numeric";
   value: string;
   onChange: (v: string) => void;
 }) {
+  const id = useId();
+  const resolvedInputMode =
+    inputMode ??
+    (props.type === "number"
+      ? props.step && props.step.includes(".")
+        ? "decimal"
+        : "numeric"
+      : undefined);
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <Label htmlFor={id} className="text-xs text-muted-foreground">{label}</Label>
       <Input
+        id={id}
         type={props.type}
         step={props.step}
+        inputMode={resolvedInputMode}
         placeholder={props.placeholder}
         value={props.value}
         onChange={(e) => props.onChange(e.target.value)}
@@ -42,14 +55,16 @@ export function TierSelector({
   selected: string | number;
   onSelect: (v: string | number) => void;
 }) {
+  const groupId = useId();
   return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
+    <div className="space-y-1.5" role="group" aria-labelledby={groupId}>
+      <Label id={groupId} className="text-xs text-muted-foreground">{label}</Label>
       <div className="flex gap-1.5">
         {options.map(({ value, label }) => (
           <button
             key={String(value)}
             onClick={() => onSelect(value)}
+            aria-pressed={selected === value}
             className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${
               selected === value
                 ? "bg-primary text-white shadow-sm"
@@ -71,10 +86,11 @@ export function ToggleRow({
   checked: boolean;
   onChange: (v: boolean) => void;
 }) {
+  const id = useId();
   return (
     <div className="flex items-center justify-between py-0.5">
-      <Label className="text-sm">{label}</Label>
-      <Switch checked={checked} onCheckedChange={onChange} />
+      <Label htmlFor={id} className="text-sm">{label}</Label>
+      <Switch id={id} checked={checked} onCheckedChange={onChange} />
     </div>
   );
 }
@@ -89,6 +105,7 @@ export function PillButton({
   return (
     <button
       onClick={onClick}
+      aria-pressed={active}
       className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
         active
           ? "bg-primary text-white shadow-glow-sm scale-105"

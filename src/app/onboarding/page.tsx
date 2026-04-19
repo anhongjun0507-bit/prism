@@ -422,6 +422,7 @@ export default function OnboardingPage() {
               <Label className="text-xs text-muted-foreground">GPA (Unweighted, 4.0 만점)</Label>
               <Input
                 type="number"
+                inputMode="decimal"
                 step="0.01"
                 min="0"
                 max="4.0"
@@ -443,6 +444,7 @@ export default function OnboardingPage() {
               <Label className="text-xs text-muted-foreground">SAT (400-1600)</Label>
               <Input
                 type="number"
+                inputMode="numeric"
                 min="400"
                 max="1600"
                 placeholder="예: 1250"
@@ -463,6 +465,7 @@ export default function OnboardingPage() {
               <Label className="text-xs text-muted-foreground">TOEFL (0-120)</Label>
               <Input
                 type="number"
+                inputMode="numeric"
                 min="0"
                 max="120"
                 placeholder="예: 95"
