@@ -11,7 +11,7 @@
  * 거부 시 NextResponse(429) 반환, 통과 시 null.
  */
 import { NextResponse } from "next/server";
-import { FieldValue } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase-admin";
 
 export interface RateLimitOptions {
@@ -40,9 +40,14 @@ export async function enforceRateLimit(
         return { blocked: true, retryAfterMs: Math.max(0, arr[0] + windowMs - now) };
       }
       arr.push(now);
+      // expiresAt: 윈도가 두 번 지나도록 여유를 두면 마지막 호출 이후 비활성 유저의
+      // 문서를 Firestore TTL이 안전하게 삭제. (콘솔에서 rateLimits 컬렉션의
+      // expiresAt 필드에 TTL 정책 활성화 필요)
+      const expiresAt = Timestamp.fromMillis(now + windowMs * 2);
       tx.set(ref, {
         timestamps: arr,
         updatedAt: FieldValue.serverTimestamp(),
+        expiresAt,
       });
       return { blocked: false, retryAfterMs: 0 };
     });

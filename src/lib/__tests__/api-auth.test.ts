@@ -141,11 +141,21 @@ describe("enforceQuota", () => {
       expect((res as Response)?.status).toBe(429);
     });
 
-    it("Firestore 실패 시 통과 (가용성 우선)", async () => {
-      mockRunTransaction.mockRejectedValueOnce(new Error("Firestore down"));
+    it("Firestore 2회 연속 실패 시 503 (fail-closed, 유료 API 보호)", async () => {
+      mockRunTransaction
+        .mockRejectedValueOnce(new Error("Firestore down"))
+        .mockRejectedValueOnce(new Error("Firestore still down"));
       const session = { uid: "u1", email: "u1@test.com", isMaster: false };
       const res = await enforceQuota(session, "aiChat");
-      // 의도된 동작: 실패해도 차단하지 않음
+      expect((res as Response)?.status).toBe(503);
+    });
+
+    it("Firestore 1회 실패 후 재시도 성공 시 통과", async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      mockRunTransaction.mockRejectedValueOnce(new Error("transient"));
+      setupTransaction("free", { period: today, count: 2 }, "aiChat");
+      const session = { uid: "u1", email: "u1@test.com", isMaster: false };
+      const res = await enforceQuota(session, "aiChat");
       expect(res).toBeUndefined();
     });
   });

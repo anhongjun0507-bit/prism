@@ -2,6 +2,14 @@
 # https://firebase.google.com/docs/app-hosting/configure
 
 runConfig:
-  # Increase this value if you'd like to automatically spin up
-  # more instances in response to increased traffic.
-  maxInstances: 1
+  # 비용 폭주 방지 상한. 트래픽 급증 시 자동 스케일하되 5개 컨테이너로 제한.
+  # 한 인스턴스(concurrency=80)로 약 80 RPS 처리 — 5×80 = 400 RPS 상한.
+  # 더 높은 트래픽이 예상되면 상향 + 알림 설정.
+  maxInstances: 5
+  # 콜드스타트 허용 (비활성 시 0으로 스케일 — 비용 절약)
+  minInstances: 0
+  # 인스턴스당 동시 요청 처리 수 (Next.js 앱 표준)
+  concurrency: 80
+  # CPU/메모리 — Next.js + Firebase Admin + Anthropic SDK 기준
+  cpu: 1
+  memoryMiB: 512

@@ -207,7 +207,7 @@ export async function enforceQuota(
     }
   }
 
-  if (!result.ok) {
+  if (!result?.ok) {
     const periodLabel =
       spec.period === "daily" ? "오늘" :
       spec.period === "monthly" ? "이번 달" : "총";
