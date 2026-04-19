@@ -18,6 +18,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { useAuth } from "@/lib/auth-context";
+import { AuthRequired } from "@/components/AuthRequired";
 import Link from "next/link";
 import { PLANS } from "@/lib/plans";
 import { collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch, query, orderBy, limit as fsLimit, runTransaction } from "firebase/firestore";
@@ -48,6 +49,10 @@ function loadEssays(): Essay[] {
 }
 
 export default function EssaysPage() {
+  return <AuthRequired><EssaysPageInner /></AuthRequired>;
+}
+
+function EssaysPageInner() {
   const { toast } = useToast();
   const { profile, saveProfile, user, isMaster } = useAuth();
   const currentPlan = profile?.plan || "free";

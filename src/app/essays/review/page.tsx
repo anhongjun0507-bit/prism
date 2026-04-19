@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { AuthRequired } from "@/components/AuthRequired";
 import { PLANS } from "@/lib/plans";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -112,6 +113,10 @@ function ScoreCircle({ score }: { score: number }) {
 }
 
 export default function EssayReviewPage() {
+  return <AuthRequired><EssayReviewPageInner /></AuthRequired>;
+}
+
+function EssayReviewPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const essayId = searchParams.get("essayId");

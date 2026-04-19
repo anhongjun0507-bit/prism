@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { AuthRequired } from "@/components/AuthRequired";
 import { PLANS } from "@/lib/plans";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -20,6 +21,10 @@ import { fetchWithAuth } from "@/lib/api-client";
 const DATA_KEYS = ["prism_essays", "prism_planner", "prism_snapshots"];
 
 export default function SubscriptionPage() {
+  return <AuthRequired><SubscriptionPageInner /></AuthRequired>;
+}
+
+function SubscriptionPageInner() {
   const { profile, saveProfile } = useAuth();
   const { toast } = useToast();
   const router = useRouter();

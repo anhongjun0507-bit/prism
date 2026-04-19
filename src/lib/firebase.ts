@@ -2,13 +2,36 @@ import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, OAuthProvider, EmailAuthProvider } from 'firebase/auth';
 import { getFirestore, initializeFirestore } from 'firebase/firestore';
 
+// env 누락 검출. 프로덕션에서는 로그인·DB가 동작할 수 없으므로 빌드/부팅 즉시 throw —
+// placeholder로 조용히 초기화된 뒤 런타임에 "로그인 실패" 같은 모호한 증상으로 나타나는 것을 방지.
+// 개발 환경에서는 placeholder로 폴백해 로컬에서 env 없이도 UI 실험 가능.
+const requiredEnv = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+};
+
+const missing = Object.entries(requiredEnv)
+  .filter(([, v]) => !v)
+  .map(([k]) => k);
+
+if (missing.length > 0 && process.env.NODE_ENV === "production") {
+  throw new Error(
+    `Firebase 환경변수가 설정되지 않았습니다: ${missing.join(", ")}. ` +
+    `Vercel/배포 환경의 NEXT_PUBLIC_FIREBASE_* 키를 확인해주세요.`
+  );
+}
+
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "placeholder-api-key",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "placeholder-auth-domain",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "placeholder-project-id",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "placeholder-storage-bucket",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "placeholder-sender-id",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "placeholder-app-id",
+  apiKey: requiredEnv.apiKey || "placeholder-api-key",
+  authDomain: requiredEnv.authDomain || "placeholder-auth-domain",
+  projectId: requiredEnv.projectId || "placeholder-project-id",
+  storageBucket: requiredEnv.storageBucket || "placeholder-storage-bucket",
+  messagingSenderId: requiredEnv.messagingSenderId || "placeholder-sender-id",
+  appId: requiredEnv.appId || "placeholder-app-id",
 };
 
 const isNewApp = getApps().length === 0;

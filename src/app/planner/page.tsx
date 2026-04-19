@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
+import { AuthRequired } from "@/components/AuthRequired";
 import { db } from "@/lib/firebase";
 import {
   collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch,
@@ -127,6 +128,10 @@ function sortTasks(tasks: PlannerTask[]): PlannerTask[] {
 
 /* ═══════════════ MAIN PAGE ═══════════════ */
 export default function PlannerPage() {
+  return <AuthRequired><PlannerPageInner /></AuthRequired>;
+}
+
+function PlannerPageInner() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [tasks, setTasks] = useState<PlannerTask[]>(() => loadLocalTasks());

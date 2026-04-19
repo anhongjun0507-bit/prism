@@ -203,10 +203,15 @@ ${wrapUserData("essay_body", safeEssay)}
           const parsed = JSON.parse(jsonMatch[0]);
           return finalizeResponse(parsed);
         } catch {
-          return NextResponse.json({ review: null, raw });
+          console.error("[essay-review] JSON parse failed after extract");
         }
+      } else {
+        console.error("[essay-review] no JSON in response");
       }
-      return NextResponse.json({ review: null, raw });
+      return NextResponse.json(
+        { error: "AI 응답을 파싱할 수 없어요. 다시 시도해주세요." },
+        { status: 502 }
+      );
     }
   } catch (error) {
     console.error("Essay review error:", error);

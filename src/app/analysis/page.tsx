@@ -6,12 +6,17 @@ import { PageHeader } from "@/components/PageHeader";
 import { type Specs } from "@/lib/matching";
 import { BarChart3 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { AuthRequired } from "@/components/AuthRequired";
 import { readJSON, writeJSON } from "@/lib/storage";
 import { AnalysisAnalyzingView } from "@/components/analysis/AnalysisAnalyzingView";
 import { AnalysisResultView } from "@/components/analysis/AnalysisResultView";
 import { AnalysisFormWizard } from "@/components/analysis/AnalysisFormWizard";
 
 export default function AnalysisPage() {
+  return <AuthRequired><AnalysisPageInner /></AuthRequired>;
+}
+
+function AnalysisPageInner() {
   const { profile, toggleFavorite, isFavorite, saveProfile } = useAuth();
 
   const [step, setStep] = useState<"form" | "analyzing" | "result">("form");

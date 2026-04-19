@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Send, Sparkles, Loader2, Bot, User, RotateCcw, GraduationCap, PenLine, TrendingUp, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
+import { AuthRequired } from "@/components/AuthRequired";
 import { EmptyState } from "@/components/EmptyState";
 import { PLANS } from "@/lib/plans";
 import { ChatLimitModal } from "@/components/UpgradeCTA";
@@ -93,6 +94,10 @@ function HighlightedGreeting({ text }: { text: string }) {
 }
 
 export default function ChatPage() {
+  return <AuthRequired><ChatPageInner /></AuthRequired>;
+}
+
+function ChatPageInner() {
   const { profile, saveProfile, isMaster } = useAuth();
   const currentPlan = profile?.plan || "free";
   const dailyLimit = isMaster ? Infinity : PLANS[currentPlan].limits.aiChatPerDay;

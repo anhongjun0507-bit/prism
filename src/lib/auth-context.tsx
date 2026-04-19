@@ -144,68 +144,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profileUnsub) { profileUnsub(); profileUnsub = null; }
     };
 
-    try {
-      const unsub = onAuthStateChanged(auth, (u) => {
-        cleanup(); // 이전 사용자의 profile 구독 해제
-        setUser(u);
+    const masterFallback = (u: User): UserProfile => ({
+      name: u.displayName || "Master", grade: "", dreamSchool: "", major: "", onboarded: false, plan: "premium",
+    });
 
-        if (!u) {
-          setProfile(null);
-          setLoading(false);
-          return;
-        }
+    const unsub = onAuthStateChanged(auth, (u) => {
+      cleanup(); // 이전 사용자의 profile 구독 해제
+      setUser(u);
 
-        // 실시간 profile 구독 — 다른 탭/기기의 변경이 즉시 반영됨
-        try {
-          profileUnsub = onSnapshot(
-            doc(db, "users", u.uid),
-            (snap) => {
-              if (snap.exists()) {
-                const data = snap.data() as UserProfile;
-                // Master account → force premium with unlimited usage
-                if (isMasterEmail(u.email)) {
-                  data.plan = "premium";
-                }
-                setProfile(data);
-                // Sync Firestore specs → localStorage cache (cross-device hydration)
-                if (data.specs && typeof window !== "undefined") {
-                  try { localStorage.setItem(SPECS_LS_KEY, JSON.stringify(data.specs)); } catch {}
-                }
-                // Sync Firestore snapshots → localStorage + state (cross-device)
-                if (data.snapshots && Array.isArray(data.snapshots) && typeof window !== "undefined") {
-                  try { localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(data.snapshots)); } catch {}
-                  setSnapshots(data.snapshots);
-                }
-              } else if (isMasterEmail(u.email)) {
-                // Master account without Firestore profile yet
-                setProfile({ name: u.displayName || "Master", grade: "", dreamSchool: "", major: "", onboarded: false, plan: "premium" });
-              }
-              setLoading(false);
-            },
-            (err) => {
-              console.error("[auth] profile snapshot error:", err);
-              // Firestore unavailable — still grant master access
-              if (isMasterEmail(u.email)) {
-                setProfile({ name: u.displayName || "Master", grade: "", dreamSchool: "", major: "", onboarded: false, plan: "premium" });
-              }
-              setLoading(false);
+      if (!u) {
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+
+      // 실시간 profile 구독 — 다른 탭/기기의 변경이 즉시 반영됨
+      profileUnsub = onSnapshot(
+        doc(db, "users", u.uid),
+        (snap) => {
+          if (snap.exists()) {
+            const data = snap.data() as UserProfile;
+            // Master account → force premium with unlimited usage
+            if (isMasterEmail(u.email)) {
+              data.plan = "premium";
             }
-          );
-        } catch {
+            setProfile(data);
+            // Sync Firestore specs → localStorage cache (cross-device hydration)
+            if (data.specs && typeof window !== "undefined") {
+              try { localStorage.setItem(SPECS_LS_KEY, JSON.stringify(data.specs)); } catch {}
+            }
+            // Sync Firestore snapshots → localStorage + state (cross-device)
+            if (data.snapshots && Array.isArray(data.snapshots) && typeof window !== "undefined") {
+              try { localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(data.snapshots)); } catch {}
+              setSnapshots(data.snapshots);
+            }
+          } else if (isMasterEmail(u.email)) {
+            setProfile(masterFallback(u));
+          }
+          setLoading(false);
+        },
+        (err) => {
+          console.error("[auth] profile snapshot error:", err);
+          // Firestore unavailable — still grant master access
           if (isMasterEmail(u.email)) {
-            setProfile({ name: u.displayName || "Master", grade: "", dreamSchool: "", major: "", onboarded: false, plan: "premium" });
+            setProfile(masterFallback(u));
           }
           setLoading(false);
         }
-      });
+      );
+    });
 
-      return () => {
-        cleanup();
-        unsub();
-      };
-    } catch {
-      setLoading(false);
-    }
+    return () => {
+      cleanup();
+      unsub();
+    };
   }, []);
 
   const loginWithGoogle = async () => {

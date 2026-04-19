@@ -12,6 +12,7 @@ import { schoolMatchesQuery } from "@/lib/school-search";
 import { Search, Sparkles, TrendingUp, Share2, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { fetchWithAuth } from "@/lib/api-client";
+import { useToast } from "@/hooks/use-toast";
 import { CAT_ORDER, CAT_ICON } from "@/lib/analysis-helpers";
 import { SchoolModal } from "@/components/analysis/SchoolModal";
 import { SchoolRow } from "@/components/analysis/SchoolRow";
@@ -30,6 +31,7 @@ type Props = {
 };
 
 export function AnalysisResultView({ specs, onBack, toggleFavorite, isFavorite }: Props) {
+  const { toast } = useToast();
   const [results, setResults] = useState<School[]>([]);
   const [lockedCount, setLockedCount] = useState(0);
   const [matchLoading, setMatchLoading] = useState(false);
@@ -116,8 +118,10 @@ export function AnalysisResultView({ specs, onBack, toggleFavorite, isFavorite }
               if (navigator.share) {
                 navigator.share({ title: "PRISM 합격 확률 분석", text }).catch(() => {});
               } else if (navigator.clipboard) {
-                navigator.clipboard.writeText(text);
-                alert("결과가 클립보드에 복사되었습니다!");
+                navigator.clipboard.writeText(text).then(
+                  () => toast({ description: "결과가 클립보드에 복사되었어요." }),
+                  () => toast({ description: "복사에 실패했어요.", variant: "destructive" })
+                );
               }
             }}
             className="text-primary gap-1"

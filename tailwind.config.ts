@@ -73,6 +73,16 @@ export default {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
         },
+        success: {
+          DEFAULT: 'hsl(var(--success))',
+          foreground: 'hsl(var(--success-foreground))',
+          soft: 'hsl(var(--success-soft))',
+        },
+        warning: {
+          DEFAULT: 'hsl(var(--warning))',
+          foreground: 'hsl(var(--warning-foreground))',
+          soft: 'hsl(var(--warning-soft))',
+        },
         hero: {
           DEFAULT: 'hsl(var(--hero-text))',
           muted: 'hsl(var(--hero-text-muted) / 0.75)',

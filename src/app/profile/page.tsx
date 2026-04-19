@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth-context";
+import { AuthRequired } from "@/components/AuthRequired";
 import { updateProfile as fbUpdateProfile } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { MAJOR_LIST } from "@/lib/constants";
@@ -24,6 +25,10 @@ import {
 const GRADES = ["9학년", "10학년", "11학년", "12학년", "졸업생/Gap Year", "홈스쿨/기타"];
 
 export default function ProfilePage() {
+  return <AuthRequired><ProfilePageInner /></AuthRequired>;
+}
+
+function ProfilePageInner() {
   const router = useRouter();
   const { user, profile, saveProfile, logout } = useAuth();
   const { toast } = useToast();

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Sparkles, TrendingUp, TrendingDown, RotateCcw } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { useAuth } from "@/lib/auth-context";
+import { AuthRequired } from "@/components/AuthRequired";
 import { PLANS } from "@/lib/plans";
 import type { Specs, School } from "@/lib/matching";
 import { fetchWithAuth } from "@/lib/api-client";
@@ -32,6 +33,10 @@ function buildSpecs(
 }
 
 export default function WhatIfPage() {
+  return <AuthRequired><WhatIfPageInner /></AuthRequired>;
+}
+
+function WhatIfPageInner() {
   const { profile, saveProfile, isMaster } = useAuth();
   const currentPlan = profile?.plan || "free";
   const hasFullAccess = isMaster || PLANS[currentPlan].limits.whatIf;

@@ -22,6 +22,7 @@ import { PLANS } from "@/lib/plans";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { AuthRequired } from "@/components/AuthRequired";
 import { SCHOOLS_INDEX, schoolMatchesQuery } from "@/lib/schools-index";
 import type { Specs, School } from "@/lib/matching";
 import { fetchWithAuth } from "@/lib/api-client";
@@ -55,6 +56,10 @@ function formatDDay(d: number): { primary: string; hint: string } {
 }
 
 export default function DashboardPage() {
+  return <AuthRequired><DashboardPageInner /></AuthRequired>;
+}
+
+function DashboardPageInner() {
   const { profile, user, logout, snapshots, toggleFavorite, isFavorite } = useAuth();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const showApiError = useApiErrorToast();

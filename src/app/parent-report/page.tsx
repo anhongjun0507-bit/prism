@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { AuthRequired } from "@/components/AuthRequired";
 import { PLANS } from "@/lib/plans";
 import type { Specs, School } from "@/lib/matching";
 import { fetchWithAuth } from "@/lib/api-client";
@@ -16,6 +17,10 @@ import { Users, TrendingUp, Award, Download, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 
 export default function ParentReportPage() {
+  return <AuthRequired><ParentReportPageInner /></AuthRequired>;
+}
+
+function ParentReportPageInner() {
   const { profile, snapshots } = useAuth();
   const showApiError = useApiErrorToast();
   const currentPlan = profile?.plan || "free";

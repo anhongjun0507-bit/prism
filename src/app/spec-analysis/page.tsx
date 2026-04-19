@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
+import { AuthRequired } from "@/components/AuthRequired";
 import { PLANS } from "@/lib/plans";
 import { UNI_LIST, MAJOR_LIST } from "@/lib/constants";
 import { schoolMatchesQuery } from "@/lib/school-search";
@@ -43,6 +44,10 @@ interface SpecAnalysis {
 const CACHE_KEY = "prism_spec_analysis";
 
 export default function SpecAnalysisPage() {
+  return <AuthRequired><SpecAnalysisPageInner /></AuthRequired>;
+}
+
+function SpecAnalysisPageInner() {
   const { profile, isMaster, user } = useAuth();
   const currentPlan = profile?.plan || "free";
   const hasAccess = isMaster || PLANS[currentPlan].limits.specAnalysis;

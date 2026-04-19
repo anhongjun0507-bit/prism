@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { SCHOOLS_INDEX, schoolMatchesQuery } from "@/lib/schools-index";
 import { SchoolLogo } from "@/components/SchoolLogo";
 import { useAuth } from "@/lib/auth-context";
+import { AuthRequired } from "@/components/AuthRequired";
 import type { Specs, School } from "@/lib/matching";
 import { fetchWithAuth } from "@/lib/api-client";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
@@ -67,6 +68,10 @@ function formatSize(s?: number) {
 }
 
 export default function ComparePage() {
+  return <AuthRequired><ComparePageInner /></AuthRequired>;
+}
+
+function ComparePageInner() {
   const { profile } = useAuth();
   const showApiError = useApiErrorToast();
   const [selected, setSelected] = useState<School[]>([]);
