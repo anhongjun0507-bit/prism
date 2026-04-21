@@ -24,7 +24,9 @@ import { PLANS } from "@/lib/plans";
 import { collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch, query, orderBy, limit as fsLimit, runTransaction } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { fetchWithAuth } from "@/lib/api-client";
-import { SCHOOLS_INDEX, schoolMatchesQuery } from "@/lib/schools-index";
+import { useSchoolsIndex, schoolMatchesQuery } from "@/lib/schools-index";
+import { countWords } from "@/lib/essay-utils";
+import { logError } from "@/lib/log";
 import type { Essay, EssayReview, EssayVersion, EssayOutline, OutlineSection } from "@/types/essay";
 import { slimEssaysForCache, normalizeOutline } from "@/types/essay";
 import { readJSON, writeJSON, removeKey } from "@/lib/storage";
@@ -55,6 +57,7 @@ export default function EssaysPage() {
 function EssaysPageInner() {
   const { toast } = useToast();
   const { profile, saveProfile, user, isMaster } = useAuth();
+  const schoolsIndex = useSchoolsIndex();
   const currentPlan = profile?.plan || "free";
   const hasPlanAccess = isMaster || PLANS[currentPlan].limits.essayOutline;
   const outlineUsed = profile?.outlineUsed || 0;
@@ -208,7 +211,7 @@ function EssaysPageInner() {
         }
         await batch.commit();
       } catch (e) {
-        console.error("[essays] legacy migration failed:", e);
+        logError("[essays] legacy migration failed:", e);
       }
     };
 
@@ -234,7 +237,7 @@ function EssaysPageInner() {
         setEssays(list);
         setEssaysLoading(false);
       },
-      (err) => { console.error("[essays] snapshot error:", err); setEssaysLoading(false); }
+      (err) => { logError("[essays] snapshot error:", err); setEssaysLoading(false); }
     );
     return unsub;
   }, [user]);
@@ -243,6 +246,9 @@ function EssaysPageInner() {
   const activeEssayRef = useRef<Essay | null>(null);
   activeEssayRef.current = activeEssay;
 
+  // Firestore 쓰기 실패 toast 스팸 방지: 한 번 띄우면 다음 성공까지 억제.
+  // (auto-save가 1초 debounce로 자주 쏘기 때문에 매번 토스트 띄우면 UX 악화)
+  const writeFailedRef = useRef(false);
   const writeEssayDoc = useCallback((essay: Essay): Essay => {
     const stamped = {
       ...essay,
@@ -251,10 +257,24 @@ function EssaysPageInner() {
     };
     if (user) {
       setDoc(doc(db, "users", user.uid, "essays", essay.id), stamped, { merge: true })
-        .catch((e) => console.error("[essays] write failed:", e));
+        .then(() => {
+          // 다시 성공하면 에러 플래그 해제 — 다음 실패에는 다시 안내 가능
+          writeFailedRef.current = false;
+        })
+        .catch((e) => {
+          logError("[essays] write failed:", e);
+          if (!writeFailedRef.current) {
+            writeFailedRef.current = true;
+            toast({
+              title: "자동 저장에 실패했어요",
+              description: "네트워크를 확인해주세요. 편집한 내용은 이 기기에 남아 있어요.",
+              variant: "destructive",
+            });
+          }
+        });
     }
     return stamped;
-  }, [user]);
+  }, [user, toast]);
 
   const removeEssayDoc = useCallback(async (id: string): Promise<boolean> => {
     if (!user) return true;
@@ -262,7 +282,7 @@ function EssaysPageInner() {
       await deleteDoc(doc(db, "users", user.uid, "essays", id));
       return true;
     } catch (e) {
-      console.error("[essays] delete failed:", e);
+      logError("[essays] delete failed:", e);
       return false;
     }
   }, [user]);
@@ -302,11 +322,11 @@ function EssaysPageInner() {
   };
 
   const filteredSchools = useMemo(() => {
-    if (!searchQuery) return SCHOOLS_INDEX.slice(0, 20);
-    return SCHOOLS_INDEX
+    if (!searchQuery) return schoolsIndex.slice(0, 20);
+    return schoolsIndex
       .filter((s) => schoolMatchesQuery(s, searchQuery))
       .slice(0, 20);
-  }, [searchQuery]);
+  }, [searchQuery, schoolsIndex]);
 
   const [selectedSchoolData, setSelectedSchoolData] = useState<SchoolDetail | null>(null);
   useEffect(() => {
@@ -323,7 +343,7 @@ function EssaysPageInner() {
     return () => { cancelled = true; };
   }, [selectedSchool]);
 
-  const wordCount = activeEssay?.content.split(/\s+/).filter(Boolean).length || 0;
+  const wordCount = activeEssay ? countWords(activeEssay.content) : 0;
   const charCount = activeEssay?.content.length || 0;
 
   const handleSave = () => {
@@ -336,7 +356,7 @@ function EssaysPageInner() {
           version: (lastVersion?.version || 0) + 1,
           content: activeEssay.content,
           savedAt: new Date().toISOString(),
-          wordCount: activeEssay.content.split(/\s+/).filter(Boolean).length,
+          wordCount: countWords(activeEssay.content),
         };
         const versions = [...existing, newVersion].slice(-10);
         const updated = { ...activeEssay, versions };
@@ -463,7 +483,7 @@ function EssaysPageInner() {
       if (err instanceof Error && err.name === "AbortError") {
         return;
       }
-      console.error("[outline] failed", err);
+      logError("[outline] failed", err);
       toast({
         title: "에세이 구조 생성 실패",
         description: err instanceof Error ? err.message : "잠시 후 다시 시도해주세요.",

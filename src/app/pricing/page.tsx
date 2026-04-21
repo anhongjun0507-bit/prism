@@ -6,7 +6,7 @@ import { PLANS, type PlanType, type BillingCycle } from "@/lib/plans";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Sparkles, Users, Smartphone, ExternalLink } from "lucide-react";
+import { Check, Sparkles, Users, Smartphone } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { SegmentedControl, SegmentedControlItem } from "@/components/ui/segmented-control";
 import {
@@ -226,33 +226,24 @@ export default function PricingPage() {
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
               <Smartphone className="w-8 h-8 text-primary" aria-hidden="true" />
             </div>
-            <DialogTitle className="font-headline text-xl font-bold">앱에서 결제해주세요</DialogTitle>
+            <DialogTitle className="font-headline text-xl font-bold">결제 준비 중이에요</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
-              {showAppPrompt && PLANS[showAppPrompt].name} 플랜은 PRISM 모바일 앱에서 App Store / Google Play를 통해 결제할 수 있습니다.
+              {showAppPrompt && PLANS[showAppPrompt].name} 플랜의 웹 결제를 곧 열 예정이에요. 조금만 기다려주세요.
             </DialogDescription>
           </DialogHeader>
 
           <div className="bg-muted/50 rounded-xl p-4 space-y-2">
-            <p className="text-xs font-semibold text-foreground">왜 앱에서 결제하나요?</p>
+            <p className="text-xs font-semibold text-foreground">준비되는 기능</p>
             <ul className="text-xs text-muted-foreground space-y-1">
-              <li className="flex gap-1.5"><Check className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5" aria-hidden="true" /> 안전한 Apple/Google 결제</li>
-              <li className="flex gap-1.5"><Check className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5" aria-hidden="true" /> 한 번의 탭으로 빠른 결제</li>
-              <li className="flex gap-1.5"><Check className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5" aria-hidden="true" /> 가족 공유 가능</li>
+              <li className="flex gap-1.5"><Check className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5" aria-hidden="true" /> 카드·간편결제 (토스페이먼츠)</li>
+              <li className="flex gap-1.5"><Check className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5" aria-hidden="true" /> 월간·연간 자동 결제</li>
+              <li className="flex gap-1.5"><Check className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5" aria-hidden="true" /> 언제든 해지 가능</li>
             </ul>
           </div>
 
-          <div className="space-y-2">
-            <Button size="xl" className="w-full gap-2" disabled>
-              <ExternalLink className="w-4 h-4" aria-hidden="true" />
-              앱 다운로드 (출시 예정)
-            </Button>
-            <p className="text-xs text-center text-muted-foreground">
-              앱 출시 시 알림을 받으려면 현재 계정 이메일로 안내드려요
-            </p>
-            <Button variant="outline" className="w-full" onClick={() => setShowAppPrompt(null)}>
-              확인
-            </Button>
-          </div>
+          <Button variant="outline" className="w-full" onClick={() => setShowAppPrompt(null)}>
+            확인
+          </Button>
         </DialogContent>
       </Dialog>
     </div>

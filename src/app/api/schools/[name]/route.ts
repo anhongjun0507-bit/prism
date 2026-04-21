@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SCHOOLS } from "@/lib/school";
 import { requireAuth } from "@/lib/api-auth";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export async function GET(
   req: NextRequest,
@@ -17,6 +18,15 @@ export async function GET(
 ) {
   const session = await requireAuth(req);
   if (session instanceof NextResponse) return session;
+
+  // 단일 학교 조회 — 분석/비교/에세이 페이지 열 때 순차 호출됨. 60/min이면 UI가 정상 쓸 땐 무해.
+  const rateErr = await enforceRateLimit({
+    bucket: "school_detail",
+    uid: session.uid,
+    windowMs: 60_000,
+    limit: 60,
+  });
+  if (rateErr) return rateErr;
 
   const { name } = await params;
   const decoded = decodeURIComponent(name);

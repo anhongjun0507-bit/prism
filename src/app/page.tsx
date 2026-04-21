@@ -16,9 +16,42 @@ export const metadata: Metadata = {
   },
 };
 
+// JSON-LD 구조화 데이터 — Google 리치 결과(사이트네임/사이트링크 검색박스).
+// Organization + WebSite 두 개의 최상위 entity를 @graph로 묶어 단일 script로 노출.
+// SoftwareApplication을 추가하지 않은 이유: 가격/리뷰가 schema에 강제되는데,
+// pricing이 plan별로 다르고 review aggregator가 없어 invalid markup이 됨.
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://prismedu.kr/#organization",
+      name: "PRISM",
+      url: "https://prismedu.kr",
+      logo: "https://prismedu.kr/icon.svg",
+      description: "한국 국제학교 학생을 위한 AI 기반 미국 대학 입시 가이드.",
+      sameAs: [],
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://prismedu.kr/#website",
+      url: "https://prismedu.kr",
+      name: "PRISM",
+      description: "AI가 분석하는 1,001개 미국 대학 합격 확률.",
+      publisher: { "@id": "https://prismedu.kr/#organization" },
+      inLanguage: "ko-KR",
+    },
+  ],
+};
+
 export default function LandingPage() {
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-muted/40 to-accent/30 dark:from-background dark:to-background flex flex-col items-center justify-start overflow-x-hidden">
+      {/* SEO: 구조화 데이터. Server Component에서 렌더되므로 검색 엔진이 SSR HTML에서 즉시 발견. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Floating prismatic orbs — background decoration */}
       <div
         className="brand-orb brand-orb-primary -top-24 -left-24 w-72 h-72 opacity-30 dark:opacity-20"
@@ -42,7 +75,7 @@ export default function LandingPage() {
               className="absolute inset-0 rounded-[22px] prism-logo-spectrum blur-2xl opacity-50 scale-150"
               aria-hidden="true"
             />
-            <div className="relative w-[68px] h-[68px] rounded-[22px] prism-logo-spectrum flex items-center justify-center shadow-xl shadow-indigo-500/25 ring-1 ring-white/30">
+            <div className="relative w-[68px] h-[68px] rounded-[22px] prism-logo-spectrum flex items-center justify-center shadow-glow-lg ring-1 ring-white/30">
               <svg className="w-8 h-8 text-white drop-shadow-md" viewBox="0 0 32 32" fill="none">
                 <path d="M16 4L28 26H4L16 4Z" fill="white" fillOpacity="0.95" />
                 <path
@@ -83,13 +116,13 @@ export default function LandingPage() {
 
           {/* Feature tags — crawlable by search engines */}
           <div className="animate-welcome-item flex gap-2 mt-5" style={{ animationDelay: "0.5s" }}>
-            <span className="text-xs font-semibold rounded-full px-3 py-1 bg-blue-50 text-blue-600">
+            <span className="text-xs font-semibold rounded-full px-3 py-1 bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300">
               합격 예측
             </span>
-            <span className="text-xs font-semibold rounded-full px-3 py-1 bg-violet-50 text-violet-600">
+            <span className="text-xs font-semibold rounded-full px-3 py-1 bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-300">
               AI 상담
             </span>
-            <span className="text-xs font-semibold rounded-full px-3 py-1 bg-amber-50 text-amber-600">
+            <span className="text-xs font-semibold rounded-full px-3 py-1 bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
               에세이 코칭
             </span>
           </div>

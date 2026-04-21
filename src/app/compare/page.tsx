@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, X, Plus, GraduationCap } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
-import { SCHOOLS_INDEX, schoolMatchesQuery } from "@/lib/schools-index";
+import { useSchoolsIndex, schoolMatchesQuery } from "@/lib/schools-index";
 import { SchoolLogo } from "@/components/SchoolLogo";
 import { useAuth } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
@@ -33,8 +33,10 @@ function buildSpecs(profile: UserProfile | null): Specs | null {
     apAvg: "",
     satSubj: "",
     classRank: "",
-    ecTier: 1,
-    awardTier: 0,
+    // dashboard/analysis/onboarding/parent-report/what-if와 동일한 기본값.
+    // 이전에 ecTier:1, intl:false로 어긋나 compare 페이지의 확률이 다른 페이지보다 과대/과소 표시됨.
+    ecTier: 2,
+    awardTier: 2,
     essayQ: 3,
     recQ: 3,
     interviewQ: 3,
@@ -43,8 +45,8 @@ function buildSpecs(profile: UserProfile | null): Specs | null {
     earlyApp: "",
     needAid: false,
     gender: "",
-    intl: false,
-    major: profile.major || "",
+    intl: true,
+    major: profile.major || "Computer Science",
   };
 }
 
@@ -74,6 +76,7 @@ export default function ComparePage() {
 function ComparePageInner() {
   const { profile } = useAuth();
   const showApiError = useApiErrorToast();
+  const schoolsIndex = useSchoolsIndex();
   const [selected, setSelected] = useState<School[]>([]);
   const [openSlot, setOpenSlot] = useState<number | null>(null);
   const [searchQ, setSearchQ] = useState("");
@@ -83,7 +86,7 @@ function ComparePageInner() {
   const [matchedSchools, setMatchedSchools] = useState<School[]>([]);
   useEffect(() => {
     if (!specs) {
-      // specs 없으면 빈 매치 결과로, 학교 picker는 SCHOOLS_INDEX로 채움 (아래 fallback)
+      // specs 없으면 빈 매치 결과로, 학교 picker는 schoolsIndex로 채움 (아래 fallback)
       setMatchedSchools([]);
       return;
     }
@@ -100,14 +103,14 @@ function ComparePageInner() {
   // specs 없을 때는 인덱스로 학교 picker만 채우기 (prob/cat 등은 빈 값)
   const effectiveSchools = useMemo<School[]>(() => {
     if (matchedSchools.length > 0) return matchedSchools;
-    return SCHOOLS_INDEX.map((s) => ({
+    return schoolsIndex.map((s) => ({
       ...s,
       n: s.n, c: s.c, d: s.d, rk: s.rk,
       r: s.r ?? 0, sat: s.sat ?? [0, 0], gpa: s.gpa ?? 0,
       ea: s.ea, rd: s.rd ?? "", tg: s.tg ?? [], toefl: 0,
       tp: "", reqs: [], prompts: [], mr: {},
     } as School));
-  }, [matchedSchools]);
+  }, [matchedSchools, schoolsIndex]);
 
 
   const filteredSchools = useMemo(() => {

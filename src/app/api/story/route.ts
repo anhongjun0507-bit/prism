@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, enforceQuota } from "@/lib/api-auth";
 import { enforceRateLimit } from "@/lib/rate-limit";
-import { getAnthropicClient } from "@/lib/anthropic";
+import { getAnthropicClient, createMessageWithTimeout, ClaudeTimeoutError } from "@/lib/anthropic";
 import { sanitizeUserText, wrapUserData } from "@/lib/api-helpers";
 import { StoryInputSchema, zodErrorResponse } from "@/lib/schemas";
 
@@ -75,16 +75,26 @@ ${wrapUserData("student_profile", studentBlock)}
 
 ${wrapUserData("school_data", schoolBlock)}`;
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 400,
-      system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
-      messages: [{ role: "user", content: userPrompt }],
-    });
+    const response = await createMessageWithTimeout(
+      anthropic,
+      {
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 400,
+        system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
+        messages: [{ role: "user", content: userPrompt }],
+      },
+      { timeoutMs: 25_000, upstreamSignal: req.signal },
+    );
 
     const textBlock = response.content.find((b) => b.type === "text");
     return NextResponse.json({ story: textBlock?.text || "" });
   } catch (error) {
+    if (error instanceof ClaudeTimeoutError) {
+      return NextResponse.json(
+        { error: "응답이 너무 오래 걸렸어요. 잠시 후 다시 시도해주세요." },
+        { status: 504 }
+      );
+    }
     console.error("Story API error:", error);
     return NextResponse.json({ error: "분석 생성에 실패했어요" }, { status: 500 });
   }

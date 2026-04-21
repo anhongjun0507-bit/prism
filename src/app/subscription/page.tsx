@@ -46,6 +46,7 @@ function SubscriptionPageInner() {
       // in-memory profile도 낙관적으로 free로 세팅 (saveProfile의 Firestore write는 규칙상
       // plan 필드 strip되므로 무해, setProfile만 효과 있음).
       await saveProfile({ plan: "free" });
+      router.refresh();
       toast({ title: "구독이 해지되었어요", description: "기본 플랜으로 전환됩니다." });
     } catch (err) {
       toast({

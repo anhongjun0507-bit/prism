@@ -3,7 +3,7 @@ import { getCachedResponse, setCachedResponse, makeCacheKey } from "@/lib/ai-cac
 import { requireAuth, enforceQuota } from "@/lib/api-auth";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { extractJSON, sanitizeUserText, wrapUserData } from "@/lib/api-helpers";
-import { getAnthropicClient } from "@/lib/anthropic";
+import { getAnthropicClient, createMessageWithTimeout, ClaudeTimeoutError } from "@/lib/anthropic";
 import { SpecAnalysisInputSchema, zodErrorResponse } from "@/lib/schemas";
 
 export async function POST(req: NextRequest) {
@@ -162,12 +162,16 @@ ${wrapUserData("student_profile", profileLines)}
 ${p.research ? "연구 경험이 있으므로 Research 매치 학교에 대한 분석도 포함해주세요." : ""}
 ${p.internship ? "실무 경험이 있으므로 이를 어떻게 강조할 수 있는지도 언급해주세요." : ""}`;
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2500,
-      system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
-      messages: [{ role: "user", content: userPrompt }],
-    });
+    const response = await createMessageWithTimeout(
+      anthropic,
+      {
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2500,
+        system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
+        messages: [{ role: "user", content: userPrompt }],
+      },
+      { timeoutMs: 60_000, upstreamSignal: req.signal },
+    );
 
     const textBlock = response.content.find((b) => b.type === "text");
     const raw = textBlock?.text || "";
@@ -185,6 +189,12 @@ ${p.internship ? "실무 경험이 있으므로 이를 어떻게 강조할 수 �
       { status: 502 }
     );
   } catch (error) {
+    if (error instanceof ClaudeTimeoutError) {
+      return NextResponse.json(
+        { error: "분석이 너무 오래 걸렸어요. 잠시 후 다시 시도해주세요." },
+        { status: 504 }
+      );
+    }
     console.error("Spec analysis error:", error);
     return NextResponse.json({ error: "분석 생성에 실패했어요." }, { status: 500 });
   }

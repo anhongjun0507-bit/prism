@@ -11,6 +11,7 @@ import { readJSON, writeJSON } from "@/lib/storage";
 import { AnalysisAnalyzingView } from "@/components/analysis/AnalysisAnalyzingView";
 import { AnalysisResultView } from "@/components/analysis/AnalysisResultView";
 import { AnalysisFormWizard } from "@/components/analysis/AnalysisFormWizard";
+import { logError } from "@/lib/log";
 
 export default function AnalysisPage() {
   return <AuthRequired><AnalysisPageInner /></AuthRequired>;
@@ -59,12 +60,42 @@ function AnalysisPageInner() {
     if (specsHydratedRef.current) return;
     if (profile?.specs) {
       specsHydratedRef.current = true;
-      setSpecs(prev => ({ ...prev, ...profile.specs }));
+      setSpecs(prev => {
+        // 사용자가 이미 핵심 필드를 입력하기 시작했다면(네트워크 지연 중 타이핑)
+        // Firestore 값으로 덮어쓰지 않고 사용자 입력을 존중한다.
+        const hasUserInput = !!(prev.gpaUW || prev.sat || prev.act);
+        if (hasUserInput) return prev;
+        return { ...prev, ...profile.specs };
+      });
       if (profile.specs.gpaUW || profile.specs.sat) {
         setStep(s => (s === "form" ? "result" : s));
       }
     }
   }, [profile?.specs]);
+
+  // Legacy key 마이그레이션: prism_saved_specs → prism_specs 1회 이관 후 삭제.
+  // 여러 세션에 걸쳐 legacy 키가 남아 fallback 경로로 재활성화되는 것을 막는다.
+  // dev 환경에선 마이그레이션 발생을 명시적으로 로깅해 "레거시 키가 왜 생겼는지" 추적 가능하게.
+  useEffect(() => {
+    try {
+      const legacy = readJSON<Partial<Specs>>("prism_saved_specs");
+      if (legacy && typeof window !== "undefined") {
+        const hadCurrent = !!readJSON<Partial<Specs>>("prism_specs");
+        if (!hadCurrent) {
+          writeJSON("prism_specs", legacy);
+        }
+        window.localStorage.removeItem("prism_saved_specs");
+        if (process.env.NODE_ENV !== "production") {
+          // eslint-disable-next-line no-console
+          console.info(
+            `[analysis] migrated legacy "prism_saved_specs" → "prism_specs" (overwrote=${!hadCurrent})`
+          );
+        }
+      }
+    } catch (e) {
+      logError("[analysis] legacy migration failed:", e);
+    }
+  }, []);
 
   const specsSaveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 

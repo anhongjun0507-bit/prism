@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { useToast } from "./use-toast";
 import { ApiError } from "@/lib/api-client";
+import { logError } from "@/lib/log";
 
 /**
  * API 호출 실패를 일관된 toast로 표시하는 훅.
@@ -36,7 +37,7 @@ export function useApiErrorToast() {
         return;
       }
 
-      console.error("[api]", err);
+      logError("[api]", err);
 
       const isApiError = err instanceof ApiError;
       const status = isApiError ? err.status : undefined;

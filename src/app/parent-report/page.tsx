@@ -27,12 +27,18 @@ function ParentReportPageInner() {
   const hasAccess = PLANS[currentPlan].limits.parentReport;
 
   /* ── compute stats — server fetch ── */
+  // 스펙(GPA/SAT)이 없으면 매칭 요청 자체를 생략. 이전엔 fallback "3.8"/"1500"로 가짜
+  // 숫자 기반 리포트를 보여줘 학부모가 자녀 실제 성적으로 오해할 위험.
+  const hasSpecs = !!(profile?.gpa || profile?.sat);
   const [matchResults, setMatchResults] = useState<School[]>([]);
   useEffect(() => {
-    if (!profile) return;
+    if (!profile || !hasSpecs) {
+      setMatchResults([]);
+      return;
+    }
     const specs: Specs = {
-      gpaUW: profile.gpa || "3.8", gpaW: "", sat: profile.sat || "1500", act: "",
-      toefl: profile.toefl || "105", ielts: "", apCount: "", apAvg: "",
+      gpaUW: profile.gpa || "", gpaW: "", sat: profile.sat || "", act: "",
+      toefl: profile.toefl || "", ielts: "", apCount: "", apAvg: "",
       satSubj: "", classRank: "", ecTier: 2, awardTier: 2,
       essayQ: 3, recQ: 3, interviewQ: 3, legacy: false, firstGen: false,
       earlyApp: "", needAid: false, gender: "",
@@ -46,7 +52,7 @@ function ParentReportPageInner() {
       .then((d) => { if (!cancelled) setMatchResults(d.results || []); })
       .catch((e) => { if (!cancelled) showApiError(e, { title: "리포트 데이터 로드 실패" }); });
     return () => { cancelled = true; };
-  }, [profile, showApiError]);
+  }, [profile, hasSpecs, showApiError]);
 
   const stats = useMemo(() => {
     if (!profile || matchResults.length === 0) return null;
@@ -137,6 +143,18 @@ function ParentReportPageInner() {
           </div>
         </div>
       </Card>
+
+      {/* 스펙 없음 — 합격 분석/추천 대학교 섹션 대신 안내 카드. */}
+      {!hasSpecs && (
+        <Card className="p-5 bg-card border-none shadow-sm">
+          <h3 className="font-headline font-bold text-base flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-primary" /> 합격 분석
+          </h3>
+          <p className="text-sm text-muted-foreground mt-2">
+            자녀의 GPA·SAT 정보가 아직 입력되지 않았어요. 프로필에서 성적을 입력하면 합격 가능성·추천 대학교가 여기 표시돼요.
+          </p>
+        </Card>
+      )}
 
       {/* Admission analysis */}
       {stats && (

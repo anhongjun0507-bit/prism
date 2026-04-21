@@ -40,15 +40,10 @@ export class ErrorBoundary extends Component<Props, State> {
         stack: error.stack?.split("\n").slice(0, 5).join(" | "),
       })
     );
-    // Send to Sentry if available (SDK injects global.Sentry when initialized)
-    if (typeof window !== "undefined") {
-      const w = window as Window & {
-        Sentry?: { captureException?: (err: unknown, ctx?: unknown) => void };
-      };
-      if (w.Sentry?.captureException) {
-        w.Sentry.captureException(error, { extra: { ...errorInfo, tag: this.props.tag } });
-      }
-    }
+    // Sentry로 리포트 — @sentry/nextjs가 DSN 없으면 no-op이라 gating 불필요.
+    import("@sentry/nextjs").then(({ captureException }) => {
+      captureException(error, { extra: { ...errorInfo, tag: this.props.tag } });
+    }).catch(() => { /* SDK 미설치 환경에서 무시 */ });
   }
 
   handleReset = () => {

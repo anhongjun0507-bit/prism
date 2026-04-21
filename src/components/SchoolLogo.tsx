@@ -6,6 +6,8 @@ import { fetchWithAuth } from "@/lib/api-client";
 
 /* ─── Logo source cache (skip the failed-image fallback chain on remount) ─── */
 const LOGO_CACHE_PREFIX = "logo_cache_";
+const LOGO_CACHE_INDEX = "logo_cache__index";
+const LOGO_CACHE_MAX = 100;
 type LogoSource = "ddg" | "favicon" | "none";
 
 function getCachedSource(domain: string): LogoSource | null {
@@ -20,7 +22,20 @@ function getCachedSource(domain: string): LogoSource | null {
 
 function setCachedSource(domain: string, source: LogoSource) {
   if (typeof window === "undefined") return;
-  try { localStorage.setItem(LOGO_CACHE_PREFIX + domain, source); } catch {}
+  // LRU — 이전엔 키가 무한 누적돼 localStorage quota를 잠식했음.
+  // write 시 MRU index 갱신, 상한 초과분은 evict.
+  try {
+    localStorage.setItem(LOGO_CACHE_PREFIX + domain, source);
+    const rawIdx = localStorage.getItem(LOGO_CACHE_INDEX);
+    const idx: string[] = rawIdx ? (JSON.parse(rawIdx) as string[]) : [];
+    const filtered = idx.filter((d) => d !== domain);
+    filtered.unshift(domain);
+    if (filtered.length > LOGO_CACHE_MAX) {
+      const evicted = filtered.splice(LOGO_CACHE_MAX);
+      for (const d of evicted) localStorage.removeItem(LOGO_CACHE_PREFIX + d);
+    }
+    localStorage.setItem(LOGO_CACHE_INDEX, JSON.stringify(filtered));
+  } catch {}
 }
 
 /**
@@ -122,6 +137,8 @@ export const SchoolLogo = memo(SchoolLogoBase);
 
 /* ─── CampusPhoto: Wikipedia URL cache (avoid refetch on every modal open) ─── */
 const CAMPUS_CACHE_PREFIX = "campus_cache_";
+const CAMPUS_CACHE_INDEX = "campus_cache__index";
+const CAMPUS_CACHE_MAX = 50;
 
 function getCachedCampusUrl(schoolName: string): string | null {
   if (typeof window === "undefined") return null;
@@ -142,6 +159,15 @@ function setCachedCampusUrl(schoolName: string, url: string | null) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(CAMPUS_CACHE_PREFIX + schoolName, url || "__none__");
+    const rawIdx = localStorage.getItem(CAMPUS_CACHE_INDEX);
+    const idx: string[] = rawIdx ? (JSON.parse(rawIdx) as string[]) : [];
+    const filtered = idx.filter((n) => n !== schoolName);
+    filtered.unshift(schoolName);
+    if (filtered.length > CAMPUS_CACHE_MAX) {
+      const evicted = filtered.splice(CAMPUS_CACHE_MAX);
+      for (const n of evicted) localStorage.removeItem(CAMPUS_CACHE_PREFIX + n);
+    }
+    localStorage.setItem(CAMPUS_CACHE_INDEX, JSON.stringify(filtered));
   } catch {}
 }
 

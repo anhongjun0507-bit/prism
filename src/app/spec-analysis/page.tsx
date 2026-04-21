@@ -110,7 +110,9 @@ function SpecAnalysisPageInner() {
           | undefined;
         if (stored && stored.profileKey === currentKey) {
           setAnalysis(stored.analysis);
-          sessionStorage.setItem(CACHE_KEY, JSON.stringify(stored));
+          // sessionStorage가 가득 찼거나(QuotaExceededError) private mode 등 저장 실패해도
+          // in-memory 분석은 그대로 보여준다 — 캐시는 optional.
+          try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(stored)); } catch {}
         }
       } catch {}
     })();
@@ -146,7 +148,8 @@ function SpecAnalysisPageInner() {
       setAnalysis(data.analysis);
       const profileKey = `${editGpa}_${editSat}_${editToefl}_${editMajor}_${editDreamSchool}`;
       const payload = { analysis: data.analysis, profileKey };
-      sessionStorage.setItem(CACHE_KEY, JSON.stringify(payload));
+      // 캐시는 optional — Quota/private mode 등으로 저장 실패해도 in-memory analysis는 정상.
+      try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(payload)); } catch {}
       // Firestore에도 저장 — 새로고침·다른 기기에서 복원 가능.
       if (user) {
         setDoc(

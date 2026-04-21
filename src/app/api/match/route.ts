@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { matchSchools, type Specs, type School } from "@/lib/matching";
 import { requireAuth } from "@/lib/api-auth";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { isMasterEmail } from "@/lib/master";
 import type { PlanType } from "@/lib/plans";
@@ -56,6 +57,15 @@ export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth(req);
     if (session instanceof NextResponse) return session;
+
+    // 200개 학교 매칭은 CPU cost가 있음. profile 변경 시 정상 호출은 1-2회 수준이라 30/min은 여유.
+    const rateErr = await enforceRateLimit({
+      bucket: "match",
+      uid: session.uid,
+      windowMs: 60_000,
+      limit: 30,
+    });
+    if (rateErr) return rateErr;
 
     const body = await req.json();
     const specs = body?.specs as Specs | undefined;

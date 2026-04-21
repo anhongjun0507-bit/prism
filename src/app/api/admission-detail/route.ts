@@ -3,7 +3,7 @@ import { getCachedResponse, setCachedResponse, makeCacheKey } from "@/lib/ai-cac
 import { requireAuth, enforceQuota } from "@/lib/api-auth";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { extractJSON, sanitizeUserText, wrapUserData } from "@/lib/api-helpers";
-import { getAnthropicClient } from "@/lib/anthropic";
+import { getAnthropicClient, createMessageWithTimeout, ClaudeTimeoutError } from "@/lib/anthropic";
 import { AdmissionDetailInputSchema, zodErrorResponse } from "@/lib/schemas";
 
 export async function POST(req: NextRequest) {
@@ -115,12 +115,16 @@ ${wrapUserData("school_data", schoolBlock)}
 
 휴리스틱 예측(${school.prob}%)을 참고하되, 국제학생 상태/전공 경쟁률/스펙의 실제 위치를 반영해서 더 정밀한 분석을 해주세요.`;
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2000,
-      system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
-      messages: [{ role: "user", content: userPrompt }],
-    });
+    const response = await createMessageWithTimeout(
+      anthropic,
+      {
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2000,
+        system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
+        messages: [{ role: "user", content: userPrompt }],
+      },
+      { timeoutMs: 45_000, upstreamSignal: req.signal },
+    );
 
     const textBlock = response.content.find((b) => b.type === "text");
     const raw = textBlock?.text || "";
@@ -137,6 +141,12 @@ ${wrapUserData("school_data", schoolBlock)}
       { status: 502 }
     );
   } catch (error) {
+    if (error instanceof ClaudeTimeoutError) {
+      return NextResponse.json(
+        { error: "분석이 너무 오래 걸렸어요. 잠시 후 다시 시도해주세요." },
+        { status: 504 }
+      );
+    }
     console.error("Admission detail error:", error);
     return NextResponse.json({ error: "분석 생성에 실패했어요." }, { status: 500 });
   }

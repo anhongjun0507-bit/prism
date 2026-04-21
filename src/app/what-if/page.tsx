@@ -73,6 +73,12 @@ function WhatIfPageInner() {
   // triedRef: saveProfile이 비동기로 Firestore round-trip 하기 전에 슬라이더가 다시 움직이면
   // whatIfUsed가 아직 0으로 보여 중복 saveProfile 호출 발생. ref로 즉시 1회 잠금.
   const triedRef = useRef(whatIfUsed > 0);
+  // profile이 비동기로 hydrate되거나 다른 탭/기기에서 whatIfUsed가 증가하면
+  // ref 초기값(최초 렌더 스냅샷)이 stale해진다. 최신 whatIfUsed를 ref에 반영.
+  useEffect(() => {
+    if (whatIfUsed > 0) triedRef.current = true;
+  }, [whatIfUsed]);
+
   useEffect(() => {
     if (triedRef.current || hasFullAccess || isMaster || whatIfUsed > 0) return;
     if (gpa !== baselineGpa || sat !== baselineSat || toefl !== baselineToefl || ecTier !== baselineEcTier || awardTier !== baselineAwardTier) {

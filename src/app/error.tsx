@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import * as Sentry from "@sentry/nextjs";
 import { AlertTriangle, RotateCw, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -14,14 +15,8 @@ export default function Error({
 }) {
   useEffect(() => {
     console.error("[app/error]", error);
-    if (typeof window !== "undefined") {
-      const w = window as Window & {
-        Sentry?: { captureException?: (err: unknown, ctx?: unknown) => void };
-      };
-      if (w.Sentry?.captureException) {
-        w.Sentry.captureException(error, { extra: { digest: error.digest } });
-      }
-    }
+    // Sentry SDK는 DSN 미설정 시 no-op이므로 gating 불필요
+    Sentry.captureException(error, { extra: { digest: error.digest } });
   }, [error]);
 
   return (

@@ -22,10 +22,13 @@ import { chime } from "@/lib/chime";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, CheckCircle2, AlertCircle, Lightbulb, Sparkles,
-  Target, MessageCircle, RotateCcw, X,
+  Target, MessageCircle, RotateCcw, X, Download, FileText,
 } from "lucide-react";
+import { exportReviewToPDF, exportReviewToDoc } from "@/lib/essay-export";
 import type { Essay, EssayReview } from "@/types/essay";
 import { slimEssaysForCache } from "@/types/essay";
+import { countWords } from "@/lib/essay-utils";
+import { logError } from "@/lib/log";
 
 /**
  * /api/essay-review 응답 스키마 — id/createdAt 없이 생성된 raw 분석 결과.
@@ -309,17 +312,21 @@ function EssayReviewPageInner() {
 
       // 두 브랜치 공통: Firestore 쓰기를 await해서 실패하면 사용자에게 toast로 알림.
       // 이전엔 fire-and-forget catch(console.error)라 저장 실패가 silent 실패였음.
+      // 실패 시 낙관적 상태를 원복하기 위한 rollback 함수.
       let updatedEssay: Essay | null = null;
       let writePromise: Promise<void> | null = null;
+      let rollback: (() => void) | null = null;
 
       // Branch 1 — linked to existing essay: append review to its reviews array.
       if (essayId) {
         // 로컬 state/캐시에 먼저 반영 (optimistic) — 서버 쓰기는 아래에서 await.
         let targetFound = false;
+        let prevSnapshot: Essay[] | null = null;
         setEssays(prev => {
           const target = prev.find(e => e.id === essayId);
           if (!target) return prev; // 아직 로딩 안 됐을 수 있음 — 아래에서 처리
           targetFound = true;
+          prevSnapshot = prev;
           updatedEssay = {
             ...target,
             reviews: [...(target.reviews ?? []), newReview],
@@ -329,6 +336,10 @@ function EssayReviewPageInner() {
           saveEssaysCache(next);
           return next;
         });
+        if (prevSnapshot) {
+          const snap = prevSnapshot;
+          rollback = () => { setEssays(snap); saveEssaysCache(snap); };
+        }
 
         // Fallback: 로컬 state에 essay가 없으면 Firestore에서 직접 읽어와 병합.
         // (캐시 비어있는 기기에서 /essays/review?essayId=X로 바로 들어온 케이스)
@@ -342,7 +353,9 @@ function EssayReviewPageInner() {
                 reviews: [...(base.reviews ?? []), newReview],
                 updatedAt: new Date().toISOString(),
               };
+              let fallbackPrev: Essay[] | null = null;
               setEssays(prev => {
+                fallbackPrev = prev;
                 const exists = prev.some(e => e.id === essayId);
                 const next = exists
                   ? prev.map(e => e.id === essayId ? updatedEssay! : e)
@@ -350,9 +363,13 @@ function EssayReviewPageInner() {
                 saveEssaysCache(next);
                 return next;
               });
+              if (fallbackPrev) {
+                const snap = fallbackPrev;
+                rollback = () => { setEssays(snap); saveEssaysCache(snap); };
+              }
             }
           } catch (e) {
-            console.error("[review] fallback fetch failed:", e);
+            logError("[review] fallback fetch failed:", e);
           }
         }
 
@@ -374,22 +391,30 @@ function EssayReviewPageInner() {
           wordLimit: limitMatch ? parseInt(limitMatch[1]) : undefined,
           reviews: [newReview],
         };
-        const next = [newEssay, ...loadEssays()];
+        const prevList = loadEssays();
+        const next = [newEssay, ...prevList];
         saveEssaysCache(next);
         setEssays(next);
         setSavedAsNew({ id: newEssayId, university: newEssay.university });
         updatedEssay = newEssay;
         if (user) {
           writePromise = setDoc(doc(db, "users", user.uid, "essays", newEssayId), newEssay, { merge: true });
+          rollback = () => {
+            setEssays(prevList);
+            saveEssaysCache(prevList);
+            setSavedAsNew(null);
+          };
         }
       }
 
-      // Firestore write를 await — 실패하면 사용자에게 알림.
+      // Firestore write를 await — 실패하면 사용자에게 알림 + 낙관적 state 롤백.
+      // 롤백 없으면 UI엔 리뷰가 달린 것처럼 보이지만 새로고침 시 사라져 유저가 혼란.
       if (writePromise) {
         try {
           await writePromise;
         } catch (e) {
-          console.error("[review] essay write failed:", e);
+          logError("[review] essay write failed:", e);
+          rollback?.();
           toast({
             title: "저장 실패",
             description: "첨삭은 받았지만 클라우드 저장에 실패했어요. 네트워크를 확인 후 다시 시도해주세요.",
@@ -509,7 +534,7 @@ function EssayReviewPageInner() {
           />
           {essay.trim() && (
             <p className="text-xs text-muted-foreground text-right">
-              {essay.split(/\s+/).filter(Boolean).length} 단어
+              {countWords(essay)} 단어
             </p>
           )}
         </div>
@@ -591,6 +616,36 @@ function EssayReviewPageInner() {
                 ⚠ 수정 예시가 원본 에세이와 다른 언어로 작성됐을 수 있어요. 참고용으로만 활용해주세요.
               </div>
             )}
+            {/* Export actions — PDF(브라우저 print dialog) / DOC(Word 호환) */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportReviewToPDF({
+                  university: university || linkedEssay?.university,
+                  prompt: prompt || linkedEssay?.prompt,
+                  content: essay,
+                  review: { ...result, id: "", createdAt: new Date().toISOString() } satisfies EssayReview,
+                })}
+                className="flex-1 rounded-xl gap-1.5"
+              >
+                <Download className="w-4 h-4" /> PDF 저장
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportReviewToDoc({
+                  university: university || linkedEssay?.university,
+                  prompt: prompt || linkedEssay?.prompt,
+                  content: essay,
+                  review: { ...result, id: "", createdAt: new Date().toISOString() } satisfies EssayReview,
+                })}
+                className="flex-1 rounded-xl gap-1.5"
+              >
+                <FileText className="w-4 h-4" /> Word(.doc) 저장
+              </Button>
+            </div>
+
             {/* Score + Summary */}
             <Card className="p-6 bg-card border-none shadow-sm rounded-2xl flex flex-col items-center gap-3">
               <ScoreCircle score={result.score} />

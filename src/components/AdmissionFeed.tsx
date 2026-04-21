@@ -107,13 +107,13 @@ export function AdmissionFeed() {
           // userGpa/userSat이 NaN이면 Number.isFinite가 false → 매칭 false (조용한 NaN 비교 방지).
           const gpaSimilar = Number.isFinite(userGpa) && !!item.gpaRange && Math.abs((userGpa as number) - parseFloat(item.gpaRange)) <= 0.3;
           const satSimilar = Number.isFinite(userSat) && !!item.satRange && Math.abs((userSat as number) - parseInt(item.satRange)) <= 100;
-          const isSimlar = gpaSimilar || satSimilar;
+          const isSimilar = gpaSimilar || satSimilar;
 
           return (
             <div
               key={`${item.school}-${item.submittedAt}-${i}`}
               className={`flex items-center gap-2.5 p-2.5 rounded-xl text-sm transition-colors ${
-                isSimlar && canFilter ? "bg-primary/5 border border-primary/10" : ""
+                isSimilar && canFilter ? "bg-primary/5 border border-primary/10" : ""
               }`}
             >
               <div className={`w-7 h-7 rounded-lg ${config.bg} flex items-center justify-center shrink-0`}>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, enforceQuota } from "@/lib/api-auth";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { extractJSON, sanitizeUserText, wrapUserData } from "@/lib/api-helpers";
-import { getAnthropicClient } from "@/lib/anthropic";
+import { getAnthropicClient, createMessageWithTimeout, ClaudeTimeoutError } from "@/lib/anthropic";
 import { EssayOutlineInputSchema, zodErrorResponse } from "@/lib/schemas";
 
 export async function POST(req: NextRequest) {
@@ -92,12 +92,16 @@ ${wrapUserData("student_profile", studentCtx || "정보 없음")}
 
 ${wrapUserData("essay_prompt", safePrompt)}`;
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 800,
-      system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
-      messages: [{ role: "user", content: userPrompt }],
-    });
+    const response = await createMessageWithTimeout(
+      anthropic,
+      {
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 800,
+        system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
+        messages: [{ role: "user", content: userPrompt }],
+      },
+      { timeoutMs: 40_000, upstreamSignal: req.signal },
+    );
 
     const textBlock = response.content.find((b) => b.type === "text");
     const raw = textBlock?.text || "";
@@ -131,6 +135,12 @@ ${wrapUserData("essay_prompt", safePrompt)}`;
     };
     return NextResponse.json({ outline });
   } catch (error: unknown) {
+    if (error instanceof ClaudeTimeoutError) {
+      return NextResponse.json(
+        { error: "에세이 구조 생성이 너무 오래 걸렸어요. 잠시 후 다시 시도해주세요." },
+        { status: 504 }
+      );
+    }
     console.error("Essay outline error:", error);
     // 내부 에러 메시지 노출 방지 — 정적 문구만 반환.
     return NextResponse.json(

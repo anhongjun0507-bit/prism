@@ -17,12 +17,15 @@ import type { Specs, School } from "@/lib/matching";
 import { fetchWithAuth } from "@/lib/api-client";
 import { CheckCircle2, ChevronRight, ChevronUp, Sparkles } from "lucide-react";
 import { CAT_STYLE } from "@/lib/analysis-helpers";
+import { useToast } from "@/hooks/use-toast";
+import { logError } from "@/lib/log";
 
 const grades = ["9학년", "10학년", "11학년", "12학년", "졸업생/Gap Year", "홈스쿨/기타"];
 
 export default function OnboardingPage() {
   const router = useRouter();
   const { saveProfile, user } = useAuth();
+  const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [uniSearch, setUniSearch] = useState("");
@@ -45,6 +48,7 @@ export default function OnboardingPage() {
   const prevStep = () => { setStepDir("back"); setStep((s) => s - 1); };
 
   const handleSubmit = async () => {
+    if (saving) return; // 더블클릭 가드
     setSaving(true);
     try {
       await saveProfile({
@@ -58,9 +62,16 @@ export default function OnboardingPage() {
         ...(formData.sat && { sat: formData.sat }),
         ...(formData.toefl && { toefl: formData.toefl }),
       });
+      // 성공 시 페이지 전환 → 컴포넌트 언마운트. setSaving(false)를 여기서 호출하면
+      // "unmounted component" 경고가 뜰 수 있어 push에 맡긴다.
       router.push("/dashboard");
     } catch (e) {
-      console.error(e);
+      logError("[onboarding] save failed:", e);
+      toast({
+        title: "저장에 실패했어요",
+        description: "네트워크 상태를 확인하고 다시 시도해주세요.",
+        variant: "destructive",
+      });
       setSaving(false);
     }
   };

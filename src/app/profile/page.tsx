@@ -13,14 +13,13 @@ import { AuthRequired } from "@/components/AuthRequired";
 import { updateProfile as fbUpdateProfile } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { MAJOR_LIST } from "@/lib/constants";
-import { Camera, Loader2, LogOut, Crown, Moon } from "lucide-react";
+import { Camera, Loader2, LogOut, Crown, Moon, Globe } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
+import { useI18n } from "@/lib/i18n";
 import { Switch } from "@/components/ui/switch";
 import Link from "next/link";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { logError } from "@/lib/log";
 
 const GRADES = ["9학년", "10학년", "11학년", "12학년", "졸업생/Gap Year", "홈스쿨/기타"];
 
@@ -33,6 +32,7 @@ function ProfilePageInner() {
   const { user, profile, saveProfile, logout } = useAuth();
   const { toast } = useToast();
   const { theme, setTheme, accent, setAccent } = useTheme();
+  const { locale, setLocale } = useI18n();
 
   const [name, setName] = useState("");
   const [photoURL, setPhotoURL] = useState("");
@@ -42,14 +42,21 @@ function ProfilePageInner() {
   const [saving, setSaving] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
-  // Hydrate form from profile/user
+  // Hydrate form once per real change — profile/user 객체 레퍼런스가 바뀌는 모든 Firestore
+  // onSnapshot tick마다 재실행되면 사용자가 타이핑 중인 입력을 덮어씀.
+  // 실제 읽는 primitive 필드만 deps로 잡아 불필요한 rehydrate 차단.
+  const pName = profile?.name || user?.displayName || "";
+  const pPhoto = profile?.photoURL || user?.photoURL || "";
+  const pGrade = profile?.grade || "";
+  const pDream = profile?.dreamSchool || "";
+  const pMajor = profile?.major || "Computer Science";
   useEffect(() => {
-    setName(profile?.name || user?.displayName || "");
-    setPhotoURL(profile?.photoURL || user?.photoURL || "");
-    setGrade(profile?.grade || "");
-    setDreamSchool(profile?.dreamSchool || "");
-    setMajor(profile?.major || "Computer Science");
-  }, [profile, user]);
+    setName(pName);
+    setPhotoURL(pPhoto);
+    setGrade(pGrade);
+    setDreamSchool(pDream);
+    setMajor(pMajor);
+  }, [pName, pPhoto, pGrade, pDream, pMajor]);
 
   const initials = (name || "학생").slice(0, 2).toUpperCase();
   const hasChanges =
@@ -88,7 +95,7 @@ function ProfilePageInner() {
 
       toast({ title: "프로필 저장됨", description: "변경사항이 저장되었어요." });
     } catch (e) {
-      console.error("[profile] save failed:", e);
+      logError("[profile] save failed:", e);
       toast({
         title: "저장 실패",
         description: e instanceof Error ? e.message : "잠시 후 다시 시도해주세요.",
@@ -231,6 +238,28 @@ function ProfilePageInner() {
           </div>
 
           <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm">언어 / Language</span>
+            </div>
+            <div className="flex items-center gap-1 rounded-xl border border-border p-0.5">
+              {(["ko", "en"] as const).map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  onClick={() => setLocale(l)}
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                    locale === l ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                  }`}
+                  aria-pressed={locale === l}
+                >
+                  {l === "ko" ? "한국어" : "English"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
             <span className="text-sm">테마 색상</span>
             <div className="flex items-center gap-2">
               {([
@@ -301,22 +330,15 @@ function ProfilePageInner() {
       </div>
 
       {/* Logout confirmation */}
-      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
-        <AlertDialogContent className="max-w-sm rounded-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-lg">로그아웃</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm">
-              로그아웃을 진행하시겠습니까? 저장되지 않은 데이터는 사라질 수 있습니다.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">취소</AlertDialogCancel>
-            <AlertDialogAction onClick={logout} className="bg-red-500 hover:bg-red-600 text-white">
-              로그아웃
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showLogoutDialog}
+        onOpenChange={setShowLogoutDialog}
+        title="로그아웃"
+        description="로그아웃을 진행하시겠습니까? 저장되지 않은 데이터는 사라질 수 있습니다."
+        confirmLabel="로그아웃"
+        onConfirm={logout}
+        destructive
+      />
 
       <BottomNav />
     </div>

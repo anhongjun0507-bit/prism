@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, enforceQuota } from "@/lib/api-auth";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { sanitizeUserText, wrapUserData } from "@/lib/api-helpers";
-import { getAnthropicClient } from "@/lib/anthropic";
+import { getAnthropicClient, createMessageWithTimeout, ClaudeTimeoutError } from "@/lib/anthropic";
 import { EssayReviewInputSchema, zodErrorResponse } from "@/lib/schemas";
 
 const SYSTEM_PROMPT = `당신은 미국 명문대 (Ivy League + Top 30) 입학사정관 출신 에세이 코치입니다.
@@ -150,17 +150,21 @@ ${wrapUserData("essay_body", safeEssay)}
 
 위 에세이를 입학사정관 시각으로 평가해주세요.`;
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      // perfectExample(에세이 전체 재작성) 때문에 3000→6000으로 상향.
-      // Common App 650 words ≒ 한국어 ~1,200자 기준, 나머지 피드백 포함 시 필요 토큰이 3000을 넘김.
-      max_tokens: 6000,
-      system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-      messages: [{
-        role: "user",
-        content: userPrompt,
-      }],
-    });
+    const response = await createMessageWithTimeout(
+      anthropic,
+      {
+        model: "claude-sonnet-4-20250514",
+        // perfectExample(에세이 전체 재작성) 때문에 3000→6000으로 상향.
+        // Common App 650 words ≒ 한국어 ~1,200자 기준, 나머지 피드백 포함 시 필요 토큰이 3000을 넘김.
+        max_tokens: 6000,
+        system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+        messages: [{
+          role: "user",
+          content: userPrompt,
+        }],
+      },
+      { timeoutMs: 90_000, upstreamSignal: req.signal },
+    );
 
     const textBlock = response.content.find((b) => b.type === "text");
     const raw = textBlock?.text || "";
@@ -214,6 +218,12 @@ ${wrapUserData("essay_body", safeEssay)}
       );
     }
   } catch (error) {
+    if (error instanceof ClaudeTimeoutError) {
+      return NextResponse.json(
+        { error: "첨삭 분석이 너무 오래 걸렸어요. 잠시 후 다시 시도해주세요." },
+        { status: 504 }
+      );
+    }
     console.error("Essay review error:", error);
     return NextResponse.json({ error: "에세이 첨삭에 실패했어요" }, { status: 500 });
   }
