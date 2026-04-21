@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { Suspense, useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -27,14 +28,21 @@ import { db } from "@/lib/firebase";
 import {
   collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch,
 } from "firebase/firestore";
-import { Calendar as CalendarIcon, CheckCircle2, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle2, ChevronRight, Plus, Trash2, Sparkles } from "lucide-react";
 import { readJSON, writeJSON } from "@/lib/storage";
 import { EmptyState } from "@/components/EmptyState";
 import { logError } from "@/lib/log";
+import { fetchWithAuth, ApiError } from "@/lib/api-client";
+import {
+  TASK_CATEGORIES, CATEGORY_COLORS, type TaskCategory,
+} from "@/lib/task-categories";
+import {
+  GeneratedTasksPreview,
+  type GeneratedTaskView,
+  type FocusAreaChoice,
+} from "@/components/planner/GeneratedTasksPreview";
 
 /* ─── Data model ─── */
-type TaskCategory = "시험" | "행정" | "에세이" | "추천서" | "지원" | "기타";
-
 interface PlannerTask {
   id: string;
   title: string;
@@ -44,18 +52,7 @@ interface PlannerTask {
   notes?: string;
 }
 
-const CATEGORIES: TaskCategory[] = ["시험", "행정", "에세이", "추천서", "지원", "기타"];
-
-// 플래너 task 카테고리 색 — 입시 Safety/Target/Reach와는 다른 도메인(작업 유형 분류)이라
-// cat-* 토큰과 별도 유지. 50-level bg는 globals.css에 dark override 있음, text는 명시적.
-const CATEGORY_COLORS: Record<TaskCategory, string> = {
-  시험:   "bg-blue-50 text-blue-600 dark:text-blue-300",
-  행정:   "bg-emerald-50 text-emerald-600 dark:text-emerald-300",
-  에세이: "bg-amber-50 text-amber-600 dark:text-amber-300",
-  추천서: "bg-violet-50 dark:bg-violet-950/20 text-violet-600 dark:text-violet-300",
-  지원:   "bg-red-50 text-red-600 dark:text-red-300",
-  기타:   "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300",
-};
+const CATEGORIES = TASK_CATEGORIES;
 
 /* ─── Helpers ─── */
 function formatDate(dateStr: string): string {
@@ -129,12 +126,20 @@ function sortTasks(tasks: PlannerTask[]): PlannerTask[] {
 
 /* ═══════════════ MAIN PAGE ═══════════════ */
 export default function PlannerPage() {
-  return <AuthRequired><PlannerPageInner /></AuthRequired>;
+  return (
+    <AuthRequired>
+      <Suspense fallback={null}>
+        <PlannerPageInner />
+      </Suspense>
+    </AuthRequired>
+  );
 }
 
 function PlannerPageInner() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [tasks, setTasks] = useState<PlannerTask[]>(() => loadLocalTasks());
   const [showCompleted, setShowCompleted] = useState(true);
 
@@ -142,6 +147,15 @@ function PlannerPageInner() {
   const [editingTask, setEditingTask] = useState<PlannerTask | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // AI 자동 생성 상태
+  const [genOpen, setGenOpen] = useState(false);
+  const [genLoading, setGenLoading] = useState(false);
+  const [genSaving, setGenSaving] = useState(false);
+  const [genTasks, setGenTasks] = useState<GeneratedTaskView[]>([]);
+  const [genReasoning, setGenReasoning] = useState("");
+  const [genTooManyExisting, setGenTooManyExisting] = useState(false);
+  const autoTriggeredRef = useRef(false);
 
   /* ─── Storage sync ─── */
   // Logged-in: subscribe to Firestore subcollection (real-time)
@@ -269,6 +283,111 @@ function PlannerPageInner() {
   const openEditDialog = (task: PlannerTask) => { setEditingTask(task); setDialogOpen(true); };
   const closeDialog = () => { setDialogOpen(false); setEditingTask(null); };
 
+  /* ─── AI 자동 생성 핸들러 ─── */
+  const handleGenerate = useCallback(async (focus: FocusAreaChoice = "balanced") => {
+    if (!user) {
+      toast({
+        title: "로그인이 필요해요",
+        description: "AI 자동 생성은 로그인 후 이용할 수 있어요.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setGenOpen(true);
+    setGenLoading(true);
+    setGenTasks([]);
+    setGenReasoning("");
+    setGenTooManyExisting(false);
+    try {
+      const res = await fetchWithAuth<{
+        tasks: GeneratedTaskView[];
+        reasoning: string;
+        tooManyExistingTasks?: boolean;
+      }>("/api/planner/generate", {
+        method: "POST",
+        body: JSON.stringify({ focusArea: focus }),
+      });
+      setGenTasks(res.tasks);
+      setGenReasoning(res.reasoning ?? "");
+      setGenTooManyExisting(Boolean(res.tooManyExistingTasks));
+    } catch (e) {
+      const err = e as ApiError;
+      setGenOpen(false);
+      if (err.code === "PROFILE_INCOMPLETE") {
+        toast({
+          title: "프로필을 먼저 완성해주세요",
+          description: "학년·GPA·전공·관심 학교를 입력하면 맞춤 계획을 만들어드려요.",
+          variant: "destructive",
+        });
+        router.push("/profile");
+      } else if (err.code === "QUOTA_EXCEEDED") {
+        toast({
+          title: "이번 달 무료 생성을 모두 사용했어요",
+          description: "Pro로 업그레이드하면 무제한으로 생성할 수 있어요.",
+          variant: "destructive",
+        });
+        router.push("/pricing");
+      } else if (err.status === 429) {
+        toast({
+          title: "잠시 후 다시 시도해주세요",
+          description: "하루 생성 한도에 도달했어요 (5회).",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "생성 실패",
+          description: err.message || "잠시 후 다시 시도해주세요.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setGenLoading(false);
+    }
+  }, [user, router, toast]);
+
+  const handleSaveGenerated = useCallback(async (selected: GeneratedTaskView[]) => {
+    if (!user || selected.length === 0) return;
+    setGenSaving(true);
+    try {
+      const batch = writeBatch(db);
+      for (const g of selected) {
+        const payload: Record<string, unknown> = {
+          title: g.title,
+          category: g.category,
+          dueDate: g.dueDate,
+          completed: false,
+          notes: `${g.description}${g.estimatedMinutes ? `\n(예상 소요: ${g.estimatedMinutes}분)` : ""}`.trim(),
+        };
+        batch.set(doc(db, "users", user.uid, "tasks", g.id), payload);
+      }
+      await batch.commit();
+      toast({
+        title: "플래너에 추가됐어요",
+        description: `${selected.length}개 일정이 다음 주 계획에 담겼어요.`,
+      });
+      setGenOpen(false);
+    } catch (e) {
+      logError("[planner] save generated tasks failed:", e);
+      toast({
+        title: "저장 실패",
+        description: "네트워크를 확인하고 다시 시도해주세요.",
+        variant: "destructive",
+      });
+    } finally {
+      setGenSaving(false);
+    }
+  }, [user, toast]);
+
+  // ?generate=1 쿼리로 진입 시 자동 오픈(chat CTA 등). URL은 즉시 정리.
+  useEffect(() => {
+    if (autoTriggeredRef.current) return;
+    if (searchParams.get("generate") !== "1") return;
+    if (!user) return;
+    autoTriggeredRef.current = true;
+    router.replace("/planner");
+    handleGenerate("balanced");
+  }, [searchParams, user, router, handleGenerate]);
+
   return (
     <div className="min-h-screen bg-background pb-nav">
       <PageHeader
@@ -276,9 +395,23 @@ function PlannerPageInner() {
         subtitle="합격을 향한 중요한 일정을 관리하세요."
         hideBack
         action={
-          <Button onClick={openAddDialog} size="icon" className="rounded-full w-10 h-10 shadow-lg shrink-0" aria-label="일정 추가">
-            <Plus className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => handleGenerate("balanced")}
+              variant="outline"
+              size="sm"
+              disabled={genLoading}
+              className="rounded-full gap-1.5 shrink-0"
+              aria-label="AI로 다음 주 자동 생성"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">AI 자동 생성</span>
+              <span className="sm:hidden">AI</span>
+            </Button>
+            <Button onClick={openAddDialog} size="icon" className="rounded-full w-10 h-10 shadow-lg shrink-0" aria-label="일정 추가">
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
         }
       />
 
@@ -327,17 +460,27 @@ function PlannerPageInner() {
           </div>
         </Card>
 
-        {/* Empty state */}
+        {/* Empty state — AI 자동 생성을 메인 CTA로 */}
         {tasks.length === 0 && (
           <Card variant="elevated">
             <EmptyState
               illustration="task"
-              title="아직 등록된 일정이 없어요"
-              description="입시 일정·마감일을 추가해 한눈에 관리하세요."
+              title="아직 계획이 없어요"
+              description="AI가 프로필에 맞춰 다음 주 7일치 계획을 한 번에 만들어드려요."
               action={
-                <Button onClick={openAddDialog}>
-                  <Plus className="w-4 h-4 mr-1" /> 첫 일정 추가하기
-                </Button>
+                <div className="flex flex-col items-center gap-2 w-full">
+                  <Button
+                    onClick={() => handleGenerate("balanced")}
+                    disabled={genLoading}
+                    className="gap-1.5"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    AI로 자동 생성
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={openAddDialog} className="text-muted-foreground">
+                    <Plus className="w-3.5 h-3.5 mr-1" /> 직접 추가하기
+                  </Button>
+                </div>
               }
             />
           </Card>
@@ -499,6 +642,19 @@ function PlannerPageInner() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* AI 자동 생성 미리보기 Drawer */}
+      <GeneratedTasksPreview
+        open={genOpen}
+        onOpenChange={setGenOpen}
+        tasks={genTasks}
+        reasoning={genReasoning}
+        isLoading={genLoading}
+        isSaving={genSaving}
+        tooManyExistingTasks={genTooManyExisting}
+        onRegenerate={handleGenerate}
+        onSave={handleSaveGenerated}
+      />
 
       <BottomNav />
     </div>

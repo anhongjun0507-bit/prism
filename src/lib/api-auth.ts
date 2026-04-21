@@ -59,7 +59,8 @@ export type QuotaKey =
   | "essayReview"      // lifetime, pro+ 무제한
   | "specAnalysis"     // pro+ 일 20회 cap, elite 일 50회
   | "admissionDetail"  // 일 cap
-  | "story";           // 일 cap
+  | "story"            // 일 cap
+  | "plannerGenerate"; // free: 월 1, pro/elite: 일 5 (악용 방지 cap)
 
 interface QuotaSpec {
   /** 카운터 리셋 주기 */
@@ -112,6 +113,12 @@ const QUOTAS: Record<QuotaKey, QuotaSpec> = {
     period: "daily",
     field: "story",
     limits: { free: 30, pro: 120, elite: 300 },
+  },
+  plannerGenerate: {
+    // Free 월 1회 — 체험용. Pro/Elite는 rate limit(일 5회)로 별도 cap.
+    period: "monthly",
+    field: "plannerGenerate",
+    limits: { free: 1, pro: Infinity, elite: Infinity },
   },
 };
 

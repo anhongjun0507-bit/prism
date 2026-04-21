@@ -54,6 +54,7 @@ const ALLOWED_ACTION_HREFS = new Set<string>([
   "/analysis",
   "/essays",
   "/planner",
+  "/planner?generate=1",
   "/spec-analysis",
   "/compare",
   "/what-if",
