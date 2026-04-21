@@ -1,29 +1,91 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { PLANS, type PlanType, type BillingCycle } from "@/lib/plans";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Sparkles, Users, Smartphone } from "lucide-react";
+import { Check, Sparkles, Users, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { SegmentedControl, SegmentedControlItem } from "@/components/ui/segmented-control";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
+import { fetchWithAuth } from "@/lib/api-client";
+import { useToast } from "@/hooks/use-toast";
 
 export default function PricingPage() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
   const currentPlan = profile?.plan || "free";
   const [billing, setBilling] = useState<BillingCycle>("monthly");
-  const [showAppPrompt, setShowAppPrompt] = useState<PlanType | null>(null);
+  const [processing, setProcessing] = useState<PlanType | null>(null);
 
-  const handlePlanSelect = (planType: PlanType) => {
+  const handlePlanSelect = async (planType: PlanType, cycle: BillingCycle) => {
     if (planType === "free") return;
-    // TODO: 실제 웹 결제는 Toss SDK로 /api/payment/confirm을 호출해야 함.
-    // 현재는 임시로 "앱에서 결제" 안내만 표시. 별도 작업에서 Toss 체크아웃 페이지 구현 필요.
-    setShowAppPrompt(planType);
+    if (!user) {
+      router.push("/");
+      return;
+    }
+    if (processing) return;
+
+    try {
+      setProcessing(planType);
+
+      // 1) 서버에서 orderId + 검증된 amount를 받는다.
+      const { orderId, amount, orderName } = await fetchWithAuth<{
+        orderId: string;
+        amount: number;
+        orderName: string;
+      }>("/api/payment/request", {
+        method: "POST",
+        body: JSON.stringify({ plan: planType, billing: cycle }),
+      });
+
+      // 2) Toss SDK 동적 로드 — 초기 번들 사이즈 억제 + Next 15 App Router 호환.
+      const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
+      if (!clientKey) {
+        throw new Error("결제 모듈이 설정되지 않았어요. 관리자에게 문의해주세요.");
+      }
+      const { loadTossPayments } = await import("@tosspayments/tosspayments-sdk");
+      const tossPayments = await loadTossPayments(clientKey);
+
+      // 3) v2 payment 인스턴스로 체크아웃 오픈.
+      //    customerKey는 사용자 uid — Toss 쪽 고객 식별자로만 쓰이며 민감정보 아님.
+      const payment = tossPayments.payment({ customerKey: user.uid });
+      await payment.requestPayment({
+        method: "CARD",
+        amount: { currency: "KRW", value: amount },
+        orderId,
+        orderName,
+        successUrl: `${window.location.origin}/payment/success`,
+        failUrl: `${window.location.origin}/payment/fail`,
+        customerEmail: user.email ?? undefined,
+        customerName: user.displayName ?? undefined,
+        card: {
+          useEscrow: false,
+          flowMode: "DEFAULT",
+          useCardPoint: false,
+          useAppCardOnly: false,
+        },
+      });
+      // requestPayment(redirect)는 successUrl로 브라우저를 이동시키므로 이 아래는 도달하지 않음.
+    } catch (e: unknown) {
+      // Toss SDK: 사용자가 결제창을 닫은 경우 UserCancelError(code=USER_CANCEL).
+      const code = (e as { code?: string } | null)?.code;
+      if (code === "USER_CANCEL" || code === "PAY_PROCESS_CANCELED") {
+        // 조용히 원복 — 사용자가 의도적으로 닫은 것.
+        return;
+      }
+      const message = e instanceof Error ? e.message : "잠시 후 다시 시도해주세요";
+      toast({
+        title: "결제를 시작할 수 없어요",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setProcessing(null);
+    }
   };
 
   return (
@@ -58,6 +120,7 @@ export default function PricingPage() {
           const monthlyEquiv = billing === "yearly" && plan.yearlyPrice > 0
             ? `월 ₩${Math.round(plan.yearlyPrice / 12).toLocaleString()}`
             : null;
+          const isProcessing = processing === plan.type;
 
           return (
             <Card
@@ -123,17 +186,21 @@ export default function PricingPage() {
                   기본 제공
                 </Button>
               ) : (
-                <div className="space-y-1.5">
-                  <Button
-                    className="w-full rounded-xl"
-                    onClick={() => handlePlanSelect(plan.type)}
-                  >
-                    앱에서 구독하기
-                  </Button>
-                  <p className="text-xs text-muted-foreground text-center">
-                    App Store 또는 Google Play에서 결제
-                  </p>
-                </div>
+                <Button
+                  className="w-full rounded-xl"
+                  onClick={() => handlePlanSelect(plan.type, billing)}
+                  disabled={!!processing}
+                  aria-busy={isProcessing}
+                >
+                  {isProcessing ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                      결제창을 여는 중...
+                    </span>
+                  ) : (
+                    "요금제 선택"
+                  )}
+                </Button>
               )}
             </Card>
           );
@@ -194,7 +261,7 @@ export default function PricingPage() {
             </span>
           </div>
           <p className="text-xs text-muted-foreground/70">
-            앱스토어 구독 정책에 따라 처리됩니다 · 해지 후 남은 기간 끝까지 이용
+            카드 결제 · 해지 후 남은 기간 끝까지 이용
           </p>
         </div>
 
@@ -218,34 +285,6 @@ export default function PricingPage() {
           실제 합격 여부를 보장하지 않습니다.
         </p>
       </div>
-
-      {/* App Store / Play Store Prompt Modal — Radix Dialog로 focus trap·ESC 자동 */}
-      <Dialog open={!!showAppPrompt} onOpenChange={(v) => !v && setShowAppPrompt(null)}>
-        <DialogContent hideClose className="max-w-sm p-6 space-y-5">
-          <DialogHeader className="items-center space-y-2 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
-              <Smartphone className="w-8 h-8 text-primary" aria-hidden="true" />
-            </div>
-            <DialogTitle className="font-headline text-xl font-bold">결제 준비 중이에요</DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
-              {showAppPrompt && PLANS[showAppPrompt].name} 플랜의 웹 결제를 곧 열 예정이에요. 조금만 기다려주세요.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="bg-muted/50 rounded-xl p-4 space-y-2">
-            <p className="text-xs font-semibold text-foreground">준비되는 기능</p>
-            <ul className="text-xs text-muted-foreground space-y-1">
-              <li className="flex gap-1.5"><Check className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5" aria-hidden="true" /> 카드·간편결제 (토스페이먼츠)</li>
-              <li className="flex gap-1.5"><Check className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5" aria-hidden="true" /> 월간·연간 자동 결제</li>
-              <li className="flex gap-1.5"><Check className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5" aria-hidden="true" /> 언제든 해지 가능</li>
-            </ul>
-          </div>
-
-          <Button variant="outline" className="w-full" onClick={() => setShowAppPrompt(null)}>
-            확인
-          </Button>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
