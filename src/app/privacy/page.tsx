@@ -18,13 +18,14 @@ export default function PrivacyPolicyPage() {
             <p className="mb-2">서비스는 다음과 같은 개인정보를 수집합니다.</p>
             <ul className="list-disc pl-5 space-y-1">
               <li>이름, 이메일 주소</li>
-              <li>학년 정보</li>
-              <li>GPA (학점)</li>
-              <li>SAT 점수</li>
-              <li>TOEFL 점수</li>
-              <li>희망 전공</li>
-              <li>목표 대학교</li>
+              <li>학년 정보, GPA, SAT/ACT, TOEFL/IELTS, 희망 전공, 목표 대학교</li>
+              <li>이용자가 작성한 에세이 본문 및 첨삭 결과</li>
+              <li>AI 카운슬러 대화 내용</li>
+              <li>합격/불합격/대기 결과 제출 시 입력한 학교명·연도(익명 피드)</li>
+              <li>결제 정보 — 주문번호, 결제 일시, 플랜 종류 (카드 정보는 Toss Payments가 직접 보관)</li>
+              <li>서비스 사용 통계 — 일일 AI 호출 횟수, 분석 횟수 등 쿼터 관리용</li>
               <li>소셜 로그인 시 제공되는 프로필 정보 (Google, 카카오, Apple)</li>
+              <li>오류 진단 데이터 — 브라우저 종류, 페이지 경로, 오류 스택 (개인 식별자 제거 후 전송)</li>
             </ul>
           </section>
 
@@ -50,24 +51,43 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold mb-3">4. 개인정보의 제3자 제공</h2>
+            <h2 className="text-lg font-semibold mb-3">4. 개인정보의 제3자 제공 및 처리위탁</h2>
             <p className="mb-2">
               서비스는 원칙적으로 이용자의 개인정보를 제3자에게 제공하지 않습니다.
-              다만, 서비스 운영을 위해 다음의 경우 제3자에게 제공될 수 있습니다.
+              다만, 서비스 운영을 위해 다음의 처리위탁을 받는 사업자에게 데이터가
+              전달될 수 있습니다.
             </p>
             <ul className="list-disc pl-5 space-y-2">
               <li>
-                <strong>Firebase (Google)</strong> — 회원 인증, 데이터 저장 및 서비스
-                인프라 운영
+                <strong>Firebase (Google LLC, 미국)</strong> — 회원 인증, 데이터 저장,
+                푸시 알림 등 서비스 인프라 운영. 처리 데이터: 계정 정보, 프로필,
+                에세이, 대화 기록.
               </li>
               <li>
-                <strong>Anthropic AI</strong> — AI 기반 에세이 코칭 및 상담 처리를 위한
-                텍스트 데이터 전송
+                <strong>Anthropic, PBC (미국)</strong> — Claude API를 통한 AI 분석,
+                에세이 첨삭, 입시 상담 응답 생성. 처리 데이터: 에세이 본문, 채팅 메시지,
+                프로필 일부(GPA·점수 등). Anthropic의 정책에 따라 API 입력은 모델 학습에
+                사용되지 않습니다.
               </li>
               <li>
-                <strong>Toss Payments</strong> — 유료 플랜 결제 처리
+                <strong>Toss Payments(주)</strong> — 유료 플랜 결제·정산 처리.
+                카드 번호 등 결제 수단 정보는 Toss가 직접 수집·보관하며, 본 서비스는
+                주문 식별자와 결제 결과만 보관합니다.
+              </li>
+              <li>
+                <strong>Sentry(Functional Software, Inc., 미국)</strong> — 서비스
+                안정성 향상을 위한 오류 진단. 처리 데이터: 오류 스택, 페이지 경로,
+                브라우저 정보 (이메일·이름 등 식별자는 전송 전 제거).
+              </li>
+              <li>
+                <strong>Google Analytics(Google LLC, 미국)</strong> — 서비스 이용 통계
+                분석. 이용자 동의 시에만 활성화되며, IP는 익명 처리됩니다.
               </li>
             </ul>
+            <p className="mt-2 text-xs text-muted-foreground">
+              위 사업자들은 미국에 서버를 두고 있어 개인정보가 국외로 이전될 수 있으며,
+              각 사업자의 보안·법적 보호 조치(GDPR, SOC2 등)를 따릅니다.
+            </p>
           </section>
 
           <section>
@@ -103,10 +123,10 @@ export default function PrivacyPolicyPage() {
             <p className="mt-2">
               이메일:{" "}
               <a
-                href="mailto:support@prism-app.com"
+                href="mailto:support@prismedu.kr"
                 className="text-primary underline"
               >
-                support@prism-app.com
+                support@prismedu.kr
               </a>
             </p>
           </section>
