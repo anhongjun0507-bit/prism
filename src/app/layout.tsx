@@ -20,6 +20,8 @@ import { Analytics } from "@/components/Analytics";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { DesktopSidebar } from "@/components/DesktopSidebar";
 import { StorageQuotaBanner } from "@/components/StorageQuotaBanner";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { I18nProvider } from "@/lib/i18n";
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://prismedu.kr'),
@@ -30,6 +32,9 @@ export const metadata: Metadata = {
   description: '한국 국제학교 학생들을 위한 AI 기반 미국 대학 입시 가이드. 1,001개 대학 합격 확률 분석, AI 에세이 첨삭, 맞춤 입시 플래너를 한곳에서.',
   keywords: ['미국 대학 입시', '합격 예측', 'AI 첨삭', '에세이', 'Common App', '국제학교', 'SAT', 'GPA', 'PRISM', '미국 유학', '대학 지원'],
   authors: [{ name: 'PRISM' }],
+  // L007: openGraph.images / twitter.images는 명시하지 않음 — Next.js 파일 컨벤션에 위임.
+  // app/opengraph-image.tsx가 자동으로 /opengraph-image 엔드포인트를 제공하고,
+  // 하위 세그먼트에서 opengraph-image.tsx를 추가하면 해당 경로가 덮어씀(dynamic SEO).
   openGraph: {
     type: 'website',
     locale: 'ko_KR',
@@ -37,13 +42,11 @@ export const metadata: Metadata = {
     title: 'PRISM — 미국 대학 입시 매니저',
     description: 'AI가 분석하는 1,001개 미국 대학 합격 확률. 내 스펙으로 갈 수 있는 대학, 3초면 알 수 있어요.',
     siteName: 'PRISM',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'PRISM — AI 기반 미국 대학 입시 매니저' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'PRISM — 미국 대학 입시 매니저',
     description: 'AI가 분석하는 1,001개 미국 대학 합격 확률. 내 스펙으로 갈 수 있는 대학, 3초면 알 수 있어요.',
-    images: ['/og-image.png'],
   },
   robots: {
     index: true,
@@ -78,13 +81,16 @@ export default function RootLayout({
     <html lang="ko" suppressHydrationWarning className={inter.variable}>
       <head>
         {/*
-          Pretendard 한글 폰트 — CDN 사용.
-          - 자체 호스팅 옵션은 검토했으나 비현실적:
+          Pretendard 한글 폰트 — CDN 사용. (L009 재검토 결론: CDN 유지)
+          - 자체 호스팅 옵션 재검토 결과 비현실적:
             · npm `pretendard` 패키지는 unpacked 97MB
             · 단일 woff2(`PretendardVariable.woff2`)는 2MB → 모든 페이지에서 강제 로드 시 비효율
-            · `next/font/local`은 한글 subset 자동화 없음
+            · `@fontsource-variable/pretendard`도 전체 subset 합치면 수백 KB
+            · `next/font/local`은 한글 subset 자동화 없음 → 수동으로 unicode-range 관리 필요
           - CDN의 `dynamic-subset.min.css`는 unicode-range로 페이지에 실제 사용되는
-            글리프 범위만 ~30KB woff2로 동적 로드 → 한국어 앱에 최적.
+            글리프 범위만 ~30KB woff2로 동적 로드 → 한국어 앱에 최적(self-host 2MB의 1/66).
+          - CDN 리스크(장애/검열): jsDelivr은 다중 geo POP(CloudFront·BunnyCDN·Fastly)
+            fallback을 자체적으로 처리 → 단일 실패점 아님. 국내 접근성도 검증됨.
           - preconnect + dns-prefetch로 cross-browser RTT 최소화. (Safari < 14는 preconnect
             지원 불완전하나 dns-prefetch는 보편 지원)
           - crossOrigin="anonymous"는 font CORS 요구사항과 정합 (preconnect와 동일).
@@ -131,7 +137,9 @@ export default function RootLayout({
           메인 콘텐츠로 건너뛰기
         </a>
         <Analytics />
+        <ServiceWorkerRegister />
         <ThemeProvider>
+          <I18nProvider>
           <ErrorBoundary>
             <AuthProvider>
               <AuthGate>
@@ -148,6 +156,7 @@ export default function RootLayout({
               </AuthGate>
             </AuthProvider>
           </ErrorBoundary>
+          </I18nProvider>
         </ThemeProvider>
       </body>
     </html>

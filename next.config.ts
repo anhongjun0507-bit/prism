@@ -1,4 +1,5 @@
 import type {NextConfig} from 'next';
+import { withSentryConfig } from '@sentry/nextjs';
 
 // 전역 보안 헤더. CSP는 Next.js 런타임 인라인 스크립트/스타일이 있어
 // 'unsafe-inline'을 허용 — nonce 기반 CSP로 강화하려면 middleware 필요.
@@ -22,7 +23,7 @@ const securityHeaders = [
       "font-src 'self' data: https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
       // Firebase Auth/Firestore, Toss, Anthropic(서버 경유지만 혹시 대비)
-      "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net wss://*.firebaseio.com https://api.tosspayments.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com",
+      "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net wss://*.firebaseio.com https://api.tosspayments.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.sentry.io https://*.ingest.sentry.io",
       "frame-src 'self' https://*.tosspayments.com https://*.firebaseapp.com",
       "object-src 'none'",
       "base-uri 'self'",
@@ -43,6 +44,12 @@ const nextConfig: NextConfig = {
   // ESLint 에러도 빌드 실패로 처리 (warnings은 통과, errors만 차단)
   eslint: {
     ignoreDuringBuilds: false,
+  },
+  // lucide-react는 barrel export(~1,500 아이콘)라 naive `import { X } from "lucide-react"`가
+  // 전체를 번들에 포함시킬 위험. optimizePackageImports로 SWC가 per-icon path로 rewrite →
+  // 실제 사용된 아이콘만 남음. (L002)
+  experimental: {
+    optimizePackageImports: ["lucide-react"],
   },
   async headers() {
     return [
@@ -81,4 +88,22 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Sentry wrapper — DSN이 설정된 경우에만 활성화.
+// 소스맵 업로드는 SENTRY_AUTH_TOKEN + org/project가 모두 있을 때만 수행 — 미설정 시 빌드 실패 방지.
+const sentryBuildOptions = {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  disableLogger: true,
+  telemetry: false,
+  hideSourceMaps: true,
+  widenClientFileUpload: true,
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+};
+
+export default process.env.NEXT_PUBLIC_SENTRY_DSN
+  ? withSentryConfig(nextConfig, sentryBuildOptions)
+  : nextConfig;
