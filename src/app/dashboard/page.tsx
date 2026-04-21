@@ -23,12 +23,12 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
-import { SCHOOLS_INDEX, schoolMatchesQuery } from "@/lib/schools-index";
+import { useSchoolsIndex, schoolMatchesQuery } from "@/lib/schools-index";
 import type { Specs, School } from "@/lib/matching";
 import { fetchWithAuth } from "@/lib/api-client";
+import { getCachedMatch, setCachedMatch } from "@/lib/match-cache";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { SchoolLogo } from "@/components/SchoolLogo";
-import { SchoolModal } from "@/components/analysis/SchoolModal";
 import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import dynamic from "next/dynamic";
@@ -37,6 +37,13 @@ const Sparkline = dynamic(() => import("@/components/Sparkline").then(m => ({ de
   ssr: false,
   loading: () => <div style={{ height: 48 }} aria-hidden="true" />,
 });
+// SchoolModal: Tabs + 4 tab 컴포넌트 + ProbabilityReveal까지 포함해 ~25KB.
+// 카드 탭 전까진 안 쓰이므로 dynamic import. modal은 사용자 동작 후 렌더라
+// loading placeholder 불필요 (open=true 직후 React Suspense가 표시 잠깐 지연시킴).
+const SchoolModal = dynamic(
+  () => import("@/components/analysis/SchoolModal").then((m) => ({ default: m.SchoolModal })),
+  { ssr: false },
+);
 
 function getDDay(dateStr: string): number {
   const now = new Date();
@@ -66,41 +73,71 @@ function DashboardPageInner() {
   const displayName = profile?.name || user?.displayName || "학생";
   const initials = displayName.slice(0, 2).toUpperCase();
 
+  const schoolsIndex = useSchoolsIndex();
+
   const dreamSchoolData = useMemo(() => {
     if (!profile?.dreamSchool) return null;
-    return SCHOOLS_INDEX.find((s) => s.n === profile.dreamSchool) || null;
-  }, [profile?.dreamSchool]);
+    return schoolsIndex.find((s) => s.n === profile.dreamSchool) || null;
+  }, [profile?.dreamSchool, schoolsIndex]);
 
   // 프로필에 gpa/sat 둘 다 없으면 매칭 요청 자체를 생략 — 이전엔 fallback "3.8"/"1500"로
   // 가짜 결과를 보여줬는데, 사용자가 "내 데이터?"로 착각할 수 있었음.
   const hasSpecs = !!(profile?.gpa || profile?.sat);
+  // 매칭 결과 입력은 스펙 필드 4개뿐 — 이 필드들만 deps로 쓰면 다른 profile 변경
+  // (favoriteSchools 토글 등)이 불필요한 match 호출을 유발하지 않음.
+  const matchGpa = profile?.gpa || "";
+  const matchSat = profile?.sat || "";
+  const matchToefl = profile?.toefl || "";
+  const matchMajor = profile?.major || "";
+
   const [allMatchResults, setAllMatchResults] = useState<School[]>([]);
   const [matchLoading, setMatchLoading] = useState(true);
   useEffect(() => {
-    if (!profile || !hasSpecs) {
+    if (!hasSpecs) {
       setAllMatchResults([]);
       setMatchLoading(false);
       return;
     }
-    setMatchLoading(true);
     const specs: Specs = {
-      gpaUW: profile.gpa || "", gpaW: "", sat: profile.sat || "", act: "",
-      toefl: profile.toefl || "", ielts: "", apCount: "", apAvg: "",
+      gpaUW: matchGpa, gpaW: "", sat: matchSat, act: "",
+      toefl: matchToefl, ielts: "", apCount: "", apAvg: "",
       satSubj: "", classRank: "", ecTier: 2,
       awardTier: 2, essayQ: 3, recQ: 3,
       interviewQ: 3, legacy: false, firstGen: false,
       earlyApp: "", needAid: false, gender: "",
-      intl: true, major: profile.major || "Computer Science",
+      intl: true, major: matchMajor || "Computer Science",
     };
-    let cancelled = false;
-    fetchWithAuth<{ results: School[] }>("/api/match", {
-      method: "POST",
-      body: JSON.stringify({ specs }),
-    })
-      .then((data) => { if (!cancelled) { setAllMatchResults(data.results || []); setMatchLoading(false); } })
-      .catch((e) => { if (!cancelled) { showApiError(e, { title: "분석 결과를 불러오지 못했어요" }); setMatchLoading(false); } });
-    return () => { cancelled = true; };
-  }, [profile, hasSpecs, showApiError]);
+    // 같은 specs로 이미 받은 적 있으면 즉시 복원 — 페이지 전환 후 재방문 시 깜빡임 제거.
+    const uid = user?.uid || "anon";
+    const cached = getCachedMatch(uid, specs);
+    if (cached) {
+      setAllMatchResults(cached.results || []);
+      setMatchLoading(false);
+      return;
+    }
+    setMatchLoading(true);
+    // 스펙 변경 burst(사용자가 폼 입력 중, 또는 다른 탭 동기화) 대응:
+    // 500ms debounce + AbortController로 in-flight 요청 취소.
+    const ac = new AbortController();
+    const timer = setTimeout(() => {
+      fetchWithAuth<{ results: School[]; plan?: string; totalAvailable?: number; lockedCount?: number }>("/api/match", {
+        method: "POST",
+        body: JSON.stringify({ specs }),
+        signal: ac.signal,
+      })
+        .then((data) => {
+          setAllMatchResults(data.results || []);
+          setMatchLoading(false);
+          setCachedMatch(uid, specs, data);
+        })
+        .catch((e) => {
+          if (e?.name === "AbortError") return; // 다음 요청이 덮어씀
+          showApiError(e, { title: "분석 결과를 불러오지 못했어요" });
+          setMatchLoading(false);
+        });
+    }, 500);
+    return () => { clearTimeout(timer); ac.abort(); };
+  }, [hasSpecs, matchGpa, matchSat, matchToefl, matchMajor, showApiError, user?.uid]);
 
   const quickResults = useMemo(() => allMatchResults.slice(0, 8), [allMatchResults]);
   const savedSchoolResults = useMemo(() => {
@@ -130,8 +167,8 @@ function DashboardPageInner() {
   const [searchQuery, setSearchQuery] = useState("");
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    return SCHOOLS_INDEX.filter(s => schoolMatchesQuery(s, searchQuery)).slice(0, 5);
-  }, [searchQuery]);
+    return schoolsIndex.filter(s => schoolMatchesQuery(s, searchQuery)).slice(0, 5);
+  }, [searchQuery, schoolsIndex]);
 
   const [showResultModal, setShowResultModal] = useState(false);
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
@@ -461,7 +498,7 @@ function DashboardPageInner() {
               {probData.length >= 2 && (
                 <div className="mb-3">
                   <p className="text-2xs text-muted-foreground mb-1">{current.dreamSchool} 합격 확률</p>
-                  <Sparkline data={probData} height={48} showTooltip />
+                  <Sparkline data={probData} height={48} />
                 </div>
               )}
 

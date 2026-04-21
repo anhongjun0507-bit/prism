@@ -12,12 +12,20 @@ import { schoolMatchesQuery } from "@/lib/school-search";
 import { Search, Sparkles, TrendingUp, Share2, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { fetchWithAuth } from "@/lib/api-client";
+import { useAuth } from "@/lib/auth-context";
+import { getCachedMatch, setCachedMatch } from "@/lib/match-cache";
 import { useToast } from "@/hooks/use-toast";
 import { CAT_ORDER, CAT_ICON } from "@/lib/analysis-helpers";
-import { SchoolModal } from "@/components/analysis/SchoolModal";
+import dynamic from "next/dynamic";
+// SchoolModal: Tabs + 4 tab + ProbabilityReveal — 카드 탭 전까진 사용 안 함.
+const SchoolModal = dynamic(
+  () => import("@/components/analysis/SchoolModal").then((m) => ({ default: m.SchoolModal })),
+  { ssr: false },
+);
 import { SchoolRow } from "@/components/analysis/SchoolRow";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import { List } from "react-window";
+import { logError } from "@/lib/log";
 import { readString, writeString } from "@/lib/storage";
 
 type SortMode = "probDesc" | "probAsc" | "rank";
@@ -32,6 +40,7 @@ type Props = {
 
 export function AnalysisResultView({ specs, onBack, toggleFavorite, isFavorite }: Props) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [results, setResults] = useState<School[]>([]);
   const [lockedCount, setLockedCount] = useState(0);
   const [matchLoading, setMatchLoading] = useState(false);
@@ -53,9 +62,19 @@ export function AnalysisResultView({ specs, onBack, toggleFavorite, isFavorite }
 
   useEffect(() => {
     let cancelled = false;
+    const uid = user?.uid || "anon";
+    // 캐시 hit 시 네트워크 round-trip 생략 — 분석↔대시보드 왕래 시 즉시 복원.
+    const cached = getCachedMatch(uid, specs);
+    if (cached) {
+      setResults(cached.results || []);
+      setLockedCount(cached.lockedCount || 0);
+      setMatchLoading(false);
+      setMatchError(null);
+      return;
+    }
     setMatchLoading(true);
     setMatchError(null);
-    fetchWithAuth<{ results: School[]; lockedCount: number }>("/api/match", {
+    fetchWithAuth<{ results: School[]; plan?: string; totalAvailable?: number; lockedCount: number }>("/api/match", {
       method: "POST",
       body: JSON.stringify({ specs }),
     })
@@ -63,10 +82,11 @@ export function AnalysisResultView({ specs, onBack, toggleFavorite, isFavorite }
         if (cancelled) return;
         setResults(data.results || []);
         setLockedCount(data.lockedCount || 0);
+        setCachedMatch(uid, specs, data);
       })
       .catch((err) => {
         if (cancelled) return;
-        console.error("[match] fetch failed:", err);
+        logError("[match] fetch failed:", err);
         setMatchError(err?.message || "분석 결과를 불러오지 못했어요.");
         setResults([]);
         setLockedCount(0);
@@ -77,7 +97,7 @@ export function AnalysisResultView({ specs, onBack, toggleFavorite, isFavorite }
     return () => {
       cancelled = true;
     };
-  }, [specs]);
+  }, [specs, user?.uid]);
 
   const filtered = useMemo(() => {
     let list = results;

@@ -149,17 +149,70 @@ export async function POST(req: NextRequest) {
 
     messages.push({ role: "user", content: enrichedMessage });
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
-      system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-      messages,
+    // SSE streaming — 토큰 단위 점진 전송으로 체감 응답 시간을 단축.
+    // upstream(Claude) abort 전파 + 30s 자체 타임아웃은 createMessageWithTimeout과 동일 패턴.
+    const controller = new AbortController();
+    let timedOut = false;
+    const onUpstreamAbort = () => controller.abort();
+    if (req.signal.aborted) controller.abort();
+    else req.signal.addEventListener("abort", onUpstreamAbort, { once: true });
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 30_000);
+
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(streamController) {
+        const send = (event: string, data: unknown) => {
+          streamController.enqueue(
+            encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
+          );
+        };
+        try {
+          const claudeStream = anthropic.messages.stream(
+            {
+              model: "claude-sonnet-4-20250514",
+              max_tokens: 1024,
+              system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+              messages,
+            },
+            { signal: controller.signal },
+          );
+          for await (const event of claudeStream) {
+            if (
+              event.type === "content_block_delta" &&
+              event.delta.type === "text_delta"
+            ) {
+              send("delta", { text: event.delta.text });
+            }
+          }
+          send("done", {});
+        } catch (err) {
+          if (timedOut) {
+            send("error", { message: "응답이 너무 오래 걸렸어요. 잠시 후 다시 시도해주세요." });
+          } else if (req.signal.aborted) {
+            // 클라이언트 disconnect — 추가 이벤트 의미 없음.
+          } else {
+            console.error("Chat stream error:", err);
+            send("error", { message: "AI 응답 생성에 실패했어요." });
+          }
+        } finally {
+          clearTimeout(timer);
+          req.signal.removeEventListener("abort", onUpstreamAbort);
+          streamController.close();
+        }
+      },
     });
 
-    const textBlock = response.content.find((b) => b.type === "text");
-    const reply = textBlock ? textBlock.text : "";
-
-    return NextResponse.json({ response: reply });
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    });
   } catch (error) {
     console.error("Chat API error:", error);
     return NextResponse.json(

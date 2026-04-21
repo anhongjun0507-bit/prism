@@ -76,3 +76,92 @@ export async function fetchWithAuth<T = unknown>(
   }
   return data as T;
 }
+
+/**
+ * SSE 스트리밍용 인증 fetch.
+ *
+ * - 본문은 raw stream이므로 fetchWithAuth(JSON parser)와 별도.
+ * - 비-2xx 응답은 JSON으로 파싱해 ApiError로 throw — 호출자가 일반 에러처럼 처리 가능.
+ * - 401 자동 재시도는 ID 토큰 만료 race 대응으로 동일하게 적용.
+ */
+export async function streamWithAuth(
+  url: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new ApiError(401, "NOT_AUTHENTICATED", "로그인이 필요해요.");
+  }
+
+  const buildHeaders = (token: string) => {
+    const headers = new Headers(init.headers);
+    headers.set("Authorization", `Bearer ${token}`);
+    if (init.body && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
+    return headers;
+  };
+
+  let token: string;
+  try {
+    token = await user.getIdToken();
+  } catch {
+    throw new ApiError(401, "TOKEN_FAILED", "인증 토큰을 가져올 수 없어요. 다시 로그인해주세요.");
+  }
+
+  let res = await fetch(url, { ...init, headers: buildHeaders(token) });
+  if (res.status === 401) {
+    try {
+      const fresh = await user.getIdToken(true);
+      res = await fetch(url, { ...init, headers: buildHeaders(fresh) });
+    } catch {
+      throw new ApiError(401, "TOKEN_FAILED", "세션이 만료되었어요. 다시 로그인해주세요.");
+    }
+  }
+
+  if (!res.ok) {
+    // 에러 응답은 JSON일 가능성이 높음 — 본문 파싱 후 ApiError로 변환.
+    const text = await res.text().catch(() => "");
+    let data: unknown = null;
+    try { data = text ? JSON.parse(text) : null; } catch { /* non-JSON */ }
+    const errBody = (data && typeof data === "object" ? data : {}) as { error?: string; code?: string };
+    throw new ApiError(res.status, errBody.code, errBody.error || `요청 실패 (${res.status})`, data);
+  }
+  return res;
+}
+
+/**
+ * SSE 이벤트 파서 — `event: NAME\ndata: JSON\n\n` 형태를 callback으로 dispatch.
+ *
+ * 한 청크에 여러 이벤트, 또는 한 이벤트가 여러 청크에 걸쳐 도착할 수 있어
+ * 마지막 미완성 라인은 buffer에 유지.
+ */
+export async function consumeSSE(
+  res: Response,
+  onEvent: (event: string, data: unknown) => void,
+): Promise<void> {
+  const reader = res.body?.getReader();
+  if (!reader) return;
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let sepIdx;
+    while ((sepIdx = buffer.indexOf("\n\n")) !== -1) {
+      const raw = buffer.slice(0, sepIdx);
+      buffer = buffer.slice(sepIdx + 2);
+      let eventName = "message";
+      let dataLine = "";
+      for (const line of raw.split("\n")) {
+        if (line.startsWith("event:")) eventName = line.slice(6).trim();
+        else if (line.startsWith("data:")) dataLine += line.slice(5).trim();
+      }
+      if (!dataLine) continue;
+      let parsed: unknown = null;
+      try { parsed = JSON.parse(dataLine); } catch { /* ignore */ }
+      onEvent(eventName, parsed);
+    }
+  }
+}

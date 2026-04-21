@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { BottomNav, BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
-import { fetchWithAuth } from "@/lib/api-client";
+import { streamWithAuth, consumeSSE } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -14,14 +14,26 @@ import { AuthRequired } from "@/components/AuthRequired";
 import { EmptyState } from "@/components/EmptyState";
 import { PLANS } from "@/lib/plans";
 import { ChatLimitModal } from "@/components/UpgradeCTA";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { readJSON, writeJSON, removeKey } from "@/lib/storage";
 import { ApiError } from "@/lib/api-client";
+import { db } from "@/lib/firebase";
+import {
+  doc, getDoc, deleteDoc, collection, query, orderBy, limit as fsLimit,
+  getDocs, addDoc, writeBatch, startAfter, serverTimestamp, Timestamp,
+  QueryDocumentSnapshot,
+} from "firebase/firestore";
+import { logError } from "@/lib/log";
 
 interface Message {
   role: "user" | "ai";
   content: string;
   error?: boolean;
+  // Firestore 서브컬렉션 docId — 페이지네이션(cursor)·삭제에 사용. 로컬 최초 생성 메시지엔 없음.
+  id?: string;
 }
+
+const CHAT_PAGE_SIZE = 50;
 
 function getTodayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -98,7 +110,7 @@ export default function ChatPage() {
 }
 
 function ChatPageInner() {
-  const { profile, saveProfile, isMaster } = useAuth();
+  const { profile, saveProfile, isMaster, user } = useAuth();
   const currentPlan = profile?.plan || "free";
   const dailyLimit = isMaster ? Infinity : PLANS[currentPlan].limits.aiChatPerDay;
 
@@ -128,18 +140,141 @@ function ChatPageInner() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [showLimitModal, setShowLimitModal] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [hasMoreOlder, setHasMoreOlder] = useState(false);
+  const oldestCursorRef = useRef<QueryDocumentSnapshot<unknown> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Hydration: Firestore 서브컬렉션(users/{uid}/chat) → localStorage → greeting.
+  // 서브컬렉션으로 이관(L003): 메시지당 도큐먼트 1개, createdAt desc로 최신 50개만 초기 로드.
+  // "이전 대화 더 보기" 버튼으로 startAfter 커서 페이지네이션.
+  // 과거 단일 doc("chat/history") 구조는 최초 하이드레이션 시 개별 doc으로 migrate.
+  const chatHydratedRef = useRef(false);
   useEffect(() => {
-    const saved = readJSON<Message[]>(CHAT_KEY);
-    if (saved && saved.length > 0) setMessages(saved);
-  }, []);
+    if (chatHydratedRef.current) return;
+    let cancelled = false;
 
-  useEffect(() => {
-    if (messages.length > 0) {
-      writeJSON(CHAT_KEY, messages.slice(-50));
+    const hydrate = async () => {
+      if (!user) {
+        const saved = readJSON<Message[]>(CHAT_KEY);
+        if (!cancelled && saved && saved.length > 0) {
+          setMessages(saved);
+          chatHydratedRef.current = true;
+        }
+        return;
+      }
+      try {
+        const col = collection(db, "users", user.uid, "chat");
+        // 1) 최신 50개 조회
+        const pageSnap = await getDocs(
+          query(col, orderBy("createdAt", "desc"), fsLimit(CHAT_PAGE_SIZE))
+        );
+        if (cancelled) return;
+
+        // 서브컬렉션이 비었으면 레거시 "history" 단일 doc 확인 후 migrate
+        if (pageSnap.empty) {
+          const legacy = await getDoc(doc(db, "users", user.uid, "chat", "history"));
+          if (cancelled) return;
+          if (legacy.exists()) {
+            const data = legacy.data() as { messages?: Message[] };
+            const legacyMsgs = Array.isArray(data.messages) ? data.messages : [];
+            if (legacyMsgs.length > 0) {
+              // Firestore 쓰기 제한(500/batch)보다 항상 작은 규모라 단일 batch로 충분.
+              const batch = writeBatch(db);
+              const base = Date.now() - legacyMsgs.length;
+              legacyMsgs.forEach((m, i) => {
+                const ref = doc(col);
+                batch.set(ref, {
+                  role: m.role,
+                  content: m.content,
+                  ...(m.error ? { error: true } : {}),
+                  // 원래 순서 보존: 개별 timestamp가 없으니 base+i로 단조 증가.
+                  createdAt: Timestamp.fromMillis(base + i),
+                });
+              });
+              batch.delete(legacy.ref);
+              await batch.commit();
+              // migrate 직후 재조회
+              const reloaded = await getDocs(
+                query(col, orderBy("createdAt", "desc"), fsLimit(CHAT_PAGE_SIZE))
+              );
+              if (cancelled) return;
+              hydrateFromSnapshot(reloaded);
+              chatHydratedRef.current = true;
+              return;
+            }
+            // 빈 legacy doc도 정리
+            await deleteDoc(legacy.ref).catch(() => {});
+          }
+        } else {
+          hydrateFromSnapshot(pageSnap);
+          chatHydratedRef.current = true;
+          return;
+        }
+      } catch (e) {
+        logError("[chat] Firestore hydrate failed:", e);
+      }
+      // Firestore 실패 시 localStorage 폴백
+      const saved = readJSON<Message[]>(CHAT_KEY);
+      if (!cancelled && saved && saved.length > 0) {
+        setMessages(saved);
+      }
+      chatHydratedRef.current = true;
+    };
+
+    function hydrateFromSnapshot(snap: Awaited<ReturnType<typeof getDocs>>) {
+      const docs = snap.docs;
+      oldestCursorRef.current = docs[docs.length - 1] ?? null;
+      setHasMoreOlder(docs.length === CHAT_PAGE_SIZE);
+      // desc로 받았으니 오래된 것부터 표시하려면 reverse.
+      const loaded: Message[] = docs
+        .map((d) => ({ id: d.id, ...(d.data() as Omit<Message, "id">) }))
+        .reverse();
+      if (loaded.length > 0) {
+        setMessages(loaded);
+        try { writeJSON(CHAT_KEY, loaded); } catch {}
+      }
     }
+
+    hydrate();
+    return () => { cancelled = true; };
+  }, [user]);
+
+  // Persist: localStorage는 최근 50개만 캐시(UI 즉시 복원용).
+  // Firestore 쓰기는 sendMessage 안에서 개별 addDoc으로 이미 처리되므로 여기선 LS만.
+  useEffect(() => {
+    if (!chatHydratedRef.current) return;
+    if (messages.length === 0) return;
+    const trimmed = messages.slice(-CHAT_PAGE_SIZE);
+    try { writeJSON(CHAT_KEY, trimmed); } catch {}
   }, [messages]);
+
+  const loadOlderMessages = async () => {
+    if (!user || loadingOlder || !hasMoreOlder) return;
+    const cursor = oldestCursorRef.current;
+    if (!cursor) return;
+    setLoadingOlder(true);
+    try {
+      const col = collection(db, "users", user.uid, "chat");
+      const snap = await getDocs(
+        query(col, orderBy("createdAt", "desc"), startAfter(cursor), fsLimit(CHAT_PAGE_SIZE))
+      );
+      const docs = snap.docs;
+      oldestCursorRef.current = docs[docs.length - 1] ?? oldestCursorRef.current;
+      setHasMoreOlder(docs.length === CHAT_PAGE_SIZE);
+      const older: Message[] = docs
+        .map((d) => ({ id: d.id, ...(d.data() as Omit<Message, "id">) }))
+        .reverse();
+      if (older.length > 0) {
+        setMessages((prev) => [...older, ...prev]);
+      }
+    } catch (e) {
+      logError("[chat] load older failed:", e);
+    } finally {
+      setLoadingOlder(false);
+    }
+  };
 
   const todayKey = getTodayKey();
   const chatCount = profile?.aiChatDate === todayKey ? (profile?.aiChatCount || 0) : 0;
@@ -176,29 +311,78 @@ function ChatPageInner() {
     return parts.length > 0 ? `\n\n[학생 프로필]\n${parts.join("\n")}` : "";
   }
 
+  const persistMessage = async (msg: Message) => {
+    if (!user) return;
+    try {
+      await addDoc(collection(db, "users", user.uid, "chat"), {
+        role: msg.role,
+        content: msg.content,
+        ...(msg.error ? { error: true } : {}),
+        createdAt: serverTimestamp(),
+      });
+    } catch (e) {
+      logError("[chat] persist failed:", e);
+    }
+  };
+
   const sendMessage = async (userMessage: string) => {
     setLoading(true);
 
     try {
       const cleanHistory = messages.filter((m) => !m.error);
 
-      const data = await fetchWithAuth<{ response: string }>("/api/chat", {
+      const res = await streamWithAuth("/api/chat", {
         method: "POST",
         body: JSON.stringify({
           message: userMessage + (cleanHistory.length <= 1 ? buildStudentContext() : ""),
           history: cleanHistory,
         }),
       });
-      if (!data.response) throw new Error("Empty response");
 
-      setMessages(prev => [...prev, { role: "ai", content: data.response }]);
+      // 스트림 시작 직전에 빈 AI 메시지를 추가해 placeholder 역할.
+      // 이후 delta가 도착할 때마다 마지막 메시지 content를 누적 업데이트.
+      // 첫 토큰 도착 전까지 typing indicator(loading=true)는 유지.
+      let aiInserted = false;
+      let accumulated = "";
+      let streamErr: string | null = null;
+
+      await consumeSSE(res, (event, data) => {
+        if (event === "delta") {
+          const text = (data as { text?: string } | null)?.text ?? "";
+          if (!text) return;
+          accumulated += text;
+          if (!aiInserted) {
+            aiInserted = true;
+            setLoading(false);
+            setMessages(prev => [...prev, { role: "ai", content: accumulated }]);
+          } else {
+            setMessages(prev => {
+              const next = prev.slice();
+              const last = next[next.length - 1];
+              if (last && last.role === "ai") {
+                next[next.length - 1] = { ...last, content: accumulated };
+              }
+              return next;
+            });
+          }
+        } else if (event === "error") {
+          streamErr = (data as { message?: string } | null)?.message
+            || "AI 응답 생성에 실패했어요.";
+        }
+      });
+
+      if (streamErr) throw new Error(streamErr);
+      if (!accumulated) throw new Error("Empty response");
+
+      // 최종 메시지를 Firestore에 영속화 (delta마다 쓰기는 비용·쿼터 부담).
+      persistMessage({ role: "ai", content: accumulated });
 
       if (!isMaster) {
         const newCount = (profile?.aiChatDate === todayKey ? (profile?.aiChatCount || 0) : 0) + 1;
         await saveProfile({ aiChatCount: newCount, aiChatDate: todayKey });
       }
     } catch (error: unknown) {
-      console.error(error);
+      logError(error);
       // 서버에서 429 QUOTA_EXCEEDED면 한도 초과 모달 + 로컬 카운트를 서버 값으로 강제 동기화.
       // 이전엔 클라가 "여유 있음"으로 판단한 요청을 서버가 거부하면 에러 버블만 생기고
       // "오늘 X회 남음" UI가 여전히 남는 문제가 있었음.
@@ -240,7 +424,9 @@ function ChatPageInner() {
 
     const userMessage = input;
     setInput("");
-    setMessages(prev => [...prev, { role: "user", content: userMessage }]);
+    const userMsg: Message = { role: "user", content: userMessage };
+    setMessages(prev => [...prev, userMsg]);
+    persistMessage(userMsg);
     await sendMessage(userMessage);
   };
 
@@ -304,7 +490,7 @@ function ChatPageInner() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { setMessages([{ role: "ai", content: getGreeting() }]); removeKey(CHAT_KEY); }}
+            onClick={() => setShowResetConfirm(true)}
             aria-label="대화 초기화"
             className="gap-1.5 text-xs text-muted-foreground hover:text-foreground rounded-full"
           >
@@ -314,14 +500,53 @@ function ChatPageInner() {
         </div>
       </header>
 
+      <ConfirmDialog
+        open={showResetConfirm}
+        onOpenChange={setShowResetConfirm}
+        title="대화 기록을 삭제할까요?"
+        description="지금까지의 AI 상담 내용이 모두 지워져요. 되돌릴 수 없어요."
+        confirmLabel="삭제"
+        destructive
+        onConfirm={async () => {
+          setMessages([{ role: "ai", content: getGreeting() }]);
+          removeKey(CHAT_KEY);
+          oldestCursorRef.current = null;
+          setHasMoreOlder(false);
+          if (user) {
+            // 서브컬렉션 전체 삭제 — 페이지당 500씩 반복.
+            // 레거시 "history" 단일 doc도 함께 정리.
+            const col = collection(db, "users", user.uid, "chat");
+            try {
+              await deleteDoc(doc(db, "users", user.uid, "chat", "history")).catch(() => {});
+              while (true) {
+                const snap = await getDocs(query(col, fsLimit(500)));
+                if (snap.empty) break;
+                const batch = writeBatch(db);
+                snap.docs.forEach((d) => batch.delete(d.ref));
+                await batch.commit();
+                if (snap.size < 500) break;
+              }
+            } catch (e) {
+              logError("[chat] reset failed:", e);
+            }
+          }
+        }}
+      />
+
       {/* ── Messages area ── */}
       <div className="flex-1 overflow-y-auto px-6 pt-6 pb-4">
-        {/* 50개 저장 한도 근접 시 주의문 — 이전엔 조용히 잘려 사용자가 "이전 대화가 왜 사라졌지" 혼란 */}
-        {messages.length >= 40 && (
-          <div className="mb-4 mx-auto max-w-md rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 px-3 py-2 text-xs text-amber-800 dark:text-amber-300 text-center">
-            {messages.length >= 50
-              ? "최근 50개 메시지만 기기에 저장됩니다. 중요한 내용은 따로 메모해두세요."
-              : `기기에는 최근 50개 메시지만 저장돼요 (현재 ${messages.length}개).`}
+        {hasMoreOlder && (
+          <div className="mb-4 flex justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadOlderMessages}
+              disabled={loadingOlder}
+              className="rounded-full text-xs"
+            >
+              {loadingOlder ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <RotateCcw className="w-3.5 h-3.5 mr-1.5" />}
+              이전 대화 더 보기
+            </Button>
           </div>
         )}
         {showSuggestions && (
@@ -424,7 +649,9 @@ function ChatPageInner() {
                   key={q.text}
                   onClick={() => {
                     setInput("");
-                    setMessages(prev => [...prev, { role: "user", content: q.text }]);
+                    const userMsg: Message = { role: "user", content: q.text };
+                    setMessages(prev => [...prev, userMsg]);
+                    persistMessage(userMsg);
                     sendMessage(q.text);
                   }}
                   className={cn(
