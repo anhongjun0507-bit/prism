@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
-import { PLANS } from "@/lib/plans";
+import { PLANS, normalizePlan } from "@/lib/plans";
 import type { Specs, School } from "@/lib/matching";
 import { fetchWithAuth } from "@/lib/api-client";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
@@ -23,8 +23,10 @@ export default function ParentReportPage() {
 function ParentReportPageInner() {
   const { profile, snapshots } = useAuth();
   const showApiError = useApiErrorToast();
-  const currentPlan = profile?.plan || "free";
-  const hasAccess = PLANS[currentPlan].limits.parentReport;
+  const currentPlan = normalizePlan(profile?.plan);
+  // Pro = basic 리포트, Elite = 주간 리포트. Free는 샘플(주간 리포트 UI 접근 불가).
+  const hasAccess = PLANS[currentPlan].features.parentReportType !== "sample"
+    && PLANS[currentPlan].features.parentReportType !== "none";
 
   /* ── compute stats — server fetch ── */
   // 스펙(GPA/SAT)이 없으면 매칭 요청 자체를 생략. 이전엔 fallback "3.8"/"1500"로 가짜

@@ -104,7 +104,15 @@ describe("enforceQuota", () => {
       expect((res as Response)?.status).toBe(429);
     });
 
-    it("premium은 무제한 (Infinity)", async () => {
+    it("elite는 무제한 (Infinity)", async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      setupTransaction("elite", { period: today, count: 9999 }, "aiChat");
+      const session = { uid: "u1", email: "u1@test.com", isMaster: false };
+      const res = await enforceQuota(session, "aiChat");
+      expect(res).toBeUndefined();
+    });
+
+    it("legacy premium plan 필드도 elite로 정규화되어 무제한 통과", async () => {
       const today = new Date().toISOString().slice(0, 10);
       setupTransaction("premium", { period: today, count: 9999 }, "aiChat");
       const session = { uid: "u1", email: "u1@test.com", isMaster: false };
@@ -127,11 +135,11 @@ describe("enforceQuota", () => {
       expect((res as Response)?.status).toBe(429);
     });
 
-    it("essayReview — basic은 0회 (포함 안 됨)", async () => {
-      setupTransaction("basic", null, "essayReview");
+    it("essayReview — pro는 무제한", async () => {
+      setupTransaction("pro", null, "essayReview");
       const session = { uid: "u1", email: "u1@test.com", isMaster: false };
       const res = await enforceQuota(session, "essayReview");
-      expect((res as Response)?.status).toBe(429);
+      expect(res).toBeUndefined();
     });
 
     it("specAnalysis는 free에서 0회 — 첫 호출부터 차단", async () => {

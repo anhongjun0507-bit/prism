@@ -20,7 +20,7 @@ import { ToastAction } from "@/components/ui/toast";
 import { useAuth } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
 import Link from "next/link";
-import { PLANS } from "@/lib/plans";
+import { normalizePlan, canUseFeature } from "@/lib/plans";
 import { collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch, query, orderBy, limit as fsLimit, runTransaction } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { fetchWithAuth } from "@/lib/api-client";
@@ -58,8 +58,9 @@ function EssaysPageInner() {
   const { toast } = useToast();
   const { profile, saveProfile, user, isMaster } = useAuth();
   const schoolsIndex = useSchoolsIndex();
-  const currentPlan = profile?.plan || "free";
-  const hasPlanAccess = isMaster || PLANS[currentPlan].limits.essayOutline;
+  const currentPlan = normalizePlan(profile?.plan);
+  // Pro+는 에세이 첨삭 무제한 → 아웃라인 생성도 포함. Free는 1회 lifetime 체험.
+  const hasPlanAccess = isMaster || canUseFeature(currentPlan, "essayReviewLimit");
   const outlineUsed = profile?.outlineUsed || 0;
   const canUseOutline = hasPlanAccess || outlineUsed < 1;
   const [essays, setEssays] = useState<Essay[]>(loadEssays);

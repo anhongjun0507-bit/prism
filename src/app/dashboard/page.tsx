@@ -18,7 +18,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-import { PLANS } from "@/lib/plans";
+import { PLANS, normalizePlan } from "@/lib/plans";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
@@ -155,7 +155,7 @@ function DashboardPageInner() {
     : getDDay("Jan 1");
   const dday = formatDDay(nextDeadline);
 
-  const currentPlan = profile?.plan || "free";
+  const currentPlan = normalizePlan(profile?.plan);
   const planInfo = PLANS[currentPlan];
 
   // 목표 대학 합격 확률 — hero 카드에 요약 표시
@@ -205,7 +205,7 @@ function DashboardPageInner() {
             {currentPlan !== "free" && (
               <Link href="/subscription" className="shrink-0">
                 <span className="inline-flex items-center gap-1 bg-primary/10 text-primary rounded-full px-2 h-5 text-2xs font-semibold">
-                  <Crown className="w-2.5 h-2.5" /> {planInfo.name}
+                  <Crown className="w-2.5 h-2.5" /> {planInfo.displayName}
                 </span>
               </Link>
             )}

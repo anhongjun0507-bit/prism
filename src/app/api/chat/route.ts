@@ -64,10 +64,22 @@ interface LoadedProfile {
   gpaNum: number | null;
   satNum: number | null;
   major: string;
+  // UI에서 "이 답변은 다음을 참고했어요" 위젯으로 쓸 프로필 라벨.
+  // block이 비어있으면 여기도 비어있음.
+  profileLabel: string;
+  name: string;
+}
+
+// 클라이언트 SSE에서 Message에 붙이는 참조 근거.
+export type ChatSourceType = "profile" | "admission" | "guide";
+interface ChatSource {
+  id: string;
+  type: ChatSourceType;
+  label: string;
 }
 
 async function loadStudentContext(uid: string): Promise<LoadedProfile> {
-  const empty: LoadedProfile = { block: "", favoriteSchools: [], gpaNum: null, satNum: null, major: "" };
+  const empty: LoadedProfile = { block: "", favoriteSchools: [], gpaNum: null, satNum: null, major: "", profileLabel: "", name: "" };
   try {
     const snap = await getAdminDb().collection("users").doc(uid).get();
     if (!snap.exists) return empty;
@@ -134,12 +146,24 @@ async function loadStudentContext(uid: string): Promise<LoadedProfile> {
     const gpaNum = gpa ? parseFloat(gpa) : (gpaUW ? parseFloat(gpaUW) : null);
     const satNum = sat ? parseInt(sat, 10) : null;
 
+    // 위젯 라벨 — 의미있는 필드가 있을 때만 생성.
+    const labelParts: string[] = [];
+    if (gpa || gpaUW) labelParts.push(`GPA ${gpa || gpaUW}`);
+    if (sat) labelParts.push(`SAT ${sat}`);
+    const profileLabel = block
+      ? (name
+          ? `${name}님 프로필${labelParts.length ? ` (${labelParts.join(", ")})` : ""}`
+          : `내 프로필${labelParts.length ? ` (${labelParts.join(", ")})` : ""}`)
+      : "";
+
     return {
       block,
       favoriteSchools,
       gpaNum: gpaNum != null && Number.isFinite(gpaNum) ? gpaNum : null,
       satNum: satNum != null && Number.isFinite(satNum) ? satNum : null,
       major: specsMajor,
+      profileLabel,
+      name,
     };
   } catch (e) {
     console.error("[chat] loadStudentContext failed:", e);
@@ -163,7 +187,13 @@ interface AdmissionRow {
   major?: string;
 }
 
-async function loadSimilarAdmissions(profile: LoadedProfile): Promise<string> {
+interface AdmissionContext {
+  block: string;
+  // { "MIT": 2, "Stanford": 1, ... } — 위젯에서 학교별 건수 라벨 생성.
+  bySchool: Record<string, number>;
+}
+
+async function loadSimilarAdmissions(profile: LoadedProfile): Promise<AdmissionContext> {
   try {
     const db = getAdminDb();
     const col = db.collection("admission_results");
@@ -219,9 +249,11 @@ async function loadSimilarAdmissions(profile: LoadedProfile): Promise<string> {
       return af - bf;
     });
     rows = rows.slice(0, 5);
-    if (!rows.length) return "";
+    if (!rows.length) return { block: "", bySchool: {} };
 
+    const bySchool: Record<string, number> = {};
     const lines = rows.map((r) => {
+      bySchool[r.school] = (bySchool[r.school] || 0) + 1;
       const parts: string[] = [`${r.school}: ${r.result}`];
       const meta: string[] = [];
       if (r.gpa) meta.push(`GPA ${r.gpa}`);
@@ -230,10 +262,11 @@ async function loadSimilarAdmissions(profile: LoadedProfile): Promise<string> {
       if (meta.length) parts.push(`(${meta.join(" · ")})`);
       return `- ${parts.join(" ")}`;
     });
-    return `\n\n[익명 합격/불합격 사례 — 비슷한 스펙 학생들의 실제 결과. 추측이 아닌 이 사례만 언급하세요]\n${lines.join("\n")}`;
+    const block = `\n\n[익명 합격/불합격 사례 — 비슷한 스펙 학생들의 실제 결과. 추측이 아닌 이 사례만 언급하세요]\n${lines.join("\n")}`;
+    return { block, bySchool };
   } catch (e) {
     console.error("[chat] loadSimilarAdmissions failed:", e);
-    return "";
+    return { block: "", bySchool: {} };
   }
 }
 
@@ -339,6 +372,35 @@ export async function POST(req: NextRequest) {
     const schoolContext = formatSchoolContext(mentionedSchools);
     const enrichedMessage = schoolContext ? message + schoolContext : message;
 
+    // 위젯용 sources — 실제 system 블록에 주입된 소스만 포함.
+    const sources: ChatSource[] = [];
+    if (studentProfile.profileLabel) {
+      sources.push({ id: "profile", type: "profile", label: studentProfile.profileLabel });
+    }
+    const admissionSchools = Object.entries(similarAdmissions.bySchool);
+    if (admissionSchools.length > 0) {
+      // 상위 1~2개 학교에 한해 "{school} 합격 사례 {n}건" 라벨로 제공.
+      admissionSchools
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 2)
+        .forEach(([school, n]) => {
+          sources.push({
+            id: `admission-${school}`,
+            type: "admission",
+            label: `최근 ${school} 합격 사례 ${n}건`,
+          });
+        });
+    }
+    if (mentionedSchools.length > 0) {
+      mentionedSchools.slice(0, 2).forEach((s) => {
+        sources.push({
+          id: `guide-${s.n}`,
+          type: "guide",
+          label: `${s.n} 가이드`,
+        });
+      });
+    }
+
     // history 검증 — 엘리먼트마다 role/content 타입 확인, 최근 N턴만, 총량 상한.
     const messages: Anthropic.MessageParam[] = [];
     if (Array.isArray(history)) {
@@ -377,7 +439,7 @@ export async function POST(req: NextRequest) {
       { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
     ];
     if (studentProfile.block) systemBlocks.push({ type: "text", text: studentProfile.block });
-    if (similarAdmissions) systemBlocks.push({ type: "text", text: similarAdmissions });
+    if (similarAdmissions.block) systemBlocks.push({ type: "text", text: similarAdmissions.block });
 
     // suggest_actions 툴 — Claude가 답변 말미에 CTA를 구조화된 JSON으로 반환하도록.
     const tools: Anthropic.Tool[] = [
@@ -426,6 +488,10 @@ export async function POST(req: NextRequest) {
           );
         };
         try {
+          // sources를 델타 전에 먼저 보내서 UI가 답변과 함께 근거를 즉시 렌더할 수 있게.
+          if (sources.length > 0) {
+            send("sources", { sources });
+          }
           const claudeStream = anthropic.messages.stream(
             {
               model: "claude-sonnet-4-20250514",

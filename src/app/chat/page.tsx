@@ -7,13 +7,13 @@ import { streamWithAuth, consumeSSE } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Send, Sparkles, Loader2, Bot, User, RotateCcw, GraduationCap, PenLine, TrendingUp, Trophy, ArrowRight } from "lucide-react";
+import { Send, Sparkles, Loader2, Bot, User, RotateCcw, GraduationCap, PenLine, TrendingUp, Trophy, ArrowRight, BookOpen, FileText, UserCircle2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
 import { EmptyState } from "@/components/EmptyState";
-import { PLANS } from "@/lib/plans";
+import { normalizePlan, featureLimit } from "@/lib/plans";
 import { ChatLimitModal } from "@/components/UpgradeCTA";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { readJSON, writeJSON, removeKey } from "@/lib/storage";
@@ -31,6 +31,13 @@ interface ChatAction {
   href: string;
 }
 
+type ChatSourceType = "profile" | "admission" | "guide";
+interface ChatSource {
+  id: string;
+  type: ChatSourceType;
+  label: string;
+}
+
 interface Message {
   role: "user" | "ai";
   content: string;
@@ -39,6 +46,8 @@ interface Message {
   id?: string;
   // 서버 suggest_actions 도구가 반환한 CTA 버튼 (있으면 AI 메시지 하단에 렌더).
   actions?: ChatAction[];
+  // 서버가 system 블록에 주입한 근거 출처 (프로필/합격 사례/가이드).
+  sources?: ChatSource[];
 }
 
 const ALLOWED_ACTION_HREFS = new Set<string>([
@@ -129,8 +138,8 @@ export default function ChatPage() {
 
 function ChatPageInner() {
   const { profile, saveProfile, isMaster, user } = useAuth();
-  const currentPlan = profile?.plan || "free";
-  const dailyLimit = isMaster ? Infinity : PLANS[currentPlan].limits.aiChatPerDay;
+  const currentPlan = normalizePlan(profile?.plan);
+  const dailyLimit = isMaster ? Infinity : featureLimit(currentPlan, "aiChatDailyLimit");
 
   function getGreeting(): string {
     const name = profile?.name;
@@ -323,6 +332,8 @@ function ChatPageInner() {
         role: msg.role,
         content: msg.content,
         ...(msg.error ? { error: true } : {}),
+        ...(msg.actions ? { actions: msg.actions } : {}),
+        ...(msg.sources ? { sources: msg.sources } : {}),
         createdAt: serverTimestamp(),
       });
     } catch (e) {
@@ -352,6 +363,7 @@ function ChatPageInner() {
       let aiInserted = false;
       let accumulated = "";
       let accumulatedActions: ChatAction[] = [];
+      let accumulatedSources: ChatSource[] = [];
       let streamErr: string | null = null;
 
       await consumeSSE(res, (event, data) => {
@@ -362,13 +374,44 @@ function ChatPageInner() {
           if (!aiInserted) {
             aiInserted = true;
             setLoading(false);
-            setMessages(prev => [...prev, { role: "ai", content: accumulated }]);
+            setMessages(prev => [
+              ...prev,
+              {
+                role: "ai",
+                content: accumulated,
+                ...(accumulatedSources.length ? { sources: accumulatedSources } : {}),
+              },
+            ]);
           } else {
             setMessages(prev => {
               const next = prev.slice();
               const last = next[next.length - 1];
               if (last && last.role === "ai") {
                 next[next.length - 1] = { ...last, content: accumulated };
+              }
+              return next;
+            });
+          }
+        } else if (event === "sources") {
+          // 서버가 system 블록에 넣은 실제 근거 — 이미 AI 메시지가 있으면 바로 첨부,
+          // 아직 없으면 accumulatedSources에 보관하고 delta 삽입 시 같이 적용.
+          const raw = (data as { sources?: unknown } | null)?.sources;
+          if (!Array.isArray(raw)) return;
+          const srcs: ChatSource[] = raw
+            .filter((s): s is ChatSource =>
+              !!s && typeof s === "object"
+              && typeof (s as ChatSource).id === "string"
+              && typeof (s as ChatSource).label === "string"
+              && (["profile", "admission", "guide"] as const).includes((s as ChatSource).type))
+            .slice(0, 5);
+          if (!srcs.length) return;
+          accumulatedSources = srcs;
+          if (aiInserted) {
+            setMessages(prev => {
+              const next = prev.slice();
+              const last = next[next.length - 1];
+              if (last && last.role === "ai") {
+                next[next.length - 1] = { ...last, sources: srcs };
               }
               return next;
             });
@@ -408,6 +451,7 @@ function ChatPageInner() {
         role: "ai",
         content: accumulated,
         ...(accumulatedActions.length ? { actions: accumulatedActions } : {}),
+        ...(accumulatedSources.length ? { sources: accumulatedSources } : {}),
       });
 
       if (!isMaster) {
@@ -630,6 +674,38 @@ function ChatPageInner() {
                   >
                     {isAi && i === 0 ? highlightProfile(m.content) : m.content}
                   </div>
+                  {isAi && Array.isArray(m.sources) && m.sources.length > 0 && (
+                    <div className="pt-1.5 pb-0.5">
+                      <p className="text-2xs font-semibold text-muted-foreground/80 mb-1 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" aria-hidden="true" />
+                        이 답변은 다음을 참고했어요
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {m.sources.map((source) => {
+                          const Icon =
+                            source.type === "profile" ? UserCircle2 :
+                            source.type === "admission" ? FileText :
+                            BookOpen;
+                          const tone =
+                            source.type === "profile" ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 ring-blue-500/20" :
+                            source.type === "admission" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-500/20" :
+                            "bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-500/20";
+                          return (
+                            <span
+                              key={source.id}
+                              className={cn(
+                                "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium ring-1",
+                                tone
+                              )}
+                            >
+                              <Icon className="w-3 h-3" aria-hidden="true" />
+                              {source.label}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                   {isAi && Array.isArray(m.actions) && m.actions.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 pt-1">
                       {m.actions.map((a, ai) => (

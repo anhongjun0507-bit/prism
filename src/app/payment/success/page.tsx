@@ -8,8 +8,7 @@ import { Card } from "@/components/ui/card";
 import { CheckCircle2, Copy, Check, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PrismLoader } from "@/components/PrismLoader";
-import type { PlanType } from "@/lib/plans";
-import { PLANS } from "@/lib/plans";
+import { PLANS, type Plan } from "@/lib/plans";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
 
 const SUPPORT_EMAIL = "support@prism-app.com";
@@ -23,7 +22,7 @@ function PaymentSuccessContent() {
   // 이 단계 없이 바로 success를 보이면 "결제했는데 아직 free"로 인지된 유저가
   // CS로 몰리는 P006 증상이 재현됨.
   const [status, setStatus] = useState<"loading" | "applying" | "success" | "error">("loading");
-  const [plan, setPlan] = useState<PlanType | null>(null);
+  const [plan, setPlan] = useState<Plan | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [recoveryId, setRecoveryId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -61,7 +60,7 @@ function PaymentSuccessContent() {
 
     async function confirmPayment() {
       try {
-        const data = await fetchWithAuth<{ success: boolean; plan: PlanType }>(
+        const data = await fetchWithAuth<{ success: boolean; plan: Plan }>(
           "/api/payment/confirm",
           {
             method: "POST",
@@ -210,7 +209,7 @@ function PaymentSuccessContent() {
         <h2 className="font-headline font-bold text-2xl mb-2">환영합니다!</h2>
         <p className="text-sm text-muted-foreground mb-1">
           {plan && PLANS[plan]
-            ? `${PLANS[plan].name} 플랜이 활성화되었습니다.`
+            ? `${PLANS[plan].displayName} 플랜이 활성화되었습니다.`
             : "플랜이 활성화되었습니다."}
         </p>
         <p className="text-xs text-primary font-medium mb-6">

@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
-import { PLANS } from "@/lib/plans";
+import { PLANS, normalizePlan } from "@/lib/plans";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,8 +33,11 @@ function SubscriptionPageInner() {
   const [hapticOn, setHapticOn] = useState(() => isHapticEnabled());
   const [chimeOn, setChimeOn] = useState(() => isChimeEnabled());
   const [cancelling, setCancelling] = useState(false);
-  const currentPlan = profile?.plan || "free";
+  const currentPlan = normalizePlan(profile?.plan);
   const plan = PLANS[currentPlan];
+  const monthlyPriceLabel = plan.monthlyPrice === 0
+    ? "무료"
+    : `₩${plan.monthlyPrice.toLocaleString()}/월`;
 
   const handleCancel = async () => {
     if (!confirm("정말 구독을 해지하시겠어요? 남은 기간 동안은 계속 이용 가능합니다.")) return;
@@ -110,11 +113,11 @@ function SubscriptionPageInner() {
           <div className="absolute bottom-[-30%] left-[-15%] w-32 h-32 bg-white/5 rounded-full blur-[50px]" />
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-1">
-              {currentPlan === "premium" && <Crown className="w-5 h-5 text-amber-300" />}
+              {currentPlan === "elite" && <Crown className="w-5 h-5 text-amber-300" />}
               <Badge variant="secondary" className="bg-white/15 text-white border-white/20">현재 플랜</Badge>
             </div>
-            <h2 className="text-3xl font-bold font-headline mt-2">{plan.name}</h2>
-            <p className="text-white/80 text-sm mt-1">{plan.priceLabel}</p>
+            <h2 className="text-3xl font-bold font-headline mt-2">{plan.displayName}</h2>
+            <p className="text-white/80 text-sm mt-1">{monthlyPriceLabel}</p>
           </div>
         </Card>
 
@@ -122,7 +125,7 @@ function SubscriptionPageInner() {
         <Card className="bg-card border-none shadow-sm p-5">
           <h3 className="font-bold text-sm mb-4">포함된 기능</h3>
           <ul className="space-y-3">
-            {plan.features.map((f) => (
+            {plan.highlights.map((f) => (
               <li key={f} className="flex items-center gap-3 text-sm">
                 <Check className="w-4 h-4 text-primary shrink-0" />
                 {f}
@@ -142,14 +145,14 @@ function SubscriptionPageInner() {
             </Button>
           )}
 
-          {currentPlan === "basic" && (
+          {currentPlan === "pro" && (
             <>
               <Button
                 size="xl"
                 onClick={() => router.push("/pricing")}
                 className="w-full rounded-xl font-bold"
               >
-                프리미엄으로 업그레이드
+                Elite로 업그레이드
               </Button>
               <Button
                 variant="outline"
@@ -163,7 +166,7 @@ function SubscriptionPageInner() {
             </>
           )}
 
-          {currentPlan === "premium" && (
+          {currentPlan === "elite" && (
             <Button
               variant="outline"
               size="xl"

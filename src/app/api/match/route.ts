@@ -17,7 +17,7 @@ import { requireAuth } from "@/lib/api-auth";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { isMasterEmail } from "@/lib/master";
-import type { PlanType } from "@/lib/plans";
+import { normalizePlan, type Plan } from "@/lib/plans";
 
 const FREE_PREVIEW_COUNT = 20;
 
@@ -73,18 +73,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "specs 누락" }, { status: 400 });
     }
 
-    // 서버 신뢰 plan 조회 (Firestore가 진실의 출처)
-    let plan: PlanType = "free";
+    // 서버 신뢰 plan 조회 (Firestore가 진실의 출처). 레거시 basic/premium은 pro/elite로 정규화.
+    let plan: Plan = "free";
     try {
       const snap = await getAdminDb().collection("users").doc(session.uid).get();
-      const data = snap.data();
-      if (data?.plan === "basic" || data?.plan === "premium") plan = data.plan;
+      plan = normalizePlan(snap.data()?.plan);
     } catch (e) {
       console.error("[match] plan fetch failed:", e);
     }
-    // 마스터 이메일은 항상 premium
+    // 마스터 이메일은 항상 elite
     if (isMasterEmail(session.email)) {
-      plan = "premium";
+      plan = "elite";
     }
 
     // matchSchools는 필요한 경우 ec/ap 배열도 받지만, 분석 페이지는 기본 specs만 보냄

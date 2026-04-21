@@ -14,7 +14,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "./firebase-admin";
-import { PLANS, type PlanType } from "./plans";
+import { featureLimit, normalizePlan, type Plan, type PlanType } from "./plans";
 import { isMasterEmail } from "./master";
 
 export interface Session {
@@ -56,16 +56,16 @@ export async function requireAuth(req: NextRequest): Promise<Session | NextRespo
 export type QuotaKey =
   | "aiChat"           // 일일, 플랜별
   | "essayOutline"     // 월별, 플랜별 (free는 lifetime 1회)
-  | "essayReview"      // lifetime, premium 전용 (free 1회)
-  | "specAnalysis"     // premium 전용, 일 20회 cap
-  | "admissionDetail"  // 일 30회 cap
-  | "story";           // 일 30회 cap
+  | "essayReview"      // lifetime, pro+ 무제한
+  | "specAnalysis"     // pro+ 일 20회 cap, elite 일 50회
+  | "admissionDetail"  // 일 cap
+  | "story";           // 일 cap
 
 interface QuotaSpec {
   /** 카운터 리셋 주기 */
   period: "daily" | "monthly" | "lifetime";
   /** 플랜별 최대 횟수. Infinity = 무제한, 0 = 차단 */
-  limits: Record<PlanType, number>;
+  limits: Record<Plan, number>;
   /** Firestore 사용자 문서 내 카운터 필드 prefix */
   field: string;
 }
@@ -75,43 +75,43 @@ const QUOTAS: Record<QuotaKey, QuotaSpec> = {
     period: "daily",
     field: "aiChat",
     limits: {
-      free: PLANS.free.limits.aiChatPerDay,
-      basic: PLANS.basic.limits.aiChatPerDay,
-      premium: PLANS.premium.limits.aiChatPerDay,
+      free: featureLimit("free", "aiChatDailyLimit"),
+      pro: featureLimit("pro", "aiChatDailyLimit"),
+      elite: featureLimit("elite", "aiChatDailyLimit"),
     },
   },
   essayOutline: {
     period: "monthly",
     field: "essayOutline",
     limits: {
-      free: 1, // free lifetime 1회 (UI에서도 1회 무료 체험)
-      basic: PLANS.basic.limits.essayOutlinePerMonth,
-      premium: PLANS.premium.limits.essayOutlinePerMonth,
+      free: 1, // free lifetime 1회 체험
+      pro: Infinity,
+      elite: Infinity,
     },
   },
   essayReview: {
     period: "lifetime",
     field: "essayReview",
     limits: {
-      free: 1,
-      basic: 0, // basic은 첨삭 포함 안됨
-      premium: Infinity,
+      free: featureLimit("free", "essayReviewLimit"),
+      pro: featureLimit("pro", "essayReviewLimit"),
+      elite: featureLimit("elite", "essayReviewLimit"),
     },
   },
   specAnalysis: {
     period: "daily",
     field: "specAnalysis",
-    limits: { free: 0, basic: 0, premium: 20 },
+    limits: { free: 0, pro: 20, elite: 50 },
   },
   admissionDetail: {
     period: "daily",
     field: "admissionDetail",
-    limits: { free: 30, basic: 60, premium: 120 },
+    limits: { free: 30, pro: 120, elite: 300 },
   },
   story: {
     period: "daily",
     field: "story",
-    limits: { free: 30, basic: 60, premium: 120 },
+    limits: { free: 30, pro: 120, elite: 300 },
   },
 };
 
@@ -153,7 +153,9 @@ export async function enforceQuota(
     db.runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
       const data = snap.exists ? snap.data() : {};
-      const plan = ((data?.plan as PlanType) || "free") as PlanType;
+      const rawPlan = data?.plan;
+      const plan = normalizePlan(rawPlan);
+      const isLegacyPlan = rawPlan === "basic" || rawPlan === "premium";
       const limit = spec.limits[plan] ?? 0;
 
       // 카운터 필드 구조: usage[field] = { period: string, count: number }
@@ -167,16 +169,16 @@ export async function enforceQuota(
       }
 
       const newCount = used + 1;
-      tx.set(
-        userRef,
-        {
-          usage: {
-            ...usage,
-            [spec.field]: { period: periodKey, count: newCount },
-          },
+      // 레거시 plan 필드(basic/premium)를 pro/elite로 동시 승급 — 결제 confirm이 아닌
+      // 자연스러운 트랜잭션 경로에서만 플랜을 변경하므로 rules write 제약과 무관(Admin SDK).
+      const patch: Record<string, unknown> = {
+        usage: {
+          ...usage,
+          [spec.field]: { period: periodKey, count: newCount },
         },
-        { merge: true }
-      );
+      };
+      if (isLegacyPlan) patch.plan = plan;
+      tx.set(userRef, patch, { merge: true });
       return { ok: true as const, plan, limit, used: newCount };
     });
 
@@ -229,15 +231,15 @@ export async function enforceQuota(
 export async function readUsage(
   session: Session,
   key: QuotaKey
-): Promise<{ plan: PlanType; limit: number; used: number; remaining: number }> {
+): Promise<{ plan: Plan; limit: number; used: number; remaining: number }> {
   if (session.isMaster) {
-    return { plan: "premium", limit: Infinity, used: 0, remaining: Infinity };
+    return { plan: "elite", limit: Infinity, used: 0, remaining: Infinity };
   }
   const spec = QUOTAS[key];
   const periodKey = currentPeriodKey(spec.period);
   const snap = await getAdminDb().collection("users").doc(session.uid).get();
   const data = snap.exists ? snap.data() : {};
-  const plan = ((data?.plan as PlanType) || "free") as PlanType;
+  const plan = normalizePlan(data?.plan);
   const limit = spec.limits[plan] ?? 0;
   const usage = (data?.usage as Record<string, { period: string; count: number }>) || {};
   const cur = usage[spec.field];

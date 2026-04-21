@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
-import { PLANS } from "@/lib/plans";
+import { normalizePlan, canUseFeature } from "@/lib/plans";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -125,8 +125,8 @@ function EssayReviewPageInner() {
   const essayId = searchParams.get("essayId");
   const { profile, saveProfile, user, isMaster } = useAuth();
   const { toast } = useToast();
-  const currentPlan = profile?.plan || "free";
-  const canReview = isMaster || PLANS[currentPlan].limits.essayReview;
+  const currentPlan = normalizePlan(profile?.plan);
+  const canReview = isMaster || canUseFeature(currentPlan, "essayReviewLimit");
   const reviewUsed = profile?.essayReviewUsed || 0;
   const canUseReview = canReview || reviewUsed < 1;
 

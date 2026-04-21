@@ -154,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const masterFallback = (u: User): UserProfile => ({
-      name: u.displayName || "Master", grade: "", dreamSchool: "", major: "", onboarded: false, plan: "premium",
+      name: u.displayName || "Master", grade: "", dreamSchool: "", major: "", onboarded: false, plan: "elite",
     });
 
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -179,9 +179,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         (snap) => {
           if (snap.exists()) {
             const data = snap.data() as UserProfile;
-            // Master account → force premium with unlimited usage (서버 판정 결과 기반)
+            // Master account → force elite with unlimited usage (서버 판정 결과 기반)
             if (isMasterRef.current) {
-              data.plan = "premium";
+              data.plan = "elite";
             }
             setProfile(data);
             // Sync Firestore specs → localStorage cache (cross-device hydration)
@@ -392,7 +392,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const merged = { ...prev, ...data, onboarded: true } as UserProfile;
     // Master account always stays premium — in-memory only, never written to Firestore
     if (isMasterRef.current) {
-      merged.plan = "premium";
+      merged.plan = "elite";
     }
 
     if (user) {

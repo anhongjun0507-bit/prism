@@ -9,7 +9,7 @@ import { CardSkeleton } from "./Skeleton";
 import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
-import { PLANS } from "@/lib/plans";
+import { normalizePlan } from "@/lib/plans";
 import Link from "next/link";
 
 interface FeedItem {
@@ -41,8 +41,8 @@ function timeAgo(dateStr: string): string {
 
 export function AdmissionFeed() {
   const { profile } = useAuth();
-  const currentPlan = profile?.plan || "free";
-  const canFilter = PLANS[currentPlan].limits.probReason; // basic+ can filter
+  const currentPlan = normalizePlan(profile?.plan);
+  const canFilter = currentPlan !== "free"; // Pro+만 필터 가능
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
 

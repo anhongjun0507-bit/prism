@@ -3,26 +3,27 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { PLANS, type PlanType, type BillingCycle } from "@/lib/plans";
+import { PLANS, normalizePlan, type Plan, type BillingCycle } from "@/lib/plans";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Sparkles, Users, Loader2 } from "lucide-react";
+import { Check, Sparkles, Users, Loader2, Crown } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { SegmentedControl, SegmentedControlItem } from "@/components/ui/segmented-control";
 import { fetchWithAuth } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 
+type PaidPlan = "pro" | "elite";
+
 export default function PricingPage() {
   const { user, profile } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const currentPlan = profile?.plan || "free";
+  const currentPlan = normalizePlan(profile?.plan);
   const [billing, setBilling] = useState<BillingCycle>("monthly");
-  const [processing, setProcessing] = useState<PlanType | null>(null);
+  const [processing, setProcessing] = useState<PaidPlan | null>(null);
 
-  const handlePlanSelect = async (planType: PlanType, cycle: BillingCycle) => {
-    if (planType === "free") return;
+  const handlePlanSelect = async (planId: PaidPlan, cycle: BillingCycle) => {
     if (!user) {
       router.push("/");
       return;
@@ -30,19 +31,17 @@ export default function PricingPage() {
     if (processing) return;
 
     try {
-      setProcessing(planType);
+      setProcessing(planId);
 
-      // 1) 서버에서 orderId + 검증된 amount를 받는다.
       const { orderId, amount, orderName } = await fetchWithAuth<{
         orderId: string;
         amount: number;
         orderName: string;
       }>("/api/payment/request", {
         method: "POST",
-        body: JSON.stringify({ plan: planType, billing: cycle }),
+        body: JSON.stringify({ plan: planId, billing: cycle }),
       });
 
-      // 2) Toss SDK 동적 로드 — 초기 번들 사이즈 억제 + Next 15 App Router 호환.
       const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
       if (!clientKey) {
         throw new Error("결제 모듈이 설정되지 않았어요. 관리자에게 문의해주세요.");
@@ -50,8 +49,6 @@ export default function PricingPage() {
       const { loadTossPayments } = await import("@tosspayments/tosspayments-sdk");
       const tossPayments = await loadTossPayments(clientKey);
 
-      // 3) v2 payment 인스턴스로 체크아웃 오픈.
-      //    customerKey는 사용자 uid — Toss 쪽 고객 식별자로만 쓰이며 민감정보 아님.
       const payment = tossPayments.payment({ customerKey: user.uid });
       await payment.requestPayment({
         method: "CARD",
@@ -69,12 +66,9 @@ export default function PricingPage() {
           useAppCardOnly: false,
         },
       });
-      // requestPayment(redirect)는 successUrl로 브라우저를 이동시키므로 이 아래는 도달하지 않음.
     } catch (e: unknown) {
-      // Toss SDK: 사용자가 결제창을 닫은 경우 UserCancelError(code=USER_CANCEL).
       const code = (e as { code?: string } | null)?.code;
       if (code === "USER_CANCEL" || code === "PAY_PROCESS_CANCELED") {
-        // 조용히 원복 — 사용자가 의도적으로 닫은 것.
         return;
       }
       const message = e instanceof Error ? e.message : "잠시 후 다시 시도해주세요";
@@ -88,12 +82,24 @@ export default function PricingPage() {
     }
   };
 
+  const planOrder: Plan[] = ["free", "pro", "elite"];
+
   return (
     <div className="min-h-screen bg-background pb-nav">
       <PageHeader title="요금제 선택" />
 
       <div className="px-gutter space-y-5">
-        {/* Billing toggle — SegmentedControl로 키보드 내비·aria 자동 */}
+        {/* Hero */}
+        <div className="text-center pt-2 space-y-2">
+          <h2 className="font-headline font-bold text-2xl leading-tight">
+            합격 가능성을 높이는<br />가장 빠른 방법
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            대치동 컨설팅 1회 가격으로 한 달 내내 무제한
+          </p>
+        </div>
+
+        {/* Billing toggle */}
         <SegmentedControl
           value={billing}
           onValueChange={(v) => setBilling(v as BillingCycle)}
@@ -104,7 +110,7 @@ export default function PricingPage() {
             value="yearly"
             trailing={
               <Badge className="absolute -top-2 -right-1 bg-emerald-500 text-white border-none text-xs px-1.5 py-0">
-                최대 38% 할인
+                최대 45%
               </Badge>
             }
           >
@@ -113,43 +119,47 @@ export default function PricingPage() {
         </SegmentedControl>
 
         {/* Plan cards */}
-        {(Object.values(PLANS) as typeof PLANS[PlanType][]).map((plan) => {
-          const isCurrent = currentPlan === plan.type;
-          const isPopular = plan.type === "basic";
-          const priceLabel = billing === "yearly" ? plan.yearlyPriceLabel : plan.priceLabel;
-          const monthlyEquiv = billing === "yearly" && plan.yearlyPrice > 0
-            ? `월 ₩${Math.round(plan.yearlyPrice / 12).toLocaleString()}`
-            : null;
-          const isProcessing = processing === plan.type;
+        {planOrder.map((planId) => {
+          const plan = PLANS[planId];
+          const isCurrent = currentPlan === plan.id;
+          const isRecommended = plan.id === "pro";
+          const isElite = plan.id === "elite";
+          const price = billing === "yearly" ? plan.yearlyPrice : plan.monthlyPrice;
+          const priceLabel = price === 0 ? "무료" : `₩${price.toLocaleString()}`;
+          const periodLabel = price === 0 ? "" : billing === "yearly" ? "/년" : "/월";
+          const monthlyEquiv =
+            billing === "yearly" && plan.yearlyPrice > 0
+              ? `월 ₩${Math.round(plan.yearlyPrice / 12).toLocaleString()} 수준`
+              : null;
+          const isProcessing = processing === plan.id;
 
           return (
             <Card
-              key={plan.type}
-              variant={isPopular ? "elevated" : "default"}
+              key={plan.id}
+              variant={isRecommended ? "elevated" : "default"}
               className={`relative p-6 border-2 transition-all hover-lift ${
-                isPopular
+                isRecommended
                   ? "border-primary shadow-glow-lg"
+                  : isElite
+                  ? "border-amber-300 dark:border-amber-700 shadow-sm"
                   : "border-transparent shadow-sm"
               }`}
             >
-              {isPopular && (
+              {isRecommended && (
                 <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white px-3">
-                  <Sparkles className="w-3 h-3 mr-1" aria-hidden="true" /> 인기
+                  <Sparkles className="w-3 h-3 mr-1" aria-hidden="true" /> 추천
+                </Badge>
+              )}
+              {isElite && (
+                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white px-3">
+                  <Users className="w-3 h-3 mr-1" aria-hidden="true" /> 학부모가 선택
                 </Badge>
               )}
 
               <div className="flex items-start justify-between mb-3">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-bold text-lg">{plan.name}</h3>
-                    {plan.type === "premium" && (
-                      <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-none text-xs font-semibold inline-flex items-center gap-1">
-                        <Users className="w-3 h-3" aria-hidden="true" />
-                        학부모 공유
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{plan.tagline}</p>
+                <div className="flex items-center gap-2">
+                  {isElite && <Crown className="w-5 h-5 text-amber-500" aria-hidden="true" />}
+                  <h3 className="font-bold text-lg">{plan.displayName}</h3>
                 </div>
                 {isCurrent && (
                   <Badge variant="secondary" className="text-xs">현재</Badge>
@@ -158,17 +168,27 @@ export default function PricingPage() {
 
               {/* Price */}
               <div className="mb-4">
-                <p className="text-2xl font-bold font-headline">{priceLabel}</p>
+                <p className="text-3xl font-bold font-headline">
+                  {priceLabel}
+                  {periodLabel && (
+                    <span className="text-base font-normal text-muted-foreground">{periodLabel}</span>
+                  )}
+                </p>
                 {monthlyEquiv && (
-                  <p className="text-xs text-emerald-600 font-semibold mt-0.5">
-                    {monthlyEquiv} · {plan.yearlySavePercent}% 절약
+                  <p className="text-xs text-emerald-600 font-semibold mt-1">
+                    {monthlyEquiv} · {plan.yearlyDiscount}% 절약
+                  </p>
+                )}
+                {isElite && billing === "monthly" && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    컨설팅 1시간 가격으로 한 달 무제한
                   </p>
                 )}
               </div>
 
-              {/* Features */}
+              {/* Highlights */}
               <ul className="space-y-2 mb-5">
-                {plan.features.map((f) => (
+                {plan.highlights.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm">
                     <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" aria-hidden="true" />
                     <span>{f}</span>
@@ -181,14 +201,14 @@ export default function PricingPage() {
                 <Button variant="outline" className="w-full" disabled>
                   현재 사용 중
                 </Button>
-              ) : plan.type === "free" ? (
+              ) : plan.id === "free" ? (
                 <Button variant="outline" className="w-full" disabled>
                   기본 제공
                 </Button>
               ) : (
                 <Button
-                  className="w-full rounded-xl"
-                  onClick={() => handlePlanSelect(plan.type, billing)}
+                  className={`w-full rounded-xl ${isElite ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}`}
+                  onClick={() => handlePlanSelect(plan.id as PaidPlan, billing)}
                   disabled={!!processing}
                   aria-busy={isProcessing}
                 >
@@ -198,13 +218,93 @@ export default function PricingPage() {
                       결제창을 여는 중...
                     </span>
                   ) : (
-                    "요금제 선택"
+                    `${plan.displayName} 시작하기`
                   )}
                 </Button>
               )}
             </Card>
           );
         })}
+
+        {/* Why this price */}
+        <Card className="p-5 border-none shadow-sm space-y-4 bg-muted/30">
+          <h3 className="font-bold text-base">왜 PRISM이 이 가격인가</h3>
+          <div className="space-y-3">
+            {[
+              {
+                label: "대치동 입시 컨설팅",
+                price: "1회 50~100만원",
+                desc: "컨설턴트마다 편차, 재방문 시 추가 비용",
+                muted: true,
+              },
+              {
+                label: "에세이 첨삭 (1편)",
+                price: "30~100만원",
+                desc: "첨삭 1편 = PRISM 6개월치",
+                muted: true,
+              },
+              {
+                label: "PRISM Elite",
+                price: "₩149,000/월",
+                desc: "24시간 무제한 · 대학별 맞춤 첨삭 포함",
+                highlight: true,
+              },
+            ].map((row) => (
+              <div
+                key={row.label}
+                className={`flex items-start justify-between gap-3 p-3 rounded-xl ${
+                  row.highlight
+                    ? "bg-primary/10 border border-primary/20"
+                    : "bg-background/60"
+                }`}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-semibold ${row.muted ? "text-muted-foreground" : ""}`}>
+                    {row.label}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{row.desc}</p>
+                </div>
+                <p
+                  className={`text-sm font-bold shrink-0 ${
+                    row.highlight ? "text-primary" : "text-muted-foreground line-through"
+                  }`}
+                >
+                  {row.price}
+                </p>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            오프라인 컨설팅 1~2회 비용이면 PRISM은 1년 동안 매일 사용할 수 있어요.
+          </p>
+        </Card>
+
+        {/* Feature comparison */}
+        <Card className="p-5 border-none shadow-sm space-y-3">
+          <h3 className="font-bold text-sm">한눈에 비교</h3>
+          <div className="space-y-2">
+            {[
+              { label: "대학 분석", free: "5개", pro: "1,001개", elite: "1,001개" },
+              { label: "AI 상담", free: "5회/일", pro: "무제한", elite: "무제한" },
+              { label: "에세이 첨삭", free: "—", pro: "무제한", elite: "대학별 맞춤" },
+              { label: "합격 케이스", free: "—", pro: "—", elite: "매칭 분석" },
+              { label: "학부모 리포트", free: "샘플", pro: "기본", elite: "주간 자동" },
+            ].map((row) => (
+              <div key={row.label} className="grid grid-cols-4 gap-2 items-center text-xs">
+                <span className="font-medium text-muted-foreground">{row.label}</span>
+                <span className="text-center text-muted-foreground">{row.free}</span>
+                <span className="text-center font-semibold text-primary">{row.pro}</span>
+                <span className="text-center font-semibold text-amber-600">{row.elite}</span>
+              </div>
+            ))}
+            <div className="grid grid-cols-4 gap-2 text-2xs text-muted-foreground border-t border-border pt-2">
+              <span />
+              <span className="text-center">Free</span>
+              <span className="text-center text-primary font-bold">Pro</span>
+              <span className="text-center text-amber-600 font-bold">Elite</span>
+            </div>
+          </div>
+        </Card>
 
         {/* Social proof */}
         <Card className="p-4 bg-card border-none shadow-sm">
@@ -222,63 +322,22 @@ export default function PricingPage() {
           </div>
         </Card>
 
-        {/* Feature comparison table */}
-        <Card className="p-card border-none shadow-sm space-y-3">
-          <h3 className="font-bold text-sm">한눈에 비교</h3>
-          <div className="space-y-2">
-            {[
-              { label: "대학교 분석", free: "5개", basic: "200개", premium: "1,001개" },
-              { label: "AI 상담", free: "5회/일", basic: "무제한", premium: "무제한" },
-              { label: "에세이 첨삭", free: "1회", basic: "무제한", premium: "무제한" },
-              { label: "학부모 리포트", free: "—", basic: "—", premium: "매월" },
-            ].map((row) => (
-              <div key={row.label} className="grid grid-cols-4 gap-2 items-center text-xs">
-                <span className="font-medium text-muted-foreground">{row.label}</span>
-                <span className="text-center">{row.free}</span>
-                <span className="text-center font-semibold text-primary">{row.basic}</span>
-                <span className="text-center font-semibold">{row.premium}</span>
-              </div>
-            ))}
-            <div className="grid grid-cols-4 gap-2 text-2xs text-muted-foreground border-t border-border pt-2">
-              <span />
-              <span className="text-center">무료</span>
-              <span className="text-center text-primary font-bold">베이직</span>
-              <span className="text-center font-bold">프리미엄</span>
-            </div>
-          </div>
-        </Card>
-
         {/* Trust signals */}
         <div className="space-y-3 text-center pt-2">
           <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Check className="w-3.5 h-3.5 text-emerald-500" aria-hidden="true" />
-              7일 무료 체험
+              언제든 해지 가능
             </span>
             <span className="flex items-center gap-1">
               <Check className="w-3.5 h-3.5 text-emerald-500" aria-hidden="true" />
-              언제든 해지 가능
+              토스 안전 결제
             </span>
           </div>
           <p className="text-xs text-muted-foreground/70">
             카드 결제 · 해지 후 남은 기간 끝까지 이용
           </p>
         </div>
-
-        {/* Parent pitch */}
-        <Card className="p-card bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 space-y-2">
-          <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-amber-600" aria-hidden="true" />
-            <h3 className="font-bold text-sm text-amber-900 dark:text-amber-300">학부모님이신가요?</h3>
-          </div>
-          <p className="text-xs text-amber-800 dark:text-amber-400 leading-relaxed">
-            프리미엄 플랜의 <strong>학부모 리포트</strong>로 자녀의 입시 준비 현황을 매월 받아보실 수 있어요.
-            성적 변화, 에세이 진행률, 플래너 완료율을 한눈에 확인하세요.
-          </p>
-          <p className="text-xs text-amber-600 font-semibold">
-            연간 결제 시 월 ₩12,417 — 학원 한 달 비용의 1/10
-          </p>
-        </Card>
 
         <p className="text-xs text-muted-foreground/60 text-center leading-relaxed px-4">
           합격 예측은 각 대학교의 공개 합격률 및 지원자 통계 기반입니다.

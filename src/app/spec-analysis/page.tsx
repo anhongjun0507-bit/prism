@@ -5,7 +5,7 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
-import { PLANS } from "@/lib/plans";
+import { PLANS, normalizePlan } from "@/lib/plans";
 import { UNI_LIST, MAJOR_LIST } from "@/lib/constants";
 import { schoolMatchesQuery } from "@/lib/school-search";
 import { BottomNav } from "@/components/BottomNav";
@@ -49,8 +49,8 @@ export default function SpecAnalysisPage() {
 
 function SpecAnalysisPageInner() {
   const { profile, isMaster, user } = useAuth();
-  const currentPlan = profile?.plan || "free";
-  const hasAccess = isMaster || PLANS[currentPlan].limits.specAnalysis;
+  const currentPlan = normalizePlan(profile?.plan);
+  const hasAccess = isMaster || PLANS[currentPlan].features.specAnalysisEnabled;
 
   const [analysis, setAnalysis] = useState<SpecAnalysis | null>(null);
   const [loading, setLoading] = useState(false);

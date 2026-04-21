@@ -24,13 +24,13 @@ import { VALID_AMOUNTS } from "../confirm/parse-order";
  */
 
 const BodySchema = z.object({
-  plan: z.enum(["basic", "premium"]),
+  plan: z.enum(["pro", "elite"]),
   billing: z.enum(["monthly", "yearly"]),
 });
 
-const PLAN_LABEL: Record<"basic" | "premium", string> = {
-  basic: "베이직",
-  premium: "프리미엄",
+const PLAN_LABEL: Record<"pro" | "elite", string> = {
+  pro: "Pro",
+  elite: "Elite",
 };
 
 const BILLING_LABEL: Record<"monthly" | "yearly", string> = {
