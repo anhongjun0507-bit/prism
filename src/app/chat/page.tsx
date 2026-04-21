@@ -7,7 +7,8 @@ import { streamWithAuth, consumeSSE } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Send, Sparkles, Loader2, Bot, User, RotateCcw, GraduationCap, PenLine, TrendingUp, Trophy } from "lucide-react";
+import { Send, Sparkles, Loader2, Bot, User, RotateCcw, GraduationCap, PenLine, TrendingUp, Trophy, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
@@ -25,13 +26,30 @@ import {
 } from "firebase/firestore";
 import { logError } from "@/lib/log";
 
+interface ChatAction {
+  label: string;
+  href: string;
+}
+
 interface Message {
   role: "user" | "ai";
   content: string;
   error?: boolean;
   // Firestore 서브컬렉션 docId — 페이지네이션(cursor)·삭제에 사용. 로컬 최초 생성 메시지엔 없음.
   id?: string;
+  // 서버 suggest_actions 도구가 반환한 CTA 버튼 (있으면 AI 메시지 하단에 렌더).
+  actions?: ChatAction[];
 }
+
+const ALLOWED_ACTION_HREFS = new Set<string>([
+  "/analysis",
+  "/essays",
+  "/planner",
+  "/spec-analysis",
+  "/compare",
+  "/what-if",
+  "/dashboard",
+]);
 
 const CHAT_PAGE_SIZE = 50;
 
@@ -298,19 +316,6 @@ function ChatPageInner() {
     }
   }, [messages]);
 
-  function buildStudentContext(): string {
-    if (!profile) return "";
-    const parts: string[] = [];
-    if (profile.name) parts.push(`학생 이름: ${profile.name}`);
-    if (profile.grade) parts.push(`학년: ${profile.grade}`);
-    if (profile.dreamSchool) parts.push(`목표 대학교: ${profile.dreamSchool}`);
-    if (profile.major) parts.push(`지망 전공: ${profile.major}`);
-    if (profile.gpa) parts.push(`GPA: ${profile.gpa}`);
-    if (profile.sat) parts.push(`SAT: ${profile.sat}`);
-    if (profile.toefl) parts.push(`TOEFL: ${profile.toefl}`);
-    return parts.length > 0 ? `\n\n[학생 프로필]\n${parts.join("\n")}` : "";
-  }
-
   const persistMessage = async (msg: Message) => {
     if (!user) return;
     try {
@@ -331,10 +336,12 @@ function ChatPageInner() {
     try {
       const cleanHistory = messages.filter((m) => !m.error);
 
+      // 프로필/specs/관심 학교/익명 합격 사례는 서버(/api/chat)가 Firestore에서 직접 읽어
+      // system 블록에 주입. 클라이언트는 질문 원문만 보냄.
       const res = await streamWithAuth("/api/chat", {
         method: "POST",
         body: JSON.stringify({
-          message: userMessage + (cleanHistory.length <= 1 ? buildStudentContext() : ""),
+          message: userMessage,
           history: cleanHistory,
         }),
       });
@@ -344,6 +351,7 @@ function ChatPageInner() {
       // 첫 토큰 도착 전까지 typing indicator(loading=true)는 유지.
       let aiInserted = false;
       let accumulated = "";
+      let accumulatedActions: ChatAction[] = [];
       let streamErr: string | null = null;
 
       await consumeSSE(res, (event, data) => {
@@ -365,6 +373,27 @@ function ChatPageInner() {
               return next;
             });
           }
+        } else if (event === "actions") {
+          // 서버 suggest_actions 도구 결과 — allow-list 필터 후 마지막 AI 메시지에 첨부.
+          const raw = (data as { actions?: unknown } | null)?.actions;
+          if (!Array.isArray(raw)) return;
+          const actions: ChatAction[] = raw
+            .filter((a): a is ChatAction =>
+              !!a && typeof a === "object"
+              && typeof (a as ChatAction).label === "string"
+              && typeof (a as ChatAction).href === "string"
+              && ALLOWED_ACTION_HREFS.has((a as ChatAction).href))
+            .slice(0, 3);
+          if (!actions.length) return;
+          accumulatedActions = actions;
+          setMessages(prev => {
+            const next = prev.slice();
+            const last = next[next.length - 1];
+            if (last && last.role === "ai") {
+              next[next.length - 1] = { ...last, actions };
+            }
+            return next;
+          });
         } else if (event === "error") {
           streamErr = (data as { message?: string } | null)?.message
             || "AI 응답 생성에 실패했어요.";
@@ -375,7 +404,11 @@ function ChatPageInner() {
       if (!accumulated) throw new Error("Empty response");
 
       // 최종 메시지를 Firestore에 영속화 (delta마다 쓰기는 비용·쿼터 부담).
-      persistMessage({ role: "ai", content: accumulated });
+      persistMessage({
+        role: "ai",
+        content: accumulated,
+        ...(accumulatedActions.length ? { actions: accumulatedActions } : {}),
+      });
 
       if (!isMaster) {
         const newCount = (profile?.aiChatDate === todayKey ? (profile?.aiChatCount || 0) : 0) + 1;
@@ -597,6 +630,24 @@ function ChatPageInner() {
                   >
                     {isAi && i === 0 ? highlightProfile(m.content) : m.content}
                   </div>
+                  {isAi && Array.isArray(m.actions) && m.actions.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {m.actions.map((a, ai) => (
+                        <Link
+                          key={`${a.href}-${ai}`}
+                          href={a.href}
+                          className={cn(
+                            "inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium",
+                            "bg-primary/10 text-primary hover:bg-primary/15 active:scale-[0.97] transition-all",
+                            "ring-1 ring-primary/20"
+                          )}
+                        >
+                          {a.label}
+                          <ArrowRight className="w-3 h-3" aria-hidden="true" />
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                   {m.error && (
                     <Button variant="ghost" size="sm" onClick={handleRetry} className="text-xs text-red-600 gap-1 h-7 px-2 rounded-lg">
                       <RotateCcw className="w-3 h-3" aria-hidden="true" /> 다시 시도
