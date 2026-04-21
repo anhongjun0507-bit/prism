@@ -16,21 +16,24 @@ service cloud.firestore {
        사용자 프로필: users/{uid}
        ──────────────────────────────────────────────────────── */
 
-    // 결제·플랜 보호 필드 — 클라이언트가 직접 수정 불가 (서버 Admin SDK 전용)
+    // 결제·플랜·쿼터 보호 필드 — 클라이언트가 직접 수정 불가 (서버 Admin SDK 전용)
     //
     // - plan: 무료→프리미엄 우회 차단 (서버 /api/match가 plan을 신뢰함)
     // - planBilling/planActivatedAt/lastPayment: 결제 감사 트레일 위변조 차단
+    // - usage: 서버 enforceQuota()가 신뢰하는 쿼터 카운터.
+    //   클라가 reset하면 일일 한도(예: aiChat 5회)가 무한으로 풀림 → Claude API 과금.
+    //   chat 페이지의 aiChatCount/aiChatDate(UI 표시용 별도 필드)와 다르니 혼동 주의.
     //
     // 마스터 계정·신규 회원가입은 plan을 Firestore에 쓰지 않도록 클라이언트 코드에서 우회
     // (auth-context에서 saveProfile 시 plan 필드 strip)
     function touchesProtectedFields() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasAny(['plan', 'planBilling', 'planActivatedAt', 'lastPayment']);
+        .hasAny(['plan', 'planBilling', 'planActivatedAt', 'lastPayment', 'usage']);
     }
 
     function createIncludesProtectedFields() {
       return request.resource.data.keys()
-        .hasAny(['plan', 'planBilling', 'planActivatedAt', 'lastPayment']);
+        .hasAny(['plan', 'planBilling', 'planActivatedAt', 'lastPayment', 'usage']);
     }
 
     match /users/{uid} {
@@ -71,6 +74,14 @@ service cloud.firestore {
          플래너 작업: users/{uid}/tasks/{taskId}
          ──────────────────────────── */
       match /tasks/{taskId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+
+      /* ────────────────────────────
+         AI 카운슬러 대화: users/{uid}/chat/{chatId}
+         단일 doc(history)로 관리 — 로그아웃/다기기에서 맥락 복원.
+         ──────────────────────────── */
+      match /chat/{chatId} {
         allow read, write: if request.auth != null && request.auth.uid == uid;
       }
     }

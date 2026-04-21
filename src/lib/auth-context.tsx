@@ -16,8 +16,8 @@ import type { PlanType, BillingCycle } from "./plans";
 // Specs 타입은 type-only import — 번들에 영향 없음
 import type { Specs } from "./matching";
 import { STORAGE_KEYS } from "./storage-keys";
-import { isMasterEmail } from "./master";
-export { isMasterEmail } from "./master";
+import { fetchWithAuth } from "./api-client";
+import { logError } from "./log";
 
 const SPECS_LS_KEY = "prism_specs";
 
@@ -83,7 +83,7 @@ interface AuthContextValue {
   isFavorite: (schoolName: string) => boolean;
 }
 
-/* Master account: bypasses all plan restrictions. `isMasterEmail`은 `@/lib/master` 단일화 모듈에서 공급. */
+/* Master account: 서버 전용 판정. 클라이언트는 `/api/auth/session`이 내려주는 `isMaster`만 신뢰. */
 
 const SNAPSHOT_KEY = "prism_snapshots";
 
@@ -130,6 +130,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [snapshots, setSnapshots] = useState<ProfileSnapshot[]>(loadSnapshots);
+  // 서버 단일 판정. onAuthStateChanged 후 /api/auth/session 응답으로 갱신.
+  const [isMaster, setIsMaster] = useState(false);
+  const isMasterRef = useRef(false);
+  isMasterRef.current = isMaster;
 
   // profile을 ref로도 추적해 useCallback 안정화 — saveProfile이 profile 바뀔 때마다
   // 새 참조로 재생성되면 consumer effect가 strict deps를 쓸 수 없어(무한 루프) eslint-disable을
@@ -137,11 +141,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const profileRef = useRef<UserProfile | null>(null);
   profileRef.current = profile;
 
-  useEffect(() => {
-    let profileUnsub: (() => void) | null = null;
+  // profile onSnapshot unsub을 ref로 노출 — logout()이 signOut 이전에 직접 해제해
+  // in-flight snapshot 콜백이 방금 비운 localStorage를 재오염하지 못하게 한다.
+  const profileUnsubRef = useRef<(() => void) | null>(null);
 
+  useEffect(() => {
     const cleanup = () => {
-      if (profileUnsub) { profileUnsub(); profileUnsub = null; }
+      if (profileUnsubRef.current) {
+        profileUnsubRef.current();
+        profileUnsubRef.current = null;
+      }
     };
 
     const masterFallback = (u: User): UserProfile => ({
@@ -154,18 +163,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!u) {
         setProfile(null);
+        setIsMaster(false);
         setLoading(false);
         return;
       }
 
+      // 서버 단일 판정 — 이메일 목록은 서버 env에만 존재. 실패하면 false로 간주(안전 방향).
+      fetchWithAuth<{ isMaster: boolean }>("/api/auth/session")
+        .then((d) => setIsMaster(!!d.isMaster))
+        .catch(() => setIsMaster(false));
+
       // 실시간 profile 구독 — 다른 탭/기기의 변경이 즉시 반영됨
-      profileUnsub = onSnapshot(
+      profileUnsubRef.current = onSnapshot(
         doc(db, "users", u.uid),
         (snap) => {
           if (snap.exists()) {
             const data = snap.data() as UserProfile;
-            // Master account → force premium with unlimited usage
-            if (isMasterEmail(u.email)) {
+            // Master account → force premium with unlimited usage (서버 판정 결과 기반)
+            if (isMasterRef.current) {
               data.plan = "premium";
             }
             setProfile(data);
@@ -178,15 +193,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               try { localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(data.snapshots)); } catch {}
               setSnapshots(data.snapshots);
             }
-          } else if (isMasterEmail(u.email)) {
+          } else if (isMasterRef.current) {
             setProfile(masterFallback(u));
           }
           setLoading(false);
         },
         (err) => {
-          console.error("[auth] profile snapshot error:", err);
+          logError("[auth] profile snapshot error:", err);
           // Firestore unavailable — still grant master access
-          if (isMasterEmail(u.email)) {
+          if (isMasterRef.current) {
             setProfile(masterFallback(u));
           }
           setLoading(false);
@@ -234,8 +249,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error("카카오 로그인이 아직 설정되지 않았습니다.");
     }
 
+    // CSRF 방어: 랜덤 state를 sessionStorage에 저장 → callback popup이 되돌려준 state와 대조.
+    // 공격자가 피해자 브라우저에 다른 Kakao code를 심어도 state 불일치로 차단됨.
+    const state =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : String(Date.now()) + Math.random().toString(36).slice(2);
+    try {
+      sessionStorage.setItem("prism_kakao_state", state);
+    } catch {}
+
     const redirectUri = `${window.location.origin}/api/auth/kakao/callback`;
-    const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;
+    const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&state=${encodeURIComponent(state)}`;
 
     const popup = window.open(kakaoAuthUrl, "kakao-login", "width=480,height=700");
     if (!popup) {
@@ -261,13 +286,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (popup && !popup.closed) {
           try { popup.close(); } catch { /* cross-origin 접근 등 */ }
         }
+        try { sessionStorage.removeItem("prism_kakao_state"); } catch {}
       };
 
       const handleMessage = async (event: MessageEvent) => {
         if (settled) return;
         if (event.origin !== expectedOrigin) return;
+        if (event.data?.type !== "kakao-login-success" && event.data?.type !== "kakao-login-error") return;
 
-        if (event.data?.type === "kakao-login-success" && event.data.customToken) {
+        // CSRF state 검증 — 세션에 저장된 값과 대조. 다르면 공격자가 심은 code일 수 있음.
+        let expectedState = "";
+        try { expectedState = sessionStorage.getItem("prism_kakao_state") || ""; } catch {}
+        if (!expectedState || event.data.state !== expectedState) {
+          cleanup();
+          reject(new Error("카카오 로그인 보안 검증에 실패했어요. 다시 시도해주세요."));
+          return;
+        }
+
+        if (event.data.type === "kakao-login-success" && event.data.customToken) {
           const token = event.data.customToken;
           cleanup();
           try {
@@ -276,7 +312,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } catch (e) {
             reject(e);
           }
-        } else if (event.data?.type === "kakao-login-error") {
+        } else if (event.data.type === "kakao-login-error") {
           cleanup();
           reject(new Error(event.data.error || "카카오 로그인 실패"));
         }
@@ -306,7 +342,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    await signOut(auth);
+    // 순서가 중요: (1) Firestore snapshot 구독 선해제 → in-flight 콜백이
+    // 아래에서 비운 localStorage를 재오염시키는 race 차단.
+    // (2) 인메모리 상태 즉시 리셋.
+    // (3) localStorage의 유저 데이터 키 clear.
+    // (4) 그 다음에야 signOut(auth) — onAuthStateChanged 콜백이 다시 들어와도
+    //     이미 unsub된 상태라 안전.
+    // (5) 리다이렉트.
+    if (profileUnsubRef.current) {
+      profileUnsubRef.current();
+      profileUnsubRef.current = null;
+    }
     setProfile(null);
     setSnapshots([]);
     // Clear all user-data caches — UI preferences (theme, accent 등)는 유지
@@ -326,7 +372,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(key);
       }
     } catch {}
-    // Redirect to login page
+    // /api/match 캐시도 함께 제거 — 다른 계정 로그인 시 잔류 결과 노출 방지.
+    try {
+      const { clearMatchCache } = await import("@/lib/match-cache");
+      clearMatchCache();
+    } catch {}
+    try {
+      await signOut(auth);
+    } catch (e) {
+      logError("[auth] signOut failed:", e);
+      // signOut 실패해도 redirect는 수행 — localStorage가 이미 비워졌으므로
+      // 세션이 남아 있어도 재접근 시 데이터 노출 위험은 제거됨.
+    }
     window.location.href = "/";
   };
 
@@ -334,15 +391,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const prev = profileRef.current; // 최신 profile을 ref로 읽기 → deps에서 제외 가능
     const merged = { ...prev, ...data, onboarded: true } as UserProfile;
     // Master account always stays premium — in-memory only, never written to Firestore
-    if (isMasterEmail(user?.email)) {
+    if (isMasterRef.current) {
       merged.plan = "premium";
     }
 
     if (user) {
-      // 보호 필드(plan/planBilling/planActivatedAt/lastPayment)는 Firestore 규칙이 거부하므로
-      // strip 후 쓴다. 이 필드들은 서버 Admin SDK(결제 confirm, 카카오 callback)만 갱신.
-      const { plan: _p, planBilling: _pb, planActivatedAt: _pa, lastPayment: _lp, ...writableData } = merged;
-      void _p; void _pb; void _pa; void _lp;
+      // 보호 필드(plan/planBilling/planActivatedAt/lastPayment/usage)는 Firestore 규칙이 거부하므로
+      // strip 후 쓴다. 이 필드들은 서버 Admin SDK(결제 confirm, 카카오 callback, enforceQuota)만 갱신.
+      // usage는 일일/월별 쿼터 카운터 — 클라가 reset해서 무한 호출 못 하도록 lock.
+      const {
+        plan: _p, planBilling: _pb, planActivatedAt: _pa, lastPayment: _lp, usage: _u,
+        ...writableData
+      } = merged as UserProfile & { usage?: unknown };
+      void _p; void _pb; void _pa; void _lp; void _u;
       try {
         await setDoc(doc(db, "users", user.uid), writableData, { merge: true });
       } catch {
@@ -361,19 +422,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(merged); // in-memory에는 plan 포함 (마스터·서버 응답 등)
   }, [user]);
 
+  // 연타 시 stale `profile` closure가 같은 current 배열을 읽어 서로 덮어쓰는 race 방지.
+  // profileRef로 최신값을 읽고, in-flight 큐로 직렬화.
+  const favPendingRef = useRef<Promise<void>>(Promise.resolve());
   const toggleFavorite = async (schoolName: string) => {
-    const current = profile?.favoriteSchools || [];
-    const updated = current.includes(schoolName)
-      ? current.filter(s => s !== schoolName)
-      : [...current, schoolName];
-    await saveProfile({ favoriteSchools: updated });
+    const prev = favPendingRef.current;
+    const next = prev.then(async () => {
+      const current = profileRef.current?.favoriteSchools || [];
+      const updated = current.includes(schoolName)
+        ? current.filter(s => s !== schoolName)
+        : [...current, schoolName];
+      await saveProfile({ favoriteSchools: updated });
+    });
+    favPendingRef.current = next;
+    return next;
   };
 
   const isFavorite = (schoolName: string) => {
     return (profile?.favoriteSchools || []).includes(schoolName);
   };
-
-  const isMaster = isMasterEmail(user?.email);
 
   return (
     <AuthContext.Provider value={{

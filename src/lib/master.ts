@@ -1,12 +1,16 @@
 /**
- * Master account 단일 진실 공급원 (single source of truth).
+ * Master account 서버 단일 판정.
  *
- * `NEXT_PUBLIC_MASTER_EMAILS` 환경변수의 콤마 구분 목록만을 신뢰한다.
- * `NEXT_PUBLIC_` 접두어라 client/server 양쪽에서 build-time inlining.
- * 미설정 시 마스터 계정이 없는 상태로 동작 — 일반 유저와 동일한 쿼터 적용.
+ * **서버 전용 모듈.** `MASTER_EMAILS`(NEXT_PUBLIC_ 없음)만 신뢰하므로 클라이언트 번들에
+ * 이메일 목록이 포함되지 않는다. 클라이언트는 `/api/auth/session`에서 내려주는
+ * `isMaster` 불리언만 참조한다.
+ *
+ * 미설정 시 마스터 계정 없는 상태 — 일반 유저와 동일 쿼터.
  */
 
-export const MASTER_EMAILS: readonly string[] = (process.env.NEXT_PUBLIC_MASTER_EMAILS || "")
+import "server-only";
+
+export const MASTER_EMAILS: readonly string[] = (process.env.MASTER_EMAILS || "")
   .split(",")
   .map((e) => e.trim().toLowerCase())
   .filter(Boolean);
