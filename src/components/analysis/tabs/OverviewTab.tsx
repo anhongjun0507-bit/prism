@@ -274,11 +274,11 @@ export function OverviewTab({
       </div>
 
       {/* Tip */}
-      <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
-        <p className="text-xs font-semibold text-amber-800 flex items-center gap-1.5 mb-1">
+      <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900 rounded-xl p-4">
+        <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1.5 mb-1">
           <Sparkles className="w-3.5 h-3.5" /> 입시 팁
         </p>
-        <p className="text-xs text-amber-700 leading-relaxed">{school.tp}</p>
+        <p className="text-xs text-amber-700 dark:text-amber-200 leading-relaxed">{school.tp}</p>
       </div>
 
       {/* Estimated data warning */}

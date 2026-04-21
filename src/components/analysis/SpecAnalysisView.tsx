@@ -144,7 +144,7 @@ export function SpecAnalysisView({ profile, hasAccess }: SpecAnalysisViewProps) 
             </Button>
           ) : (
             <div className="space-y-2">
-              <p className="text-xs text-amber-600">프로필에서 GPA, SAT를 먼저 입력해주세요</p>
+              <p className="text-xs text-amber-600 dark:text-amber-300">프로필에서 GPA, SAT를 먼저 입력해주세요</p>
               <Button onClick={() => window.location.href = "/profile"}>
                 프로필 설정하기
               </Button>

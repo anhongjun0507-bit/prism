@@ -165,7 +165,7 @@ export function AdmissionResultModal({
               size="sm"
               onClick={() => addResult("waitlisted")}
               disabled={!schoolInput.trim()}
-              className="rounded-xl gap-1.5 border-amber-200 text-amber-700 hover:bg-amber-50"
+              className="rounded-xl gap-1.5 border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-200 dark:hover:bg-amber-950/30"
             >
               <Clock className="w-3.5 h-3.5" /> 대기
             </Button>

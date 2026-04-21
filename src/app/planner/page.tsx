@@ -30,6 +30,7 @@ import {
 import { Calendar as CalendarIcon, CheckCircle2, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { readJSON, writeJSON } from "@/lib/storage";
 import { EmptyState } from "@/components/EmptyState";
+import { logError } from "@/lib/log";
 
 /* ─── Data model ─── */
 type TaskCategory = "시험" | "행정" | "에세이" | "추천서" | "지원" | "기타";
@@ -188,9 +189,17 @@ function PlannerPageInner() {
         }
         await batch.commit();
         // onSnapshot이 자동으로 새 데이터를 수신하여 setTasks 갱신
-      } catch {
-        // 마이그레이션 실패 시 로컬 데이터로 폴백
+      } catch (e) {
+        // 마이그레이션 실패 — 로컬 데이터로 폴백 + 사용자에게 알림.
+        // ref를 되돌려 다음 onSnapshot tick에 재시도 가능하도록 (페이지 재진입·탭 재열기 등).
+        logError("[planner] task migration failed:", e);
+        migrationDoneRef.current = false;
         setTasks(localTasks);
+        toast({
+          title: "플래너 동기화 실패",
+          description: "네트워크 연결을 확인한 뒤 다시 열어주세요. 로컬 임시 목록으로 표시 중이에요.",
+          variant: "destructive",
+        });
       }
     }, () => { /* ignore errors, keep local state */ });
     return unsub;
@@ -230,7 +239,7 @@ function PlannerPageInner() {
       try {
         await deleteDoc(doc(db, "users", user.uid, "tasks", id));
       } catch (err) {
-        console.error("[planner] delete failed:", err);
+        logError("[planner] delete failed:", err);
         setTasks(prev => [...prev, target]);
         toast({
           title: "삭제 실패",
@@ -370,12 +379,15 @@ function PlannerPageInner() {
                             <CalendarIcon size={12} aria-hidden="true" /> {formatDate(t.dueDate)}
                           </span>
                           {dday >= 0 && dday <= 30 && (
-                            <Badge className={cn("text-xs border-none px-1.5", dday <= 3 ? "bg-red-100 text-red-700" : dday <= 7 ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700")}>
+                            <Badge className={cn("text-xs border-none px-1.5",
+                              dday <= 3 ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200"
+                                : dday <= 7 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200"
+                                : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200")}>
                               {dday === 0 ? "D-Day" : `D-${dday}`}
                             </Badge>
                           )}
                           {isOverdue && (
-                            <Badge className="text-xs border-none px-1.5 bg-red-100 text-red-700">
+                            <Badge className="text-xs border-none px-1.5 bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200">
                               {Math.abs(dday)}일 지남
                             </Badge>
                           )}

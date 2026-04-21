@@ -24,8 +24,8 @@ export function MajorTab({ school }: MajorTabProps) {
           {majorEntries.map(([major, rank]) => (
             <div key={major} className="flex items-center gap-3 bg-accent/30 rounded-xl p-4">
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
-                rank <= 3 ? "bg-amber-100 text-amber-700" :
-                rank <= 10 ? "bg-blue-100 text-blue-700" :
+                rank <= 3 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200" :
+                rank <= 10 ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200" :
                 "bg-muted text-muted-foreground"
               }`}>
                 #{rank}
