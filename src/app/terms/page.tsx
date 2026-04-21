@@ -97,6 +97,28 @@ export default function TermsOfServicePage() {
           </section>
 
           <section>
+            <h2 className="text-lg font-semibold mb-3">제5조의3 (계정 삭제 및 탈퇴)</h2>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>
+                이용자는 언제든 직접 탈퇴하여 계정을 삭제할 수 있습니다.
+              </li>
+              <li>
+                <strong>계정 삭제 방법</strong>: 프로필 페이지 &gt; 계정 관리 &gt;
+                &quot;계정 삭제&quot; 경로를 통해 탈퇴할 수 있습니다.
+              </li>
+              <li>
+                탈퇴 즉시 모든 개인 데이터(에세이, 채팅, 플래너, 스펙 정보 등)가
+                삭제되며, 결제 내역은 전자상거래법에 따라 5년간 익명 처리된
+                상태로 보관됩니다.
+              </li>
+              <li>
+                직접 탈퇴가 어려운 경우 support@prismedu.kr로 요청하실 수 있으며,
+                본인 확인 후 처리됩니다.
+              </li>
+            </ul>
+          </section>
+
+          <section>
             <h2 className="text-lg font-semibold mb-3">제6조 (금지 행위)</h2>
             <p className="mb-2">이용자는 다음 행위를 해서는 안 됩니다.</p>
             <ul className="list-disc pl-5 space-y-1">

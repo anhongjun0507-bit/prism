@@ -46,7 +46,16 @@ export default function PrivacyPolicyPage() {
             <ul className="list-disc pl-5 space-y-1">
               <li>개인정보는 회원 탈퇴 시까지 보관됩니다.</li>
               <li>회원 탈퇴 요청 시, 탈퇴 후 30일 이내에 모든 개인정보를 파기합니다.</li>
-              <li>관련 법령에 의해 보존이 필요한 경우, 해당 기간 동안 별도 보관합니다.</li>
+              <li>
+                <strong>개인정보 삭제 방법</strong>: 서비스 내 <code>프로필 &gt;
+                계정 관리 &gt; 계정 삭제</code> 경로에서 직접 탈퇴 가능합니다.
+                또는 support@prismedu.kr로 요청하실 수 있습니다.
+              </li>
+              <li>
+                관련 법령에 의해 보존이 필요한 경우, 해당 기간 동안 별도
+                보관합니다. 결제 내역은 전자상거래법에 따라 5년간 익명 처리된
+                상태로 보관됩니다.
+              </li>
             </ul>
           </section>
 
@@ -112,6 +121,11 @@ export default function PrivacyPolicyPage() {
             <p className="mt-2">
               위 권리 행사는 아래 연락처를 통해 요청하실 수 있으며, 요청 접수 후
               지체 없이 처리하겠습니다.
+            </p>
+            <p className="mt-2">
+              <strong>개인정보 삭제 방법</strong>: 서비스 내 <code>프로필 &gt;
+              계정 관리 &gt; 계정 삭제</code> 경로에서 직접 탈퇴 가능합니다.
+              또는 support@prismedu.kr로 요청하실 수 있습니다.
             </p>
           </section>
 
