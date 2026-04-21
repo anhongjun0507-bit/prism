@@ -10,16 +10,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
-import { updateProfile as fbUpdateProfile } from "firebase/auth";
+import { updateProfile as fbUpdateProfile, signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { MAJOR_LIST } from "@/lib/constants";
-import { Camera, Loader2, LogOut, Crown, Moon, Globe } from "lucide-react";
+import { Camera, Loader2, LogOut, Crown, Moon, Globe, Trash2 } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { useI18n } from "@/lib/i18n";
 import { Switch } from "@/components/ui/switch";
 import Link from "next/link";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { logError } from "@/lib/log";
+import { fetchWithAuth, ApiError } from "@/lib/api-client";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+} from "@/components/ui/alert-dialog";
 
 const GRADES = ["9학년", "10학년", "11학년", "12학년", "졸업생/Gap Year", "홈스쿨/기타"];
 
@@ -41,6 +51,11 @@ function ProfilePageInner() {
   const [major, setMajor] = useState("Computer Science");
   const [saving, setSaving] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+
+  // 계정 삭제 플로우: step 1 = 경고, step 2 = 이메일 재입력, closed = 닫힘
+  const [deleteStep, setDeleteStep] = useState<"closed" | "warn" | "confirm">("closed");
+  const [confirmEmailInput, setConfirmEmailInput] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   // Hydrate form once per real change — profile/user 객체 레퍼런스가 바뀌는 모든 Firestore
   // onSnapshot tick마다 재실행되면 사용자가 타이핑 중인 입력을 덮어씀.
@@ -103,6 +118,43 @@ function ProfilePageInner() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const userEmail = (user?.email || "").trim();
+  const emailMatches =
+    userEmail.length > 0 &&
+    confirmEmailInput.trim().toLowerCase() === userEmail.toLowerCase();
+
+  const handleDeleteAccount = async () => {
+    if (!user || !emailMatches || deleting) return;
+    setDeleting(true);
+    try {
+      await fetchWithAuth("/api/user/delete", {
+        method: "POST",
+        body: JSON.stringify({ confirmEmail: confirmEmailInput.trim() }),
+      });
+      toast({ title: "탈퇴가 완료되었어요" });
+      // Auth 객체는 이미 서버에서 삭제됐으므로 signOut은 클라이언트 세션 정리용.
+      try {
+        await signOut(auth);
+      } catch (e) {
+        logError("[account-delete] signOut after delete failed:", e);
+      }
+      // 홈으로 강제 이동 — 상태가 남지 않도록 location 교체
+      window.location.href = "/";
+    } catch (e) {
+      logError("[account-delete] failed:", e);
+      const description =
+        e instanceof ApiError
+          ? e.message
+          : "support@prismedu.kr로 문의해주세요.";
+      toast({
+        title: "삭제에 실패했어요",
+        description,
+        variant: "destructive",
+      });
+      setDeleting(false);
     }
   };
 
@@ -327,7 +379,123 @@ function ProfilePageInner() {
             </Card>
           </button>
         </div>
+
+        {/* 계정 관리 (destructive) */}
+        <div className="pt-6 mt-2 border-t border-border/60 space-y-3">
+          <div>
+            <h2 className="text-sm font-bold text-red-600 dark:text-red-400">계정 관리</h2>
+            <p className="text-2xs text-muted-foreground mt-1 leading-relaxed">
+              계정을 삭제하면 모든 데이터가 영구적으로 지워집니다. 결제 내역은
+              회계 목적으로 5년간 익명으로 보관됩니다.
+            </p>
+          </div>
+          <Button
+            variant="destructive"
+            className="w-full h-11 rounded-xl"
+            onClick={() => {
+              setConfirmEmailInput("");
+              setDeleteStep("warn");
+            }}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            계정 삭제
+          </Button>
+        </div>
       </div>
+
+      {/* 계정 삭제 플로우 — 2단계 AlertDialog */}
+      <AlertDialog
+        open={deleteStep !== "closed"}
+        onOpenChange={(open) => {
+          if (!open && !deleting) {
+            setDeleteStep("closed");
+            setConfirmEmailInput("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          {deleteStep === "warn" && (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>정말 탈퇴하시겠어요?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  에세이, 채팅, 플래너 등 모든 데이터가 영구 삭제됩니다.
+                  이 작업은 되돌릴 수 없어요.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteStep("closed")}
+                >
+                  취소
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setDeleteStep("confirm")}
+                >
+                  다음
+                </Button>
+              </AlertDialogFooter>
+            </>
+          )}
+          {deleteStep === "confirm" && (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>이메일 확인</AlertDialogTitle>
+                <AlertDialogDescription>
+                  확인을 위해{" "}
+                  <span className="font-semibold text-foreground">
+                    {userEmail || "계정 이메일"}
+                  </span>
+                  을(를) 입력해주세요.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="space-y-1.5">
+                <Label htmlFor="delete-confirm-email" className="text-xs text-muted-foreground">
+                  이메일
+                </Label>
+                <Input
+                  id="delete-confirm-email"
+                  type="email"
+                  autoComplete="off"
+                  placeholder={userEmail}
+                  value={confirmEmailInput}
+                  onChange={(e) => setConfirmEmailInput(e.target.value)}
+                  disabled={deleting}
+                  className="h-11 rounded-xl text-sm"
+                />
+              </div>
+              <AlertDialogFooter>
+                <Button
+                  variant="outline"
+                  disabled={deleting}
+                  onClick={() => {
+                    setDeleteStep("closed");
+                    setConfirmEmailInput("");
+                  }}
+                >
+                  취소
+                </Button>
+                <Button
+                  variant="destructive"
+                  disabled={!emailMatches || deleting}
+                  onClick={handleDeleteAccount}
+                >
+                  {deleting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      삭제 중...
+                    </>
+                  ) : (
+                    "삭제하기"
+                  )}
+                </Button>
+              </AlertDialogFooter>
+            </>
+          )}
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Logout confirmation */}
       <ConfirmDialog
