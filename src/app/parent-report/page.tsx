@@ -13,8 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
-import { Users, TrendingUp, Award, Download, Sparkles } from "lucide-react";
+import { Users, TrendingUp, Award, Download, Sparkles, FileText } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import Link from "next/link";
 
 export default function ParentReportPage() {
   return <AuthRequired><ParentReportPageInner /></AuthRequired>;
@@ -276,12 +277,19 @@ function ParentReportPageInner() {
         ) : (
           <div className="relative">
             <div className="pointer-events-none select-none blur-sm opacity-50">{reportContent}</div>
-            <div className="absolute inset-0 flex items-start justify-center pt-32">
+            <div className="absolute inset-0 flex flex-col items-center justify-start pt-24 gap-3 px-4">
               <UpgradeCTA
                 title="학부모 리포트는 프리미엄 기능이에요"
                 description="자녀의 GPA/SAT 변화, 합격 가능성, 추천 대학교를 한 페이지에 정리해서 PDF로 저장하거나 인쇄할 수 있습니다."
                 planLabel="프리미엄으로 업그레이드"
               />
+              <Link
+                href="/sample-report"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
+              >
+                <FileText className="w-4 h-4" aria-hidden="true" />
+                먼저 샘플 PDF 보기
+              </Link>
             </div>
           </div>
         )}
