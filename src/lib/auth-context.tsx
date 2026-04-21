@@ -215,6 +215,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // isMaster가 뒤늦게 true가 된 경우에도 현재 profile.plan을 elite로 덮어쓰기.
+  // onSnapshot은 문서 변경 시에만 재실행되므로 이 effect가 없으면 첫 로드
+  // 타이밍에 따라 Free가 고정됨.
+  useEffect(() => {
+    if (!isMaster) return;
+    setProfile(prev => (prev && prev.plan !== "elite" ? { ...prev, plan: "elite" } : prev));
+  }, [isMaster]);
+
   const loginWithGoogle = async () => {
     await signInWithPopup(auth, googleProvider);
   };
