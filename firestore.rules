@@ -88,16 +88,22 @@ service cloud.firestore {
 
     /* ──────────────────────────────────────────────────────────
        익명 합격결과 피드: admission_results/{docId}
-       ──────────────────────────────────────────────────────── */
+       ────────────────────────────────────────────────────────
+       Week 5: 매칭·피드는 verified==true 문서만 노출.
+        - 시드 데이터(스태프 검수 완료)는 verified:true + source:"partner"
+        - 사용자 자가 제출본은 verified:false로 강제 (운영자가 수동 검증)
+        - 클라이언트는 verified:true 문서만 read 가능
+        - Admin SDK(서버 API)는 규칙 우회 → 챗봇 RAG는 unverified 포함 가능
+       ────────────────────────────────────────────────────────── */
     match /admission_results/{docId} {
-      // 읽기: 로그인 사용자만 (피드는 대시보드에서 표시)
-      allow read: if request.auth != null;
+      // 읽기: 로그인 + verified==true만 노출 (매칭·피드 공통 규칙)
+      allow read: if request.auth != null
+                  && resource.data.verified == true;
 
-      // 생성: 로그인 + 데이터 구조 검증 + 합리적 범위 검증.
-      // 진정한 rate limit은 Firestore rules만으로 불가 — 필요 시 Cloud Function으로 이관.
-      // 현재 방어선: size·year·submittedAt 길이 제한으로 최소한의 spam 차단.
+      // 생성: 로그인 + 데이터 구조 검증 + verified:false 강제 (자가 검증 차단)
       allow create: if request.auth != null
-                    && request.resource.data.keys().hasAll(['results', 'submittedAt', 'year'])
+                    && request.resource.data.keys().hasAll(['results', 'submittedAt', 'year', 'verified'])
+                    && request.resource.data.verified == false
                     && request.resource.data.results is list
                     && request.resource.data.results.size() > 0
                     && request.resource.data.results.size() <= 30
@@ -109,6 +115,14 @@ service cloud.firestore {
 
       // 익명 데이터는 수정·삭제 불가 (한 번 제출하면 영구)
       allow update, delete: if false;
+    }
+
+    /* ──────────────────────────────────────────────────────────
+       합격 사례 AI 분석 캐시: admission_analysis_cache/{matchId__profileHash}
+       서버 Admin SDK 전용 — 클라이언트 접근 금지.
+       ────────────────────────────────────────────────────────── */
+    match /admission_analysis_cache/{cacheId} {
+      allow read, write: if false;
     }
 
     /* ──────────────────────────────────────────────────────────

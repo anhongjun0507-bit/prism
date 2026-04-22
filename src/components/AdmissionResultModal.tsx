@@ -66,6 +66,10 @@ export function AdmissionResultModal({
         results,
         submittedAt: new Date().toISOString(),
         year: new Date().getFullYear(),
+        // 사용자 직접 제출본은 모두 미검증 — 매칭/피드는 verified==true만 노출.
+        // 운영자가 품질 확인 후 수동으로 verified=true + source 필드 추가.
+        verified: false,
+        source: "self",
       };
 
       if (user) {

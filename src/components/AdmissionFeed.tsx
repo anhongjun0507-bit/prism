@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Clock, Lock } from "lucide-react";
 import { CardSkeleton } from "./Skeleton";
-import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
+import { collection, query, orderBy, limit, getDocs, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
 import { normalizePlan } from "@/lib/plans";
@@ -49,8 +49,10 @@ export function AdmissionFeed() {
   useEffect(() => {
     async function loadFeed() {
       try {
+        // Firestore rules가 verified==true 문서만 read 허용 — 쿼리도 동일 조건 필수.
         const q = query(
           collection(db, "admission_results"),
+          where("verified", "==", true),
           orderBy("submittedAt", "desc"),
           limit(20)
         );

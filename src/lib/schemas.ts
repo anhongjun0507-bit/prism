@@ -96,6 +96,20 @@ export const EssayReviewInputSchema = z.object({
   major: shortStr.optional(),
 }).passthrough();
 
+/** 유사 합격자 매칭 — Elite는 university 고정 가능, 그 외는 dreamSchool 기반. */
+export const SimilarAdmissionInputSchema = z.object({
+  profile: ProfileSchema,
+  /** 특정 대학 필터. 미지정 시 profile.dreamSchool 자동 사용. */
+  university: shortStr.optional(),
+  limit: z.coerce.number().int().min(1).max(20).optional(),
+});
+
+/** 합격 사례 Elite 분석 — matchId(seed-*) + 유저 프로필 */
+export const AdmissionAnalyzeInputSchema = z.object({
+  matchId: shortStr,
+  profile: ProfileSchema,
+});
+
 export const ChatInputSchema = z.object({
   message: z.string().trim().min(1).max(2000),
   history: z.array(z.object({

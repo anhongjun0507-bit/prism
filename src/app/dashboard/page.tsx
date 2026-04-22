@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { AdmissionResultBanner, AdmissionResultModal } from "@/components/AdmissionResultModal";
 import { AdmissionFeed } from "@/components/AdmissionFeed";
+import { SimilarAdmissionCard } from "@/components/admissions/SimilarAdmissionCard";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -312,6 +313,7 @@ function DashboardPageInner() {
         {isAdmissionSeason && (profile?.grade === "12학년" || profile?.grade === "졸업생/Gap Year") && (
           <AdmissionResultBanner onOpen={() => setShowResultModal(true)} />
         )}
+        <SimilarAdmissionCard />
         {isAdmissionSeason && <AdmissionFeed />}
 
         {/* First-time CTA — 스펙이 없을 때만 표시. 있으면 Hero에 이미 정보가 있어 중복. */}
