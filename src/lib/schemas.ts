@@ -88,6 +88,8 @@ export const EssayReviewInputSchema = z.object({
   essay: essayBody,
   prompt: z.string().trim().max(2000).optional(),
   university: shortStr.optional(),
+  /** schools.json의 n 필드와 매칭되는 학교 식별자 — Elite 대학별 rubric 모드용. */
+  universityId: shortStr.optional(),
   grade: shortStr.optional(),
   gpa: z.union([z.coerce.number().min(0).max(4.5), z.literal(""), z.undefined()]).optional(),
   sat: z.union([z.coerce.number().min(400).max(1600), z.literal(""), z.undefined()]).optional(),

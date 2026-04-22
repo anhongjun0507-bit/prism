@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { listAvailableRubrics } from "@/lib/university-rubric";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
@@ -22,7 +25,7 @@ import { chime } from "@/lib/chime";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, CheckCircle2, AlertCircle, Lightbulb, Sparkles,
-  Target, MessageCircle, RotateCcw, X, Download, FileText,
+  Target, MessageCircle, RotateCcw, X, Download, FileText, GraduationCap, Crown,
 } from "lucide-react";
 import { exportReviewToPDF, exportReviewToDoc } from "@/lib/essay-export";
 import type { Essay, EssayReview } from "@/types/essay";
@@ -129,6 +132,9 @@ function EssayReviewPageInner() {
   const canReview = isMaster || canUseFeature(currentPlan, "essayReviewLimit");
   const reviewUsed = profile?.essayReviewUsed || 0;
   const canUseReview = canReview || reviewUsed < 1;
+  const canUseUniversityRubric = isMaster || canUseFeature(currentPlan, "universityRubricEnabled");
+  // 20개 대학 rubric 리스트 (모듈 top-level에서 평가되므로 useMemo 불필요)
+  const availableRubrics = listAvailableRubrics();
 
   const [essays, setEssays] = useState<Essay[]>(() => loadEssays());
   const linkedEssay = useMemo(
@@ -140,6 +146,9 @@ function EssayReviewPageInner() {
   const [essay, setEssay] = useState("");
   const [prompt, setPrompt] = useState("");
   const [university, setUniversity] = useState("");
+  // "general" = rubric 미적용(기본 첨삭), 그 외 값은 availableRubrics의 id
+  const [universityId, setUniversityId] = useState<string>("general");
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ReviewResult | null>(null);
   // 이전(저장된) 리뷰를 보여줄 때 표시할 메타 — "새 리뷰 받기" 버튼 라벨·뱃지에 사용
@@ -174,6 +183,10 @@ function EssayReviewPageInner() {
       void _id;
       setResult(rest);
       setPriorReviewMeta({ createdAt, count: reviews.length });
+      // 이전 리뷰가 대학별 rubric 기반이면 드롭다운도 해당 학교로 복원
+      if (last.universityId) {
+        setUniversityId(last.universityId);
+      }
     } else {
       setResult(null);
       setPriorReviewMeta(null);
@@ -286,10 +299,12 @@ function EssayReviewPageInner() {
     setLangMismatchWarning(false);
 
     try {
+      const selectedRubricId = universityId !== "general" ? universityId : undefined;
       const data = await fetchWithAuth<{ review: ReviewResult; langMismatch?: boolean }>("/api/essay-review", {
         method: "POST",
         body: JSON.stringify({
           essay, prompt, university,
+          universityId: selectedRubricId,
           grade: profile?.grade, gpa: profile?.gpa, sat: profile?.sat, major: profile?.major,
         }),
       });
@@ -304,6 +319,8 @@ function EssayReviewPageInner() {
       haptic("success");
       chime("complete");
 
+      // 대학별 rubric 필드(universityId/universityName/isUniversityRubric/universityFit/
+      // universitySpecificFeedback)는 서버가 review 객체에 이미 포함해 보냄.
       const newReview: EssayReview = {
         ...data.review,
         id: `r-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -431,7 +448,11 @@ function EssayReviewPageInner() {
         await saveProfile({ essayReviewUsed: (profile?.essayReviewUsed || 0) + 1 });
       }
     } catch (err) {
-      if (err instanceof ApiError) {
+      // Elite 전용 기능을 Free/Pro 유저가 호출하면 서버가 403 UPGRADE_REQUIRED.
+      // ApiError.code는 서버 응답의 error 필드(= "UPGRADE_REQUIRED") 그대로.
+      if (err instanceof ApiError && err.code === "UPGRADE_REQUIRED") {
+        setUpgradeModalOpen(true);
+      } else if (err instanceof ApiError) {
         setError(err.message);
       } else {
         setError("연결에 문제가 있어요. 잠시 후 다시 시도해주세요.");
@@ -501,15 +522,63 @@ function EssayReviewPageInner() {
           </Card>
         )}
 
-        {/* University input */}
+        {/* University selector — Top 20에는 대학별 맞춤 rubric 적용, 나머지는 일반 첨삭 */}
         <div className="space-y-2">
-          <label className="text-sm font-semibold">대학교</label>
-          <Input
-            placeholder="예: Harvard University"
-            value={university}
-            onChange={(e) => setUniversity(e.target.value)}
-            className="h-11 rounded-xl"
-          />
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-semibold">대학교</label>
+            {canUseUniversityRubric && universityId !== "general" && (
+              <Badge variant="secondary" className="bg-gradient-to-r from-amber-100 to-violet-100 text-violet-700 dark:from-amber-900/30 dark:to-violet-900/30 dark:text-violet-300 text-[10px] px-2 py-0.5 rounded-full">
+                <Crown className="w-3 h-3 mr-1" /> Elite 맞춤 rubric
+              </Badge>
+            )}
+          </div>
+          <Select
+            value={universityId}
+            onValueChange={(v) => {
+              setUniversityId(v);
+              // 대학 선택 시 university 텍스트도 자동 동기화. "general"이면 유지(직접 입력 가능)
+              if (v !== "general") {
+                const match = availableRubrics.find((r) => r.id === v);
+                if (match) setUniversity(match.name);
+              }
+            }}
+          >
+            <SelectTrigger className="h-11 rounded-xl">
+              <SelectValue placeholder="대학교 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="general">일반 첨삭 (대학 무관)</SelectItem>
+              {availableRubrics.map((r) => (
+                <SelectItem key={r.id} value={r.id}>
+                  {r.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {/* "일반 첨삭" 모드에선 자유 입력 유지 — 20개 밖의 학교도 타이틀로 기록 가능 */}
+          {universityId === "general" && (
+            <Input
+              placeholder="(선택) 에세이 대상 학교 이름"
+              value={university}
+              onChange={(e) => setUniversity(e.target.value)}
+              className="h-11 rounded-xl"
+            />
+          )}
+          {/* Free/Pro 유저가 대학별 rubric 선택 시 안내 — 제출은 서버가 403으로 차단 */}
+          {universityId !== "general" && !canUseUniversityRubric && (
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 text-xs">
+              <Crown className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <span className="text-amber-800 dark:text-amber-300 leading-relaxed">
+                대학별 맞춤 rubric은 Elite 플랜 전용이에요.{" "}
+                <button
+                  onClick={() => router.push("/pricing")}
+                  className="font-semibold underline hover:text-amber-900 dark:hover:text-amber-200"
+                >
+                  Elite 자세히 보기
+                </button>
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Prompt input */}
@@ -676,6 +745,40 @@ function EssayReviewPageInner() {
               </Badge>
             </div>
 
+            {/* University-specific feedback — Elite 대학별 rubric 모드 결과만 노출.
+                레거시 리뷰(필드 없음)는 undefined라 자동 스킵 */}
+            {result.isUniversityRubric && result.universitySpecificFeedback && (
+              <div className="space-y-2">
+                <h3 className="font-headline text-base font-bold flex items-center gap-1.5">
+                  <GraduationCap className="w-4 h-4 text-violet-500" />
+                  {result.universityName ?? "대학교"} 관점의 피드백
+                </h3>
+                <Card className="p-5 bg-gradient-to-br from-violet-50 to-amber-50 dark:from-violet-950/20 dark:to-amber-950/20 border-violet-200 dark:border-violet-800 rounded-2xl shadow-sm space-y-3">
+                  <p className="text-sm text-violet-900 dark:text-violet-100 leading-relaxed whitespace-pre-line">
+                    {result.universitySpecificFeedback}
+                  </p>
+                  {typeof result.universityFit === "number" && (
+                    <div className="flex items-center justify-between pt-3 border-t border-violet-200 dark:border-violet-800">
+                      <span className="text-xs font-semibold text-violet-700 dark:text-violet-300">
+                        이 대학과의 적합도
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-24 rounded-full bg-violet-200 dark:bg-violet-900 overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-violet-500 to-amber-500 transition-all"
+                            style={{ width: `${Math.max(0, Math.min(10, result.universityFit)) * 10}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-bold text-violet-900 dark:text-violet-100">
+                          {result.universityFit}/10
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              </div>
+            )}
+
             {/* Strengths */}
             {result.strengths.length > 0 && (
             <div className="space-y-2">
@@ -797,6 +900,37 @@ function EssayReviewPageInner() {
           </div>
         )}
       </div>
+
+      {/* Elite 업그레이드 유도 Modal — Free/Pro 유저가 대학별 rubric으로 제출 시 */}
+      <Dialog open={upgradeModalOpen} onOpenChange={setUpgradeModalOpen}>
+        <DialogContent className="max-w-sm p-8 text-center">
+          <DialogHeader>
+            <div className="mx-auto mb-3 w-14 h-14 rounded-full bg-gradient-to-br from-amber-100 to-violet-100 dark:from-amber-900/40 dark:to-violet-900/40 flex items-center justify-center">
+              <Crown className="w-7 h-7 text-violet-600 dark:text-violet-300" />
+            </div>
+            <DialogTitle className="text-lg">Elite 전용 기능</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed pt-2">
+              대학별 맞춤 rubric으로 첨삭받으려면 Elite 플랜이 필요해요.
+              Top 20 대학의 합격 경향을 반영한 심층 피드백을 받을 수 있어요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 mt-4">
+            <Button onClick={() => router.push("/pricing")} className="w-full rounded-xl">
+              Elite 자세히 보기
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setUpgradeModalOpen(false);
+                setUniversityId("general");
+              }}
+              className="w-full rounded-xl"
+            >
+              일반 첨삭으로 계속하기
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>

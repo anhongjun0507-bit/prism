@@ -87,6 +87,15 @@ export interface EssayReview {
   /** 에세이 전체를 10점 수준으로 다시 쓴 버전. 에세이 원어와 동일 언어. */
   perfectExample?: string;
   createdAt: string;        // ISO
+
+  // --- 대학별 맞춤 rubric (Elite 전용) ---
+  /** schools.json의 n 필드와 매칭되는 학교 식별자. 레거시 리뷰는 undefined. */
+  universityId?: string;
+  universityName?: string;
+  /** true면 대학별 rubric 적용된 리뷰. 기본 첨삭은 false/undefined. */
+  isUniversityRubric?: boolean;
+  universitySpecificFeedback?: string;
+  universityFit?: number;   // 0–10
 }
 
 export interface Essay {
