@@ -24,7 +24,7 @@ const navItems = [
 // pathname이 이 중 하나면 "더보기" 탭이 active 상태로 표시됨.
 const moreItems: { label: string; description: string; icon: typeof User; href: string }[] = [
   { label: "프로필",       description: "내 정보·스펙 관리",         icon: User,      href: "/profile" },
-  { label: "요금제",       description: "무료·프로·프리미엄 비교",     icon: CreditCard, href: "/pricing" },
+  { label: "요금제",       description: "Free·Pro·Elite 비교",        icon: CreditCard, href: "/pricing" },
   { label: "구독 관리",    description: "결제 내역·플랜 변경",         icon: CreditCard, href: "/subscription" },
   { label: "스펙 분석",    description: "AI가 내 스펙을 진단",         icon: Sparkles,  href: "/spec-analysis" },
   { label: "What-If",      description: "스펙 바뀌면 합격률은?",       icon: LineChart, href: "/what-if" },
