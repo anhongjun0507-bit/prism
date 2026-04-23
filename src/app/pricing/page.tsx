@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { PLANS, normalizePlan, type Plan, type BillingCycle } from "@/lib/plans";
+import { trackPrismEvent } from "@/lib/analytics/events";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,10 @@ export default function PricingPage() {
   const currentPlan = normalizePlan(profile?.plan);
   const [billing, setBilling] = useState<BillingCycle>("monthly");
   const [processing, setProcessing] = useState<PaidPlan | null>(null);
+
+  useEffect(() => {
+    trackPrismEvent("pricing_page_viewed", { plan: currentPlan });
+  }, [currentPlan]);
 
   const handlePlanSelect = async (planId: PaidPlan, cycle: BillingCycle) => {
     if (!user) {

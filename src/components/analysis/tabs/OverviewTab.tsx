@@ -228,7 +228,7 @@ export function OverviewTab({
             AI가 당신의 스펙을 분석해 더 정확한 합격 확률, 강점, 약점, 개선 방법을 제시합니다
           </p>
           <button onClick={() => window.location.href = "/pricing"} className="text-xs font-semibold text-primary bg-primary/10 rounded-full px-4 py-1.5 hover:bg-primary/20 transition-colors">
-            프리미엄으로 보기
+            Pro 플랜 알아보기
           </button>
         </div>
       )}
@@ -260,7 +260,7 @@ export function OverviewTab({
                 </p>
                 <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-card/40 to-card rounded-lg">
                   <button onClick={() => window.location.href = "/pricing"} className="text-xs font-semibold text-primary bg-primary/10 rounded-full px-3 py-1.5 hover:bg-primary/20 transition-colors">
-                    프리미엄으로 전체 보기
+                    Pro 플랜 알아보기
                   </button>
                 </div>
               </div>

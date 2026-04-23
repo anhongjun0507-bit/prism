@@ -94,9 +94,10 @@ export function SpecAnalysisView({ profile, hasAccess }: SpecAnalysisViewProps) 
           </div>
           <div className="absolute inset-0 flex items-start justify-center pt-24">
             <UpgradeCTA
-              title="AI 스펙 분석은 프리미엄 기능이에요"
+              source="spec_analysis"
+              targetPlan="pro"
+              title="AI 스펙 분석은 Pro 플랜 기능이에요"
               description="GPA, SAT, TOEFL을 종합 분석해 강점·약점·숨겨진 가능성을 알려드려요."
-              planLabel="프리미엄으로 업그레이드"
             />
           </div>
         </div>

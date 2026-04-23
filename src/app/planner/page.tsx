@@ -33,6 +33,8 @@ import { readJSON, writeJSON } from "@/lib/storage";
 import { EmptyState } from "@/components/EmptyState";
 import { logError } from "@/lib/log";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
+import { trackPrismEvent } from "@/lib/analytics/events";
+import { normalizePlan } from "@/lib/plans";
 import {
   TASK_CATEGORIES, CATEGORY_COLORS, type TaskCategory,
 } from "@/lib/task-categories";
@@ -137,7 +139,7 @@ export default function PlannerPage() {
 
 function PlannerPageInner() {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tasks, setTasks] = useState<PlannerTask[]>(() => loadLocalTasks());
@@ -310,6 +312,10 @@ function PlannerPageInner() {
       setGenTasks(res.tasks);
       setGenReasoning(res.reasoning ?? "");
       setGenTooManyExisting(Boolean(res.tooManyExistingTasks));
+      trackPrismEvent("planner_generated", {
+        plan: normalizePlan(profile?.plan),
+        taskCount: res.tasks?.length ?? 0,
+      });
     } catch (e) {
       const err = e as ApiError;
       setGenOpen(false);
@@ -343,7 +349,7 @@ function PlannerPageInner() {
     } finally {
       setGenLoading(false);
     }
-  }, [user, router, toast]);
+  }, [user, profile?.plan, router, toast]);
 
   const handleSaveGenerated = useCallback(async (selected: GeneratedTaskView[]) => {
     if (!user || selected.length === 0) return;

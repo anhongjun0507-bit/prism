@@ -32,6 +32,7 @@ import type { Essay, EssayReview } from "@/types/essay";
 import { slimEssaysForCache } from "@/types/essay";
 import { countWords } from "@/lib/essay-utils";
 import { logError } from "@/lib/log";
+import { trackPrismEvent } from "@/lib/analytics/events";
 
 /**
  * /api/essay-review 응답 스키마 — id/createdAt 없이 생성된 raw 분석 결과.
@@ -319,6 +320,12 @@ function EssayReviewPageInner() {
       haptic("success");
       chime("complete");
 
+      trackPrismEvent("essay_review_submitted", {
+        plan: normalizePlan(profile?.plan),
+        universityId: selectedRubricId,
+        model: selectedRubricId ? "elite_rubric" : "base",
+      });
+
       // 대학별 rubric 필드(universityId/universityName/isUniversityRubric/universityFit/
       // universitySpecificFeedback)는 서버가 review 객체에 이미 포함해 보냄.
       const newReview: EssayReview = {
@@ -566,15 +573,18 @@ function EssayReviewPageInner() {
           )}
           {/* Free/Pro 유저가 대학별 rubric 선택 시 안내 — 제출은 서버가 403으로 차단 */}
           {universityId !== "general" && !canUseUniversityRubric && (
-            <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 text-xs">
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-600 text-xs">
               <Crown className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-              <span className="text-amber-800 dark:text-amber-300 leading-relaxed">
+              <span className="text-amber-800 dark:text-amber-200 leading-relaxed">
                 대학별 맞춤 rubric은 Elite 플랜 전용이에요.{" "}
                 <button
-                  onClick={() => router.push("/pricing")}
-                  className="font-semibold underline hover:text-amber-900 dark:hover:text-amber-200"
+                  onClick={() => {
+                    trackPrismEvent("upgrade_cta_clicked", { source: "essay_rubric", targetPlan: "elite" });
+                    router.push("/pricing");
+                  }}
+                  className="font-semibold underline hover:text-amber-900 dark:hover:text-amber-100"
                 >
-                  Elite 자세히 보기
+                  Elite 플랜 알아보기
                 </button>
               </span>
             </div>
@@ -621,9 +631,10 @@ function EssayReviewPageInner() {
         {/* Review button or upgrade CTA */}
         {!canUseReview ? (
           <UpgradeCTA
-            title="AI 에세이 첨삭은 프리미엄 기능이에요"
-            description="무료 체험을 이미 사용했어요. 프리미엄 플랜으로 업그레이드하면 AI가 에세이를 분석하고 점수, 강점, 약점, 개선 방향을 제시해드려요."
-            planLabel="프리미엄으로 업그레이드"
+            source="essay_review"
+            targetPlan="pro"
+            title="AI 에세이 첨삭은 Pro 플랜 기능이에요"
+            description="무료 체험을 이미 사용했어요. Pro 플랜으로 업그레이드하면 AI가 에세이를 분석하고 점수, 강점, 약점, 개선 방향을 제시해드려요."
           />
         ) : (
           <div className="space-y-2">
@@ -908,15 +919,21 @@ function EssayReviewPageInner() {
             <div className="mx-auto mb-3 w-14 h-14 rounded-full bg-gradient-to-br from-amber-100 to-violet-100 dark:from-amber-900/40 dark:to-violet-900/40 flex items-center justify-center">
               <Crown className="w-7 h-7 text-violet-600 dark:text-violet-300" />
             </div>
-            <DialogTitle className="text-lg">Elite 전용 기능</DialogTitle>
+            <DialogTitle className="text-lg">Elite 전용 기능이에요</DialogTitle>
             <DialogDescription className="text-sm leading-relaxed pt-2">
-              대학별 맞춤 rubric으로 첨삭받으려면 Elite 플랜이 필요해요.
+              대학별 맞춤 에세이 첨삭은 Elite 플랜에서 이용할 수 있어요.
               Top 20 대학의 합격 경향을 반영한 심층 피드백을 받을 수 있어요.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-2 mt-4">
-            <Button onClick={() => router.push("/pricing")} className="w-full rounded-xl">
-              Elite 자세히 보기
+            <Button
+              onClick={() => {
+                trackPrismEvent("upgrade_cta_clicked", { source: "essay_rubric", targetPlan: "elite" });
+                router.push("/pricing");
+              }}
+              className="w-full rounded-xl"
+            >
+              Elite 플랜 알아보기
             </Button>
             <Button
               variant="outline"
@@ -926,7 +943,7 @@ function EssayReviewPageInner() {
               }}
               className="w-full rounded-xl"
             >
-              일반 첨삭으로 계속하기
+              현재 플랜 유지
             </Button>
           </div>
         </DialogContent>

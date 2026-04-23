@@ -339,13 +339,14 @@ export function EssayEditor({
           <div className="space-y-2">
             {outlineUsed > 0 && (
               <p className="text-xs text-center text-muted-foreground">
-                ✨ 무료 체험을 사용했어요 — 프리미엄에서 무제한으로 이용하세요
+                ✨ 무료 체험을 사용했어요 — Pro 플랜에서 무제한으로 이용하세요
               </p>
             )}
             <UpgradeCTA
+              source="essay_outline"
+              targetPlan="pro"
               title="AI가 에세이 구조를 잡아드려요"
-              description="프리미엄 플랜으로 업그레이드하면 내 프로필 기반 타임머신 에세이 구조(과거-전환점-성장)를 자동으로 생성해드려요."
-              planLabel="프리미엄으로 업그레이드"
+              description="Pro 플랜으로 업그레이드하면 내 프로필 기반 타임머신 에세이 구조(과거-전환점-성장)를 자동으로 생성해드려요."
             />
           </div>
         )}

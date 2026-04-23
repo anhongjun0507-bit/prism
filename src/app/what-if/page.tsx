@@ -325,11 +325,11 @@ function WhatIfPageInner() {
         leading={<Sparkles className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />}
         action={
           hasFullAccess ? (
-            <Badge variant="secondary" className="text-xs">프리미엄</Badge>
+            <Badge variant="secondary" className="text-xs">Pro</Badge>
           ) : canUseWhatIf ? (
             <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-xs">무료 체험 1회</Badge>
           ) : (
-            <Badge variant="secondary" className="text-xs">프리미엄</Badge>
+            <Badge variant="secondary" className="text-xs">Pro</Badge>
           )
         }
       />
@@ -345,9 +345,10 @@ function WhatIfPageInner() {
             {/* overlay */}
             <div className="absolute inset-0 flex items-start justify-center pt-32">
               <UpgradeCTA
+                source="what_if"
+                targetPlan="pro"
                 title="무료 체험을 이미 사용했어요"
-                description="What-If 시뮬레이터로 점수를 무제한 조정하며 합격 확률 변화를 확인하려면 프리미엄으로 업그레이드하세요."
-                planLabel="프리미엄으로 업그레이드"
+                description="What-If 시뮬레이터로 점수를 무제한 조정하며 합격 확률 변화를 확인하려면 Pro 플랜으로 업그레이드하세요."
               />
             </div>
           </div>

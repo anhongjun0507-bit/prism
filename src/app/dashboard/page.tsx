@@ -472,8 +472,8 @@ function DashboardPageInner() {
                 <Crown className="w-4 h-4 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold">더 많은 대학교를 분석해보세요</p>
-                <p className="text-xs text-muted-foreground mt-0.5">베이직 플랜으로 전체 학교 상세 분석</p>
+                <p className="text-sm font-semibold">Pro 플랜 알아보기</p>
+                <p className="text-xs text-muted-foreground mt-0.5">1,001개 대학 전체 합격 확률 분석</p>
               </div>
               <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
             </Card>

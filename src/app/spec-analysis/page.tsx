@@ -492,7 +492,7 @@ function SpecAnalysisPageInner() {
       <PageHeader
         title="AI 스펙 분석"
         className="print:hidden"
-        action={!hasAccess && <Badge variant="secondary" className="text-xs">프리미엄</Badge>}
+        action={!hasAccess && <Badge variant="secondary" className="text-xs">Pro</Badge>}
       />
 
       <div className="px-gutter">
@@ -509,9 +509,10 @@ function SpecAnalysisPageInner() {
             </div>
             <div className="absolute inset-0 flex items-start justify-center pt-32">
               <UpgradeCTA
-                title="AI 스펙 분석은 프리미엄 기능이에요"
+                source="spec_analysis"
+                targetPlan="pro"
+                title="AI 스펙 분석은 Pro 플랜 기능이에요"
                 description="Claude AI가 당신의 GPA, SAT, TOEFL을 종합 분석하고 강점/약점/숨겨진 가능성/다음 단계를 맞춤형으로 제시합니다."
-                planLabel="프리미엄으로 업그레이드"
               />
             </div>
           </div>

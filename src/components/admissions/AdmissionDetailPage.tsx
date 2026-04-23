@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChevronLeft, Sparkles, BookOpen, Target, Lock, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import { CardSkeleton } from "@/components/Skeleton";
 import { useAuth } from "@/lib/auth-context";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
 import { canUseFeature, normalizePlan } from "@/lib/plans";
+import { trackPrismEvent } from "@/lib/analytics/events";
 
 export interface AdmissionDetail {
   id: string;
@@ -60,12 +62,20 @@ const SCHOOL_TYPE_LABEL: Record<string, string> = {
 
 export function AdmissionDetailPage({ admission }: { admission: AdmissionDetail }) {
   const { user, profile, loading: authLoading } = useAuth();
+  const router = useRouter();
   const plan = normalizePlan(profile?.plan);
   const isElite = canUseFeature(plan, "admissionMatchingEnabled");
 
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+
+  // funnel 측정: Elite 게이팅 통과 여부와 무관하게 detail 페이지 진입 카운트.
+  useEffect(() => {
+    if (authLoading) return;
+    trackPrismEvent("admission_detail_viewed", { plan, matchId: admission.id });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading]);
 
   async function runAnalysis() {
     if (!user || !isElite) return;
@@ -246,14 +256,20 @@ export function AdmissionDetailPage({ admission }: { admission: AdmissionDetail 
             <Lock className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <p className="text-sm font-bold">Elite 플랜 전용</p>
+            <p className="text-sm font-bold">Elite 전용 기능이에요</p>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              활동 요약, 에세이 주제, Hook, AI 합격 요인 분석은 Elite 플랜에서 열람할 수 있어요.
+              활동 요약, 에세이 주제, Hook, AI 합격 요인 분석은 Elite 플랜에서 이용할 수 있어요.
             </p>
           </div>
-          <Link href="/plan">
-            <Button size="sm">Elite 플랜 보기</Button>
-          </Link>
+          <Button
+            size="sm"
+            onClick={() => {
+              trackPrismEvent("upgrade_cta_clicked", { source: "admission_detail", targetPlan: "elite" });
+              router.push("/pricing");
+            }}
+          >
+            Elite 플랜 알아보기
+          </Button>
         </Card>
       )}
     </div>

@@ -7,6 +7,7 @@ import { PLANS, normalizePlan } from "@/lib/plans";
 import type { Specs, School } from "@/lib/matching";
 import { fetchWithAuth } from "@/lib/api-client";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
+import { trackPrismEvent } from "@/lib/analytics/events";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,8 +27,12 @@ function ParentReportPageInner() {
   const showApiError = useApiErrorToast();
   const currentPlan = normalizePlan(profile?.plan);
   // Pro = basic 리포트, Elite = 주간 리포트. Free는 샘플(주간 리포트 UI 접근 불가).
-  const hasAccess = PLANS[currentPlan].features.parentReportType !== "sample"
-    && PLANS[currentPlan].features.parentReportType !== "none";
+  const reportType = PLANS[currentPlan].features.parentReportType;
+  const hasAccess = reportType !== "sample" && reportType !== "none";
+
+  useEffect(() => {
+    trackPrismEvent("parent_report_viewed", { plan: currentPlan, reportType });
+  }, [currentPlan, reportType]);
 
   /* ── compute stats — server fetch ── */
   // 스펙(GPA/SAT)이 없으면 매칭 요청 자체를 생략. 이전엔 fallback "3.8"/"1500"로 가짜
@@ -268,7 +273,7 @@ function ParentReportPageInner() {
       <PageHeader
         title="학부모 리포트"
         className="print:hidden"
-        action={!hasAccess && <Badge variant="secondary" className="text-xs">프리미엄</Badge>}
+        action={!hasAccess && <Badge variant="secondary" className="text-xs">Pro</Badge>}
       />
 
       <div className="px-gutter">
@@ -279,9 +284,10 @@ function ParentReportPageInner() {
             <div className="pointer-events-none select-none blur-sm opacity-50">{reportContent}</div>
             <div className="absolute inset-0 flex flex-col items-center justify-start pt-24 gap-3 px-4">
               <UpgradeCTA
-                title="학부모 리포트는 프리미엄 기능이에요"
+                source="parent_report"
+                targetPlan="pro"
+                title="학부모 리포트는 Pro 플랜 기능이에요"
                 description="자녀의 GPA/SAT 변화, 합격 가능성, 추천 대학교를 한 페이지에 정리해서 PDF로 저장하거나 인쇄할 수 있습니다."
-                planLabel="프리미엄으로 업그레이드"
               />
               <Link
                 href="/sample-report"

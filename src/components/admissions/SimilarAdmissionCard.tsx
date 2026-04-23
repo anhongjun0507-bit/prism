@@ -1,14 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { CardSkeleton } from "@/components/Skeleton";
-import { Sparkles, ChevronRight, Users, Lock } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
+import { Sparkles, ChevronRight, Users, Lock, Crown } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
 import { normalizePlan } from "@/lib/plans";
+import { trackPrismEvent } from "@/lib/analytics/events";
 
 interface SimilarMatch {
   id?: string; // Elite only
@@ -47,6 +53,7 @@ export function SimilarAdmissionCard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<SimilarResponse | null>(null);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   const hasSpecs = !!(profile?.gpa || profile?.sat);
 
@@ -135,34 +142,58 @@ export function SimilarAdmissionCard() {
   const isElite = !!data.elite;
 
   return (
-    <Card className="p-4 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-primary" />
+    <>
+      <Card className="p-4 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-bold">나와 비슷한 합격자 TOP {data.matches.length}</p>
+              <p className="text-2xs text-muted-foreground">cosine similarity 기준</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-bold">나와 비슷한 합격자 TOP {data.matches.length}</p>
-            <p className="text-2xs text-muted-foreground">cosine similarity 기준</p>
-          </div>
+          {!isElite && (
+            <button
+              type="button"
+              onClick={() => setUpgradeOpen(true)}
+              className="text-2xs text-primary font-medium inline-flex items-center gap-1 hover:underline"
+            >
+              <Lock className="w-3 h-3" /> Elite 플랜 알아보기
+            </button>
+          )}
         </div>
-        {!isElite && (
-          <Link href="/plan" className="text-2xs text-primary font-medium inline-flex items-center gap-1">
-            <Lock className="w-3 h-3" /> Elite 상세
-          </Link>
-        )}
-      </div>
 
-      <div className="space-y-2">
-        {data.matches.map((m, i) => (
-          <MatchRow key={m.id ?? `${m.university}-${i}`} match={m} elite={isElite} plan={plan} />
-        ))}
-      </div>
-    </Card>
+        <div className="space-y-2">
+          {data.matches.map((m, i) => (
+            <MatchRow
+              key={m.id ?? `${m.university}-${i}`}
+              match={m}
+              elite={isElite}
+              plan={plan}
+              onUpgradeClick={() => setUpgradeOpen(true)}
+            />
+          ))}
+        </div>
+      </Card>
+
+      <UpgradeDialog open={upgradeOpen} onOpenChange={setUpgradeOpen} />
+    </>
   );
 }
 
-function MatchRow({ match, elite, plan }: { match: SimilarMatch; elite: boolean; plan: "free" | "pro" | "elite" }) {
+function MatchRow({
+  match,
+  elite,
+  plan,
+  onUpgradeClick,
+}: {
+  match: SimilarMatch;
+  elite: boolean;
+  plan: "free" | "pro" | "elite";
+  onUpgradeClick: () => void;
+}) {
   const pct = Math.round(match.similarity * 100);
   const hookLabel = HOOK_LABEL[match.hookCategory] ?? match.hookCategory;
 
@@ -192,13 +223,62 @@ function MatchRow({ match, elite, plan }: { match: SimilarMatch; elite: boolean;
   if (elite && match.id) {
     return <Link href={`/admissions/${match.id}`}>{inner}</Link>;
   }
-  // Free/Pro — 상세 링크 없음, 클릭 시 업그레이드 유도
+  // Free/Pro — 서버 403 받기 전 UX 차단: 클릭 시 Elite 업그레이드 modal.
   if (plan !== "elite") {
     return (
-      <Link href="/plan" title="Elite 플랜에서 상세 활동·에세이·Hook 분석을 볼 수 있어요">
+      <button
+        type="button"
+        onClick={onUpgradeClick}
+        className="w-full text-left"
+        aria-label={`${match.university} 상세 보기 — Elite 플랜 안내`}
+      >
         {inner}
-      </Link>
+      </button>
     );
   }
   return inner;
+}
+
+function UpgradeDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const router = useRouter();
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm p-8 text-center">
+        <DialogHeader>
+          <div className="mx-auto mb-3 w-14 h-14 rounded-full bg-gradient-to-br from-amber-100 to-violet-100 dark:from-amber-900/40 dark:to-violet-900/40 flex items-center justify-center">
+            <Crown className="w-7 h-7 text-violet-600 dark:text-violet-300" />
+          </div>
+          <DialogTitle className="text-lg">Elite 전용 기능이에요</DialogTitle>
+          <DialogDescription className="text-sm leading-relaxed pt-2">
+            비슷한 합격자의 활동, 에세이 주제, Hook과 AI 합격 요인 분석은
+            Elite 플랜에서 이용할 수 있어요.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-2 mt-4">
+          <Button
+            onClick={() => {
+              trackPrismEvent("upgrade_cta_clicked", { source: "admission_card", targetPlan: "elite" });
+              router.push("/pricing");
+            }}
+            className="w-full rounded-xl"
+          >
+            Elite 플랜 알아보기
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="w-full rounded-xl"
+          >
+            현재 플랜 유지
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }

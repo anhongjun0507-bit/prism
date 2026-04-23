@@ -143,7 +143,7 @@ export function AdmissionFeed() {
         <div className="pt-2 border-t border-border/50">
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
             <Lock className="w-3 h-3" aria-hidden="true" />
-            "나와 비슷한 스펙" 필터는 베이직부터 가능해요
+            "나와 비슷한 스펙" 필터는 Pro 플랜부터 가능해요
           </div>
           <Link href="/pricing">
             <Button variant="outline" size="sm" className="w-full text-xs">

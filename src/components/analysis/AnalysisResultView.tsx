@@ -289,9 +289,10 @@ export function AnalysisResultView({ specs, onBack, toggleFavorite, isFavorite }
       {lockedCount > 0 && (
         <div className="px-6 mt-4 space-y-3">
           <UpgradeCTA
+            source="analysis_locked"
+            targetPlan="pro"
             title={`나머지 ${lockedCount}개 대학교 결과 보기`}
             description="숨겨진 대학교 중에 나에게 딱 맞는 학교가 있을 수 있어요."
-            planLabel="베이직 시작하기 — 7일 무료 체험"
           />
         </div>
       )}

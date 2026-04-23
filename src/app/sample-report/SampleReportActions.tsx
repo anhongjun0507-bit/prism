@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, Share2, Link2, Check, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { trackPrismEvent } from "@/lib/analytics/events";
 
 // Web Share API(모바일)가 있으면 카카오톡 공유 메뉴로 자연스럽게 이어짐.
 // SDK 초기화/앱키 관리를 피하고 플랫폼 공유 시트에 위임.
@@ -15,6 +16,8 @@ export function SampleReportActions() {
   const handleDownload = async () => {
     if (downloading) return;
     setDownloading(true);
+    // funnel: 클릭 시점 기록. 실제 다운로드 성공 여부는 server log로 확인.
+    trackPrismEvent("sample_pdf_downloaded", {});
     try {
       // 새 탭에서 여는 대신 직접 이동 → 모바일 Safari에서 미리보기 후 저장이 자연스러움.
       window.location.href = "/api/report/sample";
