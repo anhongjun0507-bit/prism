@@ -39,6 +39,8 @@ export interface PrismEventPayloads {
   parent_report_viewed: { plan: Plan; reportType: string };
   today_focus_shown: { type: TodayFocusType };
   today_focus_clicked: { type: TodayFocusType; target: string };
+  landing_sample_viewed: Record<string, never>;
+  landing_sample_cta_clicked: { target: string };
 }
 
 export type PrismEventName = keyof PrismEventPayloads;

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AuthSection } from "@/components/landing/AuthSection";
+import { SampleReportShowcase } from "@/components/landing/SampleReportShowcase";
 
 export const metadata: Metadata = {
   title: "PRISM — 미국 대학 입시 매니저 | AI 합격 예측",
@@ -201,20 +202,10 @@ export default function LandingPage() {
             ))}
           </ol>
 
-          {/* Sample report CTA */}
-          <a
-            href="/sample-report"
-            className="flex items-center justify-between p-4 rounded-2xl bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-colors"
-          >
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-foreground">샘플 리포트 먼저 보기</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                가입 전에 실제 분석 결과를 확인해보세요
-              </p>
-            </div>
-            <span className="text-primary text-xl shrink-0" aria-hidden="true">→</span>
-          </a>
         </section>
+
+        {/* ═══ Sample report preview — visual proof of output ═══ */}
+        <SampleReportShowcase />
       </div>
     </div>
   );
