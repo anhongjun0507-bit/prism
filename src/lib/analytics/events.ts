@@ -41,6 +41,8 @@ export interface PrismEventPayloads {
   today_focus_clicked: { type: TodayFocusType; target: string };
   landing_sample_viewed: Record<string, never>;
   landing_sample_cta_clicked: { target: string };
+  account_delete_requested: Record<string, never>;
+  account_delete_confirmed: Record<string, never>;
 }
 
 export type PrismEventName = keyof PrismEventPayloads;

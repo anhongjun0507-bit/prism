@@ -22,6 +22,9 @@ import Link from "next/link";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { logError } from "@/lib/log";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
+import { db } from "@/lib/firebase";
+import { collection, getCountFromServer } from "firebase/firestore";
+import { trackPrismEvent } from "@/lib/analytics/events";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -56,6 +59,11 @@ function ProfilePageInner() {
   const [deleteStep, setDeleteStep] = useState<"closed" | "warn" | "confirm">("closed");
   const [confirmEmailInput, setConfirmEmailInput] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [dataCounts, setDataCounts] = useState<{
+    essays: number;
+    tasks: number;
+    chat: number;
+  } | null>(null);
 
   // Hydrate form once per real change — profile/user 객체 레퍼런스가 바뀌는 모든 Firestore
   // onSnapshot tick마다 재실행되면 사용자가 타이핑 중인 입력을 덮어씀.
@@ -142,7 +150,8 @@ function ProfilePageInner() {
         logError("[account-delete] signOut after delete failed:", e);
       }
       // 홈으로 강제 이동 — 상태가 남지 않도록 location 교체
-      window.location.href = "/";
+      trackPrismEvent("account_delete_confirmed", {});
+      window.location.href = "/goodbye";
     } catch (e) {
       logError("[account-delete] failed:", e);
       const description =
@@ -392,9 +401,29 @@ function ProfilePageInner() {
           <Button
             variant="destructive"
             className="w-full h-11 rounded-xl"
-            onClick={() => {
+            onClick={async () => {
               setConfirmEmailInput("");
+              setDataCounts(null);
               setDeleteStep("warn");
+              trackPrismEvent("account_delete_requested", {});
+              if (user) {
+                // 사용자가 지워질 데이터 규모를 "본 뒤" 동의하도록 카운트 조회.
+                // 실패해도 경고 다이얼로그는 카운트 없이 표시 (non-blocking).
+                try {
+                  const [essays, tasks, chat] = await Promise.all([
+                    getCountFromServer(collection(db, "users", user.uid, "essays")),
+                    getCountFromServer(collection(db, "users", user.uid, "tasks")),
+                    getCountFromServer(collection(db, "users", user.uid, "chat")),
+                  ]);
+                  setDataCounts({
+                    essays: essays.data().count,
+                    tasks: tasks.data().count,
+                    chat: chat.data().count,
+                  });
+                } catch (e) {
+                  logError("[account-delete] count fetch failed:", e);
+                }
+              }
             }}
           >
             <Trash2 className="w-4 h-4 mr-2" />
@@ -419,10 +448,43 @@ function ProfilePageInner() {
               <AlertDialogHeader>
                 <AlertDialogTitle>정말 탈퇴하시겠어요?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  에세이, 채팅, 플래너 등 모든 데이터가 영구 삭제됩니다.
-                  이 작업은 되돌릴 수 없어요.
+                  아래 데이터가 영구 삭제됩니다. 이 작업은 되돌릴 수 없어요.
                 </AlertDialogDescription>
               </AlertDialogHeader>
+              <div className="rounded-xl bg-muted/50 border border-border/50 p-3 text-xs text-foreground leading-relaxed">
+                {dataCounts ? (
+                  <ul className="space-y-1">
+                    <li>
+                      에세이{" "}
+                      <span className="font-semibold tabular-nums">
+                        {dataCounts.essays}
+                      </span>
+                      개
+                    </li>
+                    <li>
+                      플래너 과제{" "}
+                      <span className="font-semibold tabular-nums">
+                        {dataCounts.tasks}
+                      </span>
+                      개
+                    </li>
+                    <li>
+                      AI 채팅{" "}
+                      <span className="font-semibold tabular-nums">
+                        {dataCounts.chat}
+                      </span>
+                      건
+                    </li>
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground">
+                    에세이·플래너·채팅·분석 기록 전체
+                  </p>
+                )}
+                <p className="text-2xs text-muted-foreground mt-2 pt-2 border-t border-border/40">
+                  결제 내역은 전자상거래법에 따라 5년간 익명 보관됩니다.
+                </p>
+              </div>
               <AlertDialogFooter>
                 <Button
                   variant="outline"
