@@ -9,11 +9,12 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
-  Sparkles, Target, BookOpen, ChevronRight, ChevronDown, GraduationCap,
+  Sparkles, ChevronRight, ChevronDown,
   LogOut, Crown, Settings, TrendingUp, Heart, Search,
   Zap, Users, Wand2,
 } from "lucide-react";
 import { CAT_STYLE } from "@/lib/analysis-helpers";
+import { TodayFocusCard } from "@/components/dashboard/TodayFocusCard";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -179,11 +180,12 @@ function DashboardPageInner() {
 
   // 보조 도구 — 분석/에세이/AI상담/플래너는 BottomNav에 이미 있어 제외.
   // What-If·스펙 분석·에세이 리뷰·학부모 리포트는 특수 기능이라 dashboard에 surface.
+  // 시각적 무게는 모두 동일 — 차별화는 아이콘·라벨로만 (palette noise 축소).
   const tools = [
-    { href: "/what-if", label: "What-If", desc: "가상 점수 시뮬레이션", Icon: Wand2, color: "text-violet-500", bg: "bg-violet-50 dark:bg-violet-950/30" },
-    { href: "/spec-analysis", label: "스펙 분석", desc: "강약점 상세 리포트", Icon: Sparkles, color: "text-primary", bg: "bg-primary/10" },
-    { href: "/essays/review", label: "에세이 리뷰", desc: "AI 첨삭·10점 예문", Icon: Zap, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30" },
-    { href: "/parent-report", label: "학부모 리포트", desc: "공유용 요약", Icon: Users, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
+    { href: "/what-if",       label: "What-If",     desc: "가상 점수 시뮬레이션", Icon: Wand2 },
+    { href: "/spec-analysis", label: "스펙 분석",    desc: "강약점 상세 리포트",   Icon: Sparkles },
+    { href: "/essays/review", label: "에세이 리뷰",  desc: "AI 첨삭·10점 예문",    Icon: Zap },
+    { href: "/parent-report", label: "학부모 리포트", desc: "공유용 요약",         Icon: Users },
   ] as const;
 
   return (
@@ -295,15 +297,18 @@ function DashboardPageInner() {
           </div>
         </Card>
 
+        {/* TodayFocusCard — Hero 바로 아래, Urgent Deadline 위. 조건 미매치 시 null. */}
+        <TodayFocusCard />
+
         {/* Urgent deadline alert — D-30 이하만 */}
         {nextDeadline > 0 && nextDeadline <= 30 && (
-          <div className="rounded-2xl p-4 flex items-center gap-3 bg-red-50 dark:bg-red-950/25 border border-red-200 dark:border-red-900/60">
-            <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/50 flex items-center justify-center shrink-0">
-              <span className="text-red-600 dark:text-red-400 font-bold text-sm tabular-nums">D-{nextDeadline}</span>
+          <div className="rounded-2xl p-4 flex items-center gap-3 bg-destructive/10 border border-destructive/25">
+            <div className="w-10 h-10 rounded-xl bg-destructive/15 flex items-center justify-center shrink-0">
+              <span className="text-destructive font-bold text-sm tabular-nums">D-{nextDeadline}</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-red-900 dark:text-red-200">마감 임박</p>
-              <p className="text-xs text-red-700 dark:text-red-300/80 mt-0.5 truncate">
+              <p className="text-sm font-bold text-destructive">마감 임박</p>
+              <p className="text-xs text-destructive/80 mt-0.5 truncate">
                 {profile?.dreamSchool || "지원 대학교"} 마감까지 {nextDeadline}일
               </p>
             </div>
@@ -337,23 +342,23 @@ function DashboardPageInner() {
         )}
         {hasSpecs && <SimilarAdmissionCard />}
 
-        {/* Stats row — 0개인 항목은 숨기고, 남은 항목만 균등 배치 */}
+        {/* Stats row — cat-* dot indicator로만 차별화. 배경은 공통 muted. */}
         {hasSpecs && quickResults.length > 0 && (() => {
           const items = [
-            { label: "Reach", count: reachCount, color: "text-red-500", bg: "bg-red-50 dark:bg-red-950/30", Icon: Target },
-            { label: "Target", count: targetCount, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-950/30", Icon: GraduationCap },
-            { label: "Safety", count: safetyCount, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/30", Icon: BookOpen },
+            { label: "Reach", count: reachCount, dot: CAT_STYLE.Reach.dot },
+            { label: "Target", count: targetCount, dot: CAT_STYLE.Target.dot },
+            { label: "Safety", count: safetyCount, dot: CAT_STYLE.Safety.dot },
           ].filter(item => item.count > 0);
           if (items.length === 0) return null;
           return (
-            <div className={`grid rounded-2xl bg-muted/30 dark:bg-card/60 border border-border/50 overflow-hidden`} style={{ gridTemplateColumns: `repeat(${items.length}, 1fr)` }}>
-              {items.map(({ label, count, color, bg, Icon }, i) => (
+            <div className="grid rounded-2xl bg-muted/40 border border-border/50 overflow-hidden" style={{ gridTemplateColumns: `repeat(${items.length}, 1fr)` }}>
+              {items.map(({ label, count, dot }, i) => (
                 <div key={label} className={`p-4 text-center ${i < items.length - 1 ? "border-r border-border/50" : ""}`}>
-                  <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center mx-auto mb-1.5`}>
-                    <Icon className={`w-4 h-4 ${color}`} />
+                  <div className="flex items-center justify-center gap-1.5 mb-1">
+                    <span className={`w-2 h-2 rounded-full ${dot}`} aria-hidden="true" />
+                    <p className="text-2xs text-muted-foreground font-medium">{label}</p>
                   </div>
-                  <p className="text-2xs text-muted-foreground">{label}</p>
-                  <p className="text-lg font-bold tabular-nums leading-tight mt-0.5">
+                  <p className="text-lg font-bold tabular-nums leading-tight text-foreground">
                     {count}<span className="text-2xs font-normal text-muted-foreground ml-0.5">개</span>
                   </p>
                 </div>
@@ -441,11 +446,11 @@ function DashboardPageInner() {
                   </div>
                   <button
                     onClick={() => toggleFavorite(school.n)}
-                    className="shrink-0 p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                    className="shrink-0 p-1.5 rounded-full hover:bg-destructive/10 transition-colors"
                     aria-label={isFavorite(school.n) ? `${school.n} 즐겨찾기 해제` : `${school.n} 즐겨찾기 추가`}
                     aria-pressed={isFavorite(school.n)}
                   >
-                    <Heart className={`w-4 h-4 transition-all ${isFavorite(school.n) ? "fill-red-500 text-red-500" : "text-muted-foreground/50"}`} />
+                    <Heart className={`w-4 h-4 transition-all ${isFavorite(school.n) ? "fill-destructive text-destructive" : "text-muted-foreground/50"}`} />
                   </button>
                 </Card>
               );
@@ -471,11 +476,11 @@ function DashboardPageInner() {
             </button>
             {toolsOpen && (
               <div className="grid grid-cols-2 gap-3 pt-1">
-                {tools.map(({ href, label, desc, Icon, color, bg }) => (
+                {tools.map(({ href, label, desc, Icon }) => (
                   <Link key={href} href={href} className="block">
                     <Card className="p-4 rounded-2xl border border-border/60 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all active:scale-[0.98] h-full flex flex-col gap-2.5">
-                      <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center`}>
-                        <Icon className={`w-5 h-5 ${color}`} />
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <Icon className="w-5 h-5 text-primary" aria-hidden="true" />
                       </div>
                       <div>
                         <p className="text-sm font-bold">{label}</p>
@@ -549,12 +554,12 @@ function DashboardPageInner() {
               {(totalSatDiff !== 0 || (totalProbDiff != null && totalProbDiff !== 0)) && (
                 <div className="flex items-center justify-center gap-3 mt-3 pt-3 border-t border-border/50 text-xs">
                   {totalSatDiff !== 0 && (
-                    <span className={`font-semibold ${totalSatDiff > 0 ? "text-emerald-600" : "text-red-500"}`}>
+                    <span className={`font-semibold ${totalSatDiff > 0 ? "text-success" : "text-destructive"}`}>
                       SAT {totalSatDiff > 0 ? "+" : ""}{totalSatDiff}
                     </span>
                   )}
                   {totalProbDiff != null && totalProbDiff !== 0 && (
-                    <span className={`font-semibold ${totalProbDiff > 0 ? "text-emerald-600" : "text-red-500"}`}>
+                    <span className={`font-semibold ${totalProbDiff > 0 ? "text-success" : "text-destructive"}`}>
                       합격 확률 {totalProbDiff > 0 ? "+" : ""}{totalProbDiff}%
                     </span>
                   )}
@@ -594,7 +599,7 @@ function DashboardPageInner() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-xl">취소</AlertDialogCancel>
-            <AlertDialogAction onClick={logout} className="bg-red-500 hover:bg-red-600 text-white">
+            <AlertDialogAction onClick={logout} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
               로그아웃
             </AlertDialogAction>
           </AlertDialogFooter>

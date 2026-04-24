@@ -17,6 +17,14 @@ export type UpgradeSource =
   | "dashboard_more_schools"
   | "chat_limit";
 
+/** 대시보드 TodayFocusCard 우선순위 분기 식별자. 추가 시 여기에 append. */
+export type TodayFocusType =
+  | "due_today"
+  | "due_soon"
+  | "profile_incomplete"
+  | "no_essays"
+  | "stale_analysis";
+
 export interface PrismEventPayloads {
   pricing_page_viewed: { plan: Plan };
   upgrade_cta_clicked: { source: UpgradeSource; targetPlan: Plan };
@@ -29,6 +37,8 @@ export interface PrismEventPayloads {
   planner_generated: { plan: Plan; taskCount: number };
   sample_pdf_downloaded: Record<string, never>;
   parent_report_viewed: { plan: Plan; reportType: string };
+  today_focus_shown: { type: TodayFocusType };
+  today_focus_clicked: { type: TodayFocusType; target: string };
 }
 
 export type PrismEventName = keyof PrismEventPayloads;
