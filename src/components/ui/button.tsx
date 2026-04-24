@@ -25,14 +25,14 @@ const buttonVariants = cva(
       //   lg      —  44px — 데스크톱 표준 CTA, h-11 ad-hoc 대체
       //   xl      —  48px — 모바일 표준 CTA / hero (h-12 23회 ad-hoc 대체)
       //   2xl     —  56px — 풀폭 hero CTA (h-14 11회 ad-hoc 대체)
-      //   icon    —  40px square — 아이콘 전용
+      //   icon    —  44px square — 아이콘 전용 (모바일 tap-target 기준)
       size: {
         default: "h-10 px-4 py-2",
         sm: "h-9 px-3",
         lg: "h-11 px-8",
         xl: "h-12 px-6",
         "2xl": "h-14 px-8 text-base",
-        icon: "h-10 w-10",
+        icon: "h-11 w-11",
       },
     },
     defaultVariants: {

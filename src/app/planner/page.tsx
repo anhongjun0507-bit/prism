@@ -394,6 +394,10 @@ function PlannerPageInner() {
     handleGenerate("balanced");
   }, [searchParams, user, router, handleGenerate]);
 
+  // AI 자동 생성 사전 게이팅 — 학년/GPA/전공/목표 대학 중 하나라도 없으면 생성 불가.
+  // 이전엔 버튼 클릭 후 API가 PROFILE_INCOMPLETE로 응답해야 알 수 있었음 → round-trip 낭비 + 혼란.
+  const profileComplete = !!(profile?.grade && profile?.gpa && profile?.major && profile?.dreamSchool);
+
   return (
     <div className="min-h-screen bg-background pb-nav">
       <PageHeader
@@ -406,9 +410,10 @@ function PlannerPageInner() {
               onClick={() => handleGenerate("balanced")}
               variant="outline"
               size="sm"
-              disabled={genLoading}
+              disabled={genLoading || !profileComplete}
               className="rounded-full gap-1.5 shrink-0"
-              aria-label="AI로 다음 주 자동 생성"
+              aria-label={profileComplete ? "AI로 다음 주 자동 생성" : "프로필을 먼저 완성해주세요"}
+              title={profileComplete ? undefined : "프로필을 완성해야 AI가 맞춤 일정을 만들 수 있어요"}
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">AI 자동 생성</span>
@@ -420,6 +425,23 @@ function PlannerPageInner() {
           </div>
         }
       />
+      {!profileComplete && (
+        <div className="px-gutter pt-1 pb-3">
+          <div className="rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-950/20 p-3 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2">
+            <Sparkles className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />
+            <span className="flex-1">
+              AI 자동 생성은 학년·GPA·전공·목표 대학교가 모두 입력된 후 사용할 수 있어요.{" "}
+              <button
+                type="button"
+                onClick={() => router.push("/analysis")}
+                className="font-semibold underline underline-offset-2 hover:text-amber-700"
+              >
+                지금 입력하기
+              </button>
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="px-gutter space-y-6">
         {/* Urgent deadlines banner */}

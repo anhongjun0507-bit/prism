@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { listAvailableRubrics } from "@/lib/university-rubric";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
+import { PrismLoader } from "@/components/PrismLoader";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import { db } from "@/lib/firebase";
 import { doc, setDoc, getDoc, collection, query, orderBy, limit as fsLimit, getDocs } from "firebase/firestore";
@@ -25,7 +26,7 @@ import { chime } from "@/lib/chime";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, CheckCircle2, AlertCircle, Lightbulb, Sparkles,
-  Target, MessageCircle, RotateCcw, X, Download, FileText, GraduationCap, Crown,
+  Target, MessageCircle, RotateCcw, X, Download, FileText, GraduationCap, Crown, HelpCircle,
 } from "lucide-react";
 import { exportReviewToPDF, exportReviewToDoc } from "@/lib/essay-export";
 import type { Essay, EssayReview } from "@/types/essay";
@@ -149,8 +150,10 @@ function EssayReviewPageInner() {
   const [university, setUniversity] = useState("");
   // "general" = rubric 미적용(기본 첨삭), 그 외 값은 availableRubrics의 id
   const [universityId, setUniversityId] = useState<string>("general");
+  const [rubricInfoOpen, setRubricInfoOpen] = useState(false);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingElapsed, setLoadingElapsed] = useState(0);
   const [result, setResult] = useState<ReviewResult | null>(null);
   // 이전(저장된) 리뷰를 보여줄 때 표시할 메타 — "새 리뷰 받기" 버튼 라벨·뱃지에 사용
   const [priorReviewMeta, setPriorReviewMeta] = useState<{ createdAt: string; count: number } | null>(null);
@@ -263,6 +266,14 @@ function EssayReviewPageInner() {
     }, 500);
     return () => clearTimeout(timer);
   }, [university, prompt, essay, essayId, result]);
+
+  // loading 경과 시간 — 30초 초과 시 "조금만 더 기다려주세요" 카피 전환용
+  useEffect(() => {
+    if (!loading) { setLoadingElapsed(0); return; }
+    const started = Date.now();
+    const t = setInterval(() => setLoadingElapsed(Math.floor((Date.now() - started) / 1000)), 1000);
+    return () => clearInterval(t);
+  }, [loading]);
 
   // Warn before unload when work is unsaved.
   // Fires during loading (API in-flight) or when content is dirty (debounce hasn't fired).
@@ -531,14 +542,35 @@ function EssayReviewPageInner() {
 
         {/* University selector — Top 20에는 대학별 맞춤 rubric 적용, 나머지는 일반 첨삭 */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-semibold">대학교</label>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <label className="text-sm font-semibold">대학교</label>
+              <button
+                type="button"
+                aria-label="대학별 채점 기준이란?"
+                aria-expanded={rubricInfoOpen}
+                onClick={() => setRubricInfoOpen((v) => !v)}
+                className="inline-flex items-center justify-center w-6 h-6 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <HelpCircle className="w-4 h-4" aria-hidden="true" />
+              </button>
+            </div>
             {canUseUniversityRubric && universityId !== "general" && (
               <Badge variant="secondary" className="bg-gradient-to-r from-amber-100 to-violet-100 text-violet-700 dark:from-amber-900/30 dark:to-violet-900/30 dark:text-violet-300 text-[10px] px-2 py-0.5 rounded-full">
-                <Crown className="w-3 h-3 mr-1" /> Elite 맞춤 rubric
+                <Crown className="w-3 h-3 mr-1" /> Elite 맞춤 채점
               </Badge>
             )}
           </div>
+          {rubricInfoOpen && (
+            <div className="rounded-xl border border-violet-200 dark:border-violet-900/50 bg-violet-50/60 dark:bg-violet-950/20 p-3 text-xs text-muted-foreground leading-relaxed space-y-1">
+              <p>
+                <span className="font-semibold text-foreground">대학별 채점 기준(rubric):</span> Top 20 대학은 각 학교가 실제로 중시하는 역량(예: Harvard는 intellectual vitality, MIT는 technical rigor)에 맞춰 AI가 채점해요.
+              </p>
+              <p>
+                Elite 플랜에서 자동 적용되며, 그 외 대학교는 공통 기준으로 평가돼요.
+              </p>
+            </div>
+          )}
           <Select
             value={universityId}
             onValueChange={(v) => {
@@ -666,10 +698,42 @@ function EssayReviewPageInner() {
           </div>
         )}
 
+        {/* Long-call loading state — PrismLoader + time estimate + 3-stage progress */}
+        {loading && (
+          <Card variant="elevated" className="p-8 text-center space-y-3">
+            <div className="flex justify-center">
+              <PrismLoader size={56} />
+            </div>
+            <div className="space-y-1">
+              <p className="font-bold text-sm">AI가 에세이를 분석하고 있어요</p>
+              <p className="text-xs text-muted-foreground">
+                {loadingElapsed >= 30
+                  ? "조금만 더 기다려주세요"
+                  : "15~30초 정도 걸려요"}
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2 pt-1 text-xs text-muted-foreground">
+              <span className={loadingElapsed < 10 ? "text-primary font-semibold" : ""}>1/3 내용 분석</span>
+              <span>·</span>
+              <span className={loadingElapsed >= 10 && loadingElapsed < 20 ? "text-primary font-semibold" : ""}>2/3 rubric 평가</span>
+              <span>·</span>
+              <span className={loadingElapsed >= 20 ? "text-primary font-semibold" : ""}>3/3 피드백 작성</span>
+            </div>
+            {canUseUniversityRubric && universityId !== "general" && (
+              <p className="text-xs text-violet-600 dark:text-violet-300 pt-2 border-t border-border/40">
+                이 대학 전용 기준으로 채점 중이에요
+              </p>
+            )}
+          </Card>
+        )}
+
         {/* Error */}
         {error && (
-          <Card className="p-4 border-red-200 bg-red-50">
-            <p className="text-sm text-red-700">{error}</p>
+          <Card className="p-4 border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800 space-y-3">
+            <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+            <Button variant="outline" size="sm" onClick={handleReview} disabled={!essay.trim()}>
+              다시 시도
+            </Button>
           </Card>
         )}
 

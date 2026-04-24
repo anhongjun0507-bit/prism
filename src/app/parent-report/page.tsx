@@ -39,9 +39,15 @@ function ParentReportPageInner() {
   // 숫자 기반 리포트를 보여줘 학부모가 자녀 실제 성적으로 오해할 위험.
   const hasSpecs = !!(profile?.gpa || profile?.sat);
   const [matchResults, setMatchResults] = useState<School[]>([]);
+  const [matchLoading, setMatchLoading] = useState(true);
+  const [matchError, setMatchError] = useState<string | null>(null);
+  const [matchRetryToken, setMatchRetryToken] = useState(0);
   useEffect(() => {
-    if (!profile || !hasSpecs) {
+    if (!profile) return;
+    if (!hasSpecs) {
       setMatchResults([]);
+      setMatchLoading(false);
+      setMatchError(null);
       return;
     }
     const specs: Specs = {
@@ -53,14 +59,25 @@ function ParentReportPageInner() {
       intl: true, major: profile.major || "Computer Science",
     };
     let cancelled = false;
+    setMatchLoading(true);
+    setMatchError(null);
     fetchWithAuth<{ results: School[] }>("/api/match", {
       method: "POST",
       body: JSON.stringify({ specs }),
     })
-      .then((d) => { if (!cancelled) setMatchResults(d.results || []); })
-      .catch((e) => { if (!cancelled) showApiError(e, { title: "리포트 데이터 로드 실패" }); });
+      .then((d) => {
+        if (cancelled) return;
+        setMatchResults(d.results || []);
+        setMatchLoading(false);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setMatchLoading(false);
+        setMatchError("리포트 데이터를 불러오지 못했어요.");
+        showApiError(e, { title: "리포트 데이터 로드 실패" });
+      });
     return () => { cancelled = true; };
-  }, [profile, hasSpecs, showApiError]);
+  }, [profile, hasSpecs, showApiError, matchRetryToken]);
 
   const stats = useMemo(() => {
     if (!profile || matchResults.length === 0) return null;
@@ -100,6 +117,48 @@ function ParentReportPageInner() {
       </div>
     );
   }
+
+  const reportSkeleton = (
+    <div className="space-y-6" aria-hidden="true">
+      <div className="dark-hero-gradient rounded-xl h-40 animate-pulse opacity-70" />
+      <Card className="p-5 bg-card border-none shadow-sm space-y-3">
+        <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+        <div className="grid grid-cols-3 gap-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="p-3 bg-muted/30 rounded-xl space-y-2">
+              <div className="h-3 w-10 bg-muted rounded animate-pulse mx-auto" />
+              <div className="h-7 w-12 bg-muted rounded animate-pulse mx-auto" />
+            </div>
+          ))}
+        </div>
+      </Card>
+      <Card className="p-5 bg-card border-none shadow-sm space-y-3">
+        <div className="h-4 w-28 bg-muted rounded animate-pulse" />
+        <div className="space-y-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-6 w-full bg-muted rounded animate-pulse" />
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+
+  const reportErrorCard = matchError ? (
+    <Card className="rounded-2xl border-red-200 bg-red-50/60 dark:bg-red-950/20 p-5 flex items-start gap-3">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-red-700 dark:text-red-300">{matchError}</p>
+        <p className="text-xs text-muted-foreground mt-1">네트워크를 확인하고 다시 시도해주세요.</p>
+      </div>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => setMatchRetryToken((t) => t + 1)}
+        className="shrink-0 rounded-xl"
+      >
+        재시도
+      </Button>
+    </Card>
+  ) : null;
 
   const reportContent = (
     <div className="space-y-6">
@@ -278,7 +337,14 @@ function ParentReportPageInner() {
 
       <div className="px-gutter">
         {hasAccess ? (
-          reportContent
+          matchLoading && hasSpecs && matchResults.length === 0 ? (
+            reportSkeleton
+          ) : (
+            <>
+              {reportErrorCard}
+              {reportContent}
+            </>
+          )
         ) : (
           <div className="relative">
             <div className="pointer-events-none select-none blur-sm opacity-50">{reportContent}</div>

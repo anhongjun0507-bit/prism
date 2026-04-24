@@ -122,7 +122,7 @@ export function AdmissionFeed() {
                 <Icon className={`w-3.5 h-3.5 ${config.color}`} aria-hidden="true" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs truncate">
+                <p className="text-xs truncate" title={item.school}>
                   <span className="font-medium">GPA {item.gpaRange || "?"} · SAT {item.satRange || "?"}</span>
                   {" → "}
                   <span className="font-bold">{item.school}</span>

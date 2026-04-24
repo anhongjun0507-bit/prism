@@ -81,8 +81,8 @@ export function DesktopSidebar() {
       </nav>
 
       {/* Footer hint — 작은 도움말 */}
-      <div className="px-card-lg py-card text-xs text-muted-foreground/70 border-t border-border/40">
-        <p className="font-medium text-foreground/70 mb-0.5">PRISM</p>
+      <div className="px-card-lg py-card text-sm text-muted-foreground border-t border-border/40">
+        <p className="font-medium text-foreground/80 mb-0.5">PRISM</p>
         <p>미국 대학 입시 매니저</p>
       </div>
     </aside>

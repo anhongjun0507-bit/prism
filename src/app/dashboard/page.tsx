@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
-  Sparkles, Target, BookOpen, ChevronRight, GraduationCap,
+  Sparkles, Target, BookOpen, ChevronRight, ChevronDown, GraduationCap,
   LogOut, Crown, Settings, TrendingUp, Heart, Search,
   Zap, Users, Wand2,
 } from "lucide-react";
@@ -173,6 +173,7 @@ function DashboardPageInner() {
 
   const [showResultModal, setShowResultModal] = useState(false);
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const currentMonth = new Date().getMonth() + 1;
   const isAdmissionSeason = currentMonth >= 3 && currentMonth <= 5;
 
@@ -309,28 +310,32 @@ function DashboardPageInner() {
           </div>
         )}
 
-        {/* Admission season banner + feed */}
-        {isAdmissionSeason && (profile?.grade === "12학년" || profile?.grade === "졸업생/Gap Year") && (
+        {/* 스펙 미입력 — 단일 CTA만 노출. 도구/피드/스탯은 숨김. */}
+        {!hasSpecs && (
+          <>
+            <Link href="/analysis">
+              <Card className="p-5 rounded-2xl border border-primary/25 bg-primary/5 flex items-center gap-3 hover:bg-primary/10 transition-all active:scale-[0.98]">
+                <div className="w-12 h-12 rounded-xl bg-primary/12 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold">성적을 입력해 시작하세요</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">GPA·SAT를 입력하면 합격 확률 분석이 열려요</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-primary shrink-0" />
+              </Card>
+            </Link>
+            <p className="text-xs text-muted-foreground text-center">
+              먼저 분석을 완료하면 대학교 저장·에세이 리뷰·플래너가 활성화돼요
+            </p>
+          </>
+        )}
+
+        {/* Admission season banner + feed — 스펙 입력 완료된 경우만 */}
+        {hasSpecs && isAdmissionSeason && (profile?.grade === "12학년" || profile?.grade === "졸업생/Gap Year") && (
           <AdmissionResultBanner onOpen={() => setShowResultModal(true)} />
         )}
-        <SimilarAdmissionCard />
-        {isAdmissionSeason && <AdmissionFeed />}
-
-        {/* First-time CTA — 스펙이 없을 때만 표시. 있으면 Hero에 이미 정보가 있어 중복. */}
-        {!hasSpecs && (
-          <Link href="/analysis">
-            <Card className="p-4 rounded-2xl border border-primary/25 bg-primary/5 flex items-center gap-3 hover:bg-primary/10 transition-all active:scale-[0.98]">
-              <div className="w-11 h-11 rounded-xl bg-primary/12 flex items-center justify-center shrink-0">
-                <Sparkles className="w-5 h-5 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold">성적을 입력해보세요</p>
-                <p className="text-xs text-muted-foreground mt-0.5">GPA·SAT로 합격 확률을 확인해요</p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-primary shrink-0" />
-            </Card>
-          </Link>
-        )}
+        {hasSpecs && <SimilarAdmissionCard />}
 
         {/* Stats row — 0개인 항목은 숨기고, 남은 항목만 균등 배치 */}
         {hasSpecs && quickResults.length > 0 && (() => {
@@ -357,24 +362,8 @@ function DashboardPageInner() {
           );
         })()}
 
-        {/* Tools — BottomNav에 없는 특수 기능 4개. 2x2 카드 그리드. */}
-        <div className="grid grid-cols-2 gap-3">
-          {tools.map(({ href, label, desc, Icon, color, bg }) => (
-            <Link key={href} href={href} className="block">
-              <Card className="p-4 rounded-2xl border border-border/60 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all active:scale-[0.98] h-full flex flex-col gap-2.5">
-                <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center`}>
-                  <Icon className={`w-5 h-5 ${color}`} />
-                </div>
-                <div>
-                  <p className="text-sm font-bold">{label}</p>
-                  <p className="text-2xs text-muted-foreground mt-0.5 leading-snug">{desc}</p>
-                </div>
-              </Card>
-            </Link>
-          ))}
-        </div>
-
-        {/* My schools */}
+        {/* My schools — tools보다 위에 배치 (사용자 핵심 정보 우선) */}
+        {hasSpecs && (
         <div className="space-y-2.5">
           <div className="flex justify-between items-center">
             <h2 className="font-headline text-base font-bold">나의 지원 대학교</h2>
@@ -463,6 +452,45 @@ function DashboardPageInner() {
             })
           )}
         </div>
+        )}
+
+        {/* 도구 — 저장/리뷰/시뮬레이션은 core flow 아래 collapsible로 숨김 */}
+        {hasSpecs && (
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => setToolsOpen((v) => !v)}
+              aria-expanded={toolsOpen}
+              className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 bg-muted/40 hover:bg-muted/60 transition-colors min-h-[44px]"
+            >
+              <span className="text-sm font-semibold">더 많은 도구</span>
+              <ChevronDown
+                className={`w-4 h-4 text-muted-foreground transition-transform ${toolsOpen ? "rotate-180" : ""}`}
+                aria-hidden="true"
+              />
+            </button>
+            {toolsOpen && (
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                {tools.map(({ href, label, desc, Icon, color, bg }) => (
+                  <Link key={href} href={href} className="block">
+                    <Card className="p-4 rounded-2xl border border-border/60 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all active:scale-[0.98] h-full flex flex-col gap-2.5">
+                      <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center`}>
+                        <Icon className={`w-5 h-5 ${color}`} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold">{label}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{desc}</p>
+                      </div>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 합격 실황 피드 — 스펙 입력 후 도구 아래에 위치 */}
+        {hasSpecs && isAdmissionSeason && <AdmissionFeed />}
 
         {/* Free user upgrade nudge */}
         {currentPlan === "free" && hasSpecs && (

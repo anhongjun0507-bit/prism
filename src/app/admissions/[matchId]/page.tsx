@@ -1,6 +1,6 @@
-import { notFound } from "next/navigation";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { AdmissionDetailPage } from "@/components/admissions/AdmissionDetailPage";
+import { AdmissionUnavailable } from "@/components/admissions/AdmissionUnavailable";
 
 interface PageProps {
   params: Promise<{ matchId: string }>;
@@ -9,6 +9,8 @@ interface PageProps {
 /**
  * 합격 사례 상세 (Elite). Server Component에서 verified 체크 후 렌더.
  * 실제 Elite 플랜 게이팅은 상세 데이터 fetch 시점의 API(/api/admissions/analyze)에서 수행.
+ * 누락/비공개/오류 상황에서는 404가 아닌 AdmissionUnavailable 안내 페이지를 노출 — 공유 URL을
+ * 받은 Free/Pro 사용자가 방향을 잃지 않도록.
  */
 export default async function Page({ params }: PageProps) {
   const { matchId } = await params;
@@ -16,17 +18,20 @@ export default async function Page({ params }: PageProps) {
   let raw: Record<string, unknown> | null = null;
   try {
     const doc = await getAdminDb().collection("admission_results").doc(matchId).get();
-    if (!doc.exists) notFound();
+    if (!doc.exists) {
+      return <AdmissionUnavailable reason="not_found" />;
+    }
     const data = doc.data() ?? {};
-    if (data.verified !== true) notFound();
+    if (data.verified !== true) {
+      return <AdmissionUnavailable reason="unverified" />;
+    }
     raw = data;
   } catch {
-    notFound();
+    return <AdmissionUnavailable reason="error" />;
   }
 
-  if (!raw) notFound();
+  if (!raw) return <AdmissionUnavailable reason="not_found" />;
 
-  // 직렬화 가능한 plain object만 클라이언트로 전달
   const admission = {
     id: matchId,
     university: String(raw.university ?? ""),

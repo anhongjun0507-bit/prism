@@ -157,6 +157,64 @@ export default function LandingPage() {
 
         {/* ═══ Client-side Auth UI ═══ */}
         <AuthSection />
+
+        {/* ═══ How it works — 3 simple steps ═══ */}
+        <section
+          aria-label="PRISM 이용 방법"
+          className="w-full mt-14 space-y-5"
+        >
+          <h2 className="text-center text-base font-bold text-foreground">
+            3단계로 시작해요
+          </h2>
+          <ol className="space-y-3">
+            {[
+              {
+                step: "1",
+                title: "성적 입력",
+                desc: "GPA·SAT·전공을 입력하면 2분 안에 분석이 끝나요.",
+              },
+              {
+                step: "2",
+                title: "합격 확률 분석",
+                desc: "1,001개 미국 대학교의 합격 확률을 Reach·Target·Safety로 분류해줘요.",
+              },
+              {
+                step: "3",
+                title: "에세이·플래너로 실행",
+                desc: "AI가 에세이를 첨삭하고 지원 마감일까지 할 일을 매주 정리해요.",
+              },
+            ].map((s) => (
+              <li
+                key={s.step}
+                className="flex gap-3 p-4 rounded-2xl bg-card/70 dark:bg-card/40 border border-border/50 backdrop-blur-sm"
+              >
+                <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary font-bold flex items-center justify-center shrink-0 text-sm">
+                  {s.step}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">{s.title}</p>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    {s.desc}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          {/* Sample report CTA */}
+          <a
+            href="/sample-report"
+            className="flex items-center justify-between p-4 rounded-2xl bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-colors"
+          >
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-foreground">샘플 리포트 먼저 보기</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                가입 전에 실제 분석 결과를 확인해보세요
+              </p>
+            </div>
+            <span className="text-primary text-xl shrink-0" aria-hidden="true">→</span>
+          </a>
+        </section>
       </div>
     </div>
   );

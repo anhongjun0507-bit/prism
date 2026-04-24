@@ -184,20 +184,20 @@ function SpecAnalysisPageInner() {
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">GPA (UW)</Label>
-          <Input placeholder="4.0" type="number" inputMode="decimal" step="0.01" value={editGpa} onChange={(e) => setEditGpa(e.target.value)} className="h-10 rounded-xl" />
+          <Input placeholder="4.0" type="number" inputMode="decimal" step="0.01" value={editGpa} onChange={(e) => setEditGpa(e.target.value)} className="h-11 rounded-xl" />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">SAT</Label>
-          <Input placeholder="1400" type="number" inputMode="numeric" value={editSat} onChange={(e) => setEditSat(e.target.value)} className="h-10 rounded-xl" />
+          <Input placeholder="1400" type="number" inputMode="numeric" value={editSat} onChange={(e) => setEditSat(e.target.value)} className="h-11 rounded-xl" />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">TOEFL</Label>
-          <Input placeholder="110" type="number" inputMode="numeric" value={editToefl} onChange={(e) => setEditToefl(e.target.value)} className="h-10 rounded-xl" />
+          <Input placeholder="110" type="number" inputMode="numeric" value={editToefl} onChange={(e) => setEditToefl(e.target.value)} className="h-11 rounded-xl" />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">학년</Label>
           <select value={editGrade} onChange={(e) => setEditGrade(e.target.value)}
-            className="w-full h-10 rounded-xl border border-input px-3 text-sm bg-background">
+            className="w-full h-11 rounded-xl border border-input px-3 text-sm bg-background">
             <option value="">선택</option>
             {["9학년","10학년","11학년","12학년","졸업생/Gap Year"].map(g => <option key={g} value={g}>{g}</option>)}
           </select>
@@ -245,7 +245,7 @@ function SpecAnalysisPageInner() {
           aria-haspopup="listbox"
           aria-autocomplete="list"
           autoComplete="off"
-          className="h-10 rounded-xl"
+          className="h-11 rounded-xl"
         />
         {filteredUnis.length > 0 && !editDreamSchool && (
           <div role="listbox" aria-label="대학교 검색 결과" className="absolute top-full left-0 right-0 z-10 bg-card rounded-xl shadow-lg border mt-1 max-h-48 overflow-y-auto overscroll-contain">
@@ -275,7 +275,7 @@ function SpecAnalysisPageInner() {
       <div className="space-y-1.5">
         <Label className="text-xs text-muted-foreground">지망 전공</Label>
         <select value={editMajor} onChange={(e) => setEditMajor(e.target.value)}
-          className="w-full h-10 rounded-xl border border-input px-3 text-sm bg-background">
+          className="w-full h-11 rounded-xl border border-input px-3 text-sm bg-background">
           <option value="">선택</option>
           {MAJOR_LIST.map(m => <option key={m} value={m}>{m}</option>)}
         </select>
@@ -285,7 +285,7 @@ function SpecAnalysisPageInner() {
         <Sparkles className="w-4 h-4" /> {analysis ? "다시 분석하기" : "AI 분석 시작"}
       </Button>
 
-      <p className="text-2xs text-muted-foreground/60 text-center">
+      <p className="text-xs text-muted-foreground/70 text-center">
         수정한 값은 이 분석에만 적용돼요 · 프로필은 변경되지 않아요
       </p>
     </Card>

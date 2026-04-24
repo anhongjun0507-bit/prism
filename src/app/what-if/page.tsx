@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Sparkles, TrendingUp, TrendingDown, RotateCcw } from "lucide-react";
+import { Sparkles, TrendingUp, TrendingDown, RotateCcw, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { useAuth } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
@@ -15,6 +15,7 @@ import type { Specs, School } from "@/lib/matching";
 import { fetchWithAuth } from "@/lib/api-client";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import { CAT_STYLE } from "@/lib/analysis-helpers";
+import { useToast } from "@/hooks/use-toast";
 
 /* ───── helpers ───── */
 function buildSpecs(
@@ -38,6 +39,7 @@ export default function WhatIfPage() {
 
 function WhatIfPageInner() {
   const { profile, saveProfile, isMaster } = useAuth();
+  const { toast } = useToast();
   const currentPlan = normalizePlan(profile?.plan);
   const hasFullAccess = isMaster || PLANS[currentPlan].features.whatIfEnabled;
   const whatIfUsed = profile?.whatIfUsed || 0;
@@ -90,6 +92,9 @@ function WhatIfPageInner() {
   /* ── compute results — server-side, debounced ── */
   const [baselineResults, setBaselineResults] = useState<School[]>([]);
   const [whatIfResults, setWhatIfResults] = useState<School[]>([]);
+  const [simulating, setSimulating] = useState(false);
+  const [simError, setSimError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
 
   // baseline은 profile 변경 시에만 한 번 fetch
   useEffect(() => {
@@ -104,20 +109,37 @@ function WhatIfPageInner() {
     return () => { cancelled = true; };
   }, [profile]);
 
-  // what-if는 슬라이더 변경 시 debounce 후 fetch (interactive UX)
+  // what-if는 슬라이더 변경 시 debounce 후 fetch (interactive UX).
+  // retryToken 증가 시 재시도. 에러 시 whatIfResults는 이전 값 유지(깨짐 방지).
   useEffect(() => {
     if (!profile) return;
     let cancelled = false;
     const timer = setTimeout(() => {
+      setSimulating(true);
+      setSimError(null);
       fetchWithAuth<{ results: School[] }>("/api/match", {
         method: "POST",
         body: JSON.stringify({ specs: buildSpecs(profile, { gpa, sat, toefl, ecTier, awardTier }) }),
       })
-        .then((d) => { if (!cancelled) setWhatIfResults(d.results || []); })
-        .catch((e) => console.warn("[what-if] simulation fetch failed:", e));
-    }, 600); // 600ms debounce — 모바일 슬라이더 터치 드래그 시 과도한 요청 완화
+        .then((d) => {
+          if (cancelled) return;
+          setWhatIfResults(d.results || []);
+          setSimulating(false);
+        })
+        .catch((e) => {
+          if (cancelled) return;
+          setSimulating(false);
+          setSimError("시뮬레이션에 실패했어요. 다시 시도해주세요.");
+          toast({
+            title: "시뮬레이션 실패",
+            description: "네트워크를 확인하고 다시 시도해주세요.",
+            variant: "destructive",
+          });
+          console.warn("[what-if] simulation fetch failed:", e);
+        });
+    }, 500); // 500ms debounce — 모바일 슬라이더 터치 드래그 시 과도한 요청 완화
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [profile, gpa, sat, toefl, ecTier, awardTier]);
+  }, [profile, gpa, sat, toefl, ecTier, awardTier, retryToken, toast]);
 
   /* ── category counts ── */
   const count = (list: typeof baselineResults, cat: string) =>
@@ -146,6 +168,30 @@ function WhatIfPageInner() {
   /* ═══ RENDER ═══ */
   const simulatorContent = (
     <div className="space-y-5">
+      {/* ── Status: simulating / error ── */}
+      {simulating && !simError && (
+        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground py-2" role="status" aria-live="polite">
+          <Loader2 className="w-4 h-4 animate-spin text-primary" aria-hidden="true" />
+          합격 확률 계산 중...
+        </div>
+      )}
+      {simError && (
+        <Card className="rounded-2xl border-red-200 bg-red-50/60 dark:bg-red-950/20 p-4 flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-red-700 dark:text-red-300">{simError}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">이전 결과를 그대로 보여드리고 있어요.</p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setRetryToken((t) => t + 1)}
+            className="shrink-0 rounded-xl"
+          >
+            재시도
+          </Button>
+        </Card>
+      )}
+
       {/* ── Adjustable Specs ── */}
       <Card className="rounded-2xl bg-card shadow-sm p-5 space-y-4">
         <div className="flex items-center justify-between">

@@ -73,7 +73,7 @@ export function BottomNav() {
                 <span className="sr-only">현재 페이지: </span>
               </>
             )}
-            <span className="text-xs font-medium">{item.label}</span>
+            <span className="text-[13px] leading-tight font-medium">{item.label}</span>
           </Link>
         );
       })}
@@ -90,7 +90,7 @@ export function BottomNav() {
       >
         <MoreHorizontal className={cn("w-5 h-5", onMoreRoute && "stroke-[2.5px]")} aria-hidden="true" />
         {onMoreRoute && <span className="w-1 h-1 rounded-full bg-primary absolute top-1 right-2" aria-hidden="true" />}
-        <span className="text-xs font-medium">더보기</span>
+        <span className="text-[13px] leading-tight font-medium">더보기</span>
       </button>
     </nav>
 
@@ -122,7 +122,7 @@ export function BottomNav() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm">{item.label}</p>
-                  <p className="text-xs text-muted-foreground line-clamp-1">{item.description}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-1">{item.description}</p>
                 </div>
               </Link>
             );

@@ -151,7 +151,7 @@ export function SchoolModal({ school, open, onClose, specs }: { school: School |
         {/* Hero header — extra bottom padding leaves room for the overlapping card */}
         <div className="shrink-0">
           <CampusPhoto schoolName={school.n} color={school.c} className="p-6 pb-14">
-            <button onClick={onClose} aria-label="모달 닫기" className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/25 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/40 transition">
+            <button onClick={onClose} aria-label="모달 닫기" className="absolute top-3 right-3 z-20 w-11 h-11 rounded-full bg-black/25 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/40 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
               <X className="w-4 h-4" />
             </button>
             <DialogHeader className="text-white">

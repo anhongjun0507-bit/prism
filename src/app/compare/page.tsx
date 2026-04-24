@@ -361,11 +361,60 @@ function ComparePageInner() {
           </Card>
         )}
 
-        {/* Comparison table */}
+        {/* Comparison — mobile card layout */}
         {selected.length >= 2 && (
-          <Card className="overflow-hidden">
+          <div className="space-y-4 md:hidden">
+            {rows.map((row) => {
+              const bestIdx = getBestIdx(row);
+              return (
+                <Card key={row.key} className="p-4 space-y-2.5">
+                  <p className="text-xs font-semibold text-muted-foreground">
+                    {row.label}
+                  </p>
+                  <div className="space-y-1.5">
+                    {selected.map((s, i) => (
+                      <div
+                        key={s.n}
+                        className={`flex items-center justify-between gap-3 rounded-lg px-2.5 py-2 ${
+                          bestIdx === i
+                            ? "bg-emerald-50 dark:bg-emerald-950/30"
+                            : ""
+                        }`}
+                        aria-label={bestIdx === i ? `${row.label} 최적 값` : undefined}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ backgroundColor: s.c || "#6366f1" }}
+                            aria-hidden="true"
+                          />
+                          <span className="text-sm font-medium truncate" title={s.n}>
+                            {s.n}
+                          </span>
+                        </div>
+                        <span
+                          className={`text-sm tabular-nums shrink-0 ${
+                            bestIdx === i
+                              ? "font-bold text-emerald-700 dark:text-emerald-300"
+                              : "font-medium text-foreground"
+                          }`}
+                        >
+                          {row.getValue(s)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Comparison — desktop table */}
+        {selected.length >= 2 && (
+          <Card className="overflow-hidden hidden md:block">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[600px]">
+              <table className="w-full">
                 <thead>
                   <tr className="border-b border-border/50">
                     <th className="text-left text-xs text-muted-foreground p-3 w-24">
