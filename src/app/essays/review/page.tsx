@@ -21,6 +21,7 @@ import { db } from "@/lib/firebase";
 import { doc, setDoc, getDoc, collection, query, orderBy, limit as fsLimit, getDocs } from "firebase/firestore";
 import { fetchWithAuth, ApiError, streamWithAuth, consumeSSE } from "@/lib/api-client";
 import { StreamingResultView } from "@/components/essays/StreamingResultView";
+import { parseStreamedReview, isReviewParseFatal } from "@/lib/essays/parse-streamed-review";
 import { readJSON, writeJSON, removeKey } from "@/lib/storage";
 import { haptic } from "@/hooks/use-haptic";
 import { chime } from "@/lib/chime";
@@ -325,6 +326,148 @@ function EssayReviewPageInner() {
   const useSSE = isMaster;
   const [streamedContent, setStreamedContent] = useState("");
   const [streamingComplete, setStreamingComplete] = useState(false);
+  const [parseError, setParseError] = useState(false);
+
+  /**
+   * 파싱된 review를 EssayReview로 승격해 로컬 state/cache/Firestore에 저장.
+   * JSON 모드와 SSE(마크다운) 모드가 동일한 persistence 경로를 공유하도록 추출.
+   *
+   * - linked essay (essayId 있음): reviews 배열에 append
+   * - new essay: 새 Essay 문서 생성 + 첫 review로 등록
+   *
+   * 두 브랜치 모두 optimistic 로컬 반영 후 Firestore write를 await,
+   * 실패 시 toast + rollback. 마지막에 draft 정리 + 쿼터 카운트.
+   */
+  const persistReviewToEssay = async (parsed: ReviewResult): Promise<void> => {
+    const newReview: EssayReview = {
+      ...parsed,
+      id: `r-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      createdAt: new Date().toISOString(),
+    };
+
+    let updatedEssay: Essay | null = null;
+    let writePromise: Promise<void> | null = null;
+    let rollback: (() => void) | null = null;
+
+    if (essayId) {
+      let targetFound = false;
+      let prevSnapshot: Essay[] | null = null;
+      setEssays((prev) => {
+        const target = prev.find((e) => e.id === essayId);
+        if (!target) return prev;
+        targetFound = true;
+        prevSnapshot = prev;
+        updatedEssay = {
+          ...target,
+          reviews: [...(target.reviews ?? []), newReview],
+          updatedAt: new Date().toISOString(),
+        };
+        const next = prev.map((e) => (e.id === essayId ? updatedEssay! : e));
+        saveEssaysCache(next);
+        return next;
+      });
+      if (prevSnapshot) {
+        const snap = prevSnapshot;
+        rollback = () => {
+          setEssays(snap);
+          saveEssaysCache(snap);
+        };
+      }
+
+      if (!targetFound && user) {
+        try {
+          const snap = await getDoc(doc(db, "users", user.uid, "essays", essayId));
+          if (snap.exists()) {
+            const base = { id: snap.id, ...(snap.data() as Omit<Essay, "id">) };
+            updatedEssay = {
+              ...base,
+              reviews: [...(base.reviews ?? []), newReview],
+              updatedAt: new Date().toISOString(),
+            };
+            let fallbackPrev: Essay[] | null = null;
+            setEssays((prev) => {
+              fallbackPrev = prev;
+              const exists = prev.some((e) => e.id === essayId);
+              const next = exists
+                ? prev.map((e) => (e.id === essayId ? updatedEssay! : e))
+                : [updatedEssay!, ...prev];
+              saveEssaysCache(next);
+              return next;
+            });
+            if (fallbackPrev) {
+              const snap2 = fallbackPrev;
+              rollback = () => {
+                setEssays(snap2);
+                saveEssaysCache(snap2);
+              };
+            }
+          }
+        } catch (e) {
+          logError("[review] fallback fetch failed:", e);
+        }
+      }
+
+      if (user && updatedEssay) {
+        writePromise = setDoc(
+          doc(db, "users", user.uid, "essays", essayId),
+          updatedEssay,
+          { merge: true },
+        );
+      }
+    } else {
+      const newEssayId = Date.now().toString();
+      const limitMatch = prompt.match(/(\d+)자/);
+      const newEssay: Essay = {
+        id: newEssayId,
+        university: university.trim() || "(대학교 미지정)",
+        prompt: prompt.trim(),
+        content: essay,
+        lastSaved: new Date().toISOString().split("T")[0],
+        updatedAt: new Date().toISOString(),
+        wordLimit: limitMatch ? parseInt(limitMatch[1]) : undefined,
+        reviews: [newReview],
+      };
+      const prevList = loadEssays();
+      const next = [newEssay, ...prevList];
+      saveEssaysCache(next);
+      setEssays(next);
+      setSavedAsNew({ id: newEssayId, university: newEssay.university });
+      updatedEssay = newEssay;
+      if (user) {
+        writePromise = setDoc(
+          doc(db, "users", user.uid, "essays", newEssayId),
+          newEssay,
+          { merge: true },
+        );
+        rollback = () => {
+          setEssays(prevList);
+          saveEssaysCache(prevList);
+          setSavedAsNew(null);
+        };
+      }
+    }
+
+    if (writePromise) {
+      try {
+        await writePromise;
+      } catch (e) {
+        logError("[review] essay write failed:", e);
+        rollback?.();
+        toast({
+          title: "저장 실패",
+          description: "첨삭은 받았지만 클라우드 저장에 실패했어요. 네트워크를 확인 후 다시 시도해주세요.",
+          variant: "destructive",
+        });
+      }
+    }
+
+    removeKey(DRAFT_KEY);
+    setDraftDirty(false);
+
+    if (!canReview) {
+      await saveProfile({ essayReviewUsed: (profile?.essayReviewUsed || 0) + 1 });
+    }
+  };
 
   const handleReviewStreaming = async () => {
     if (!essay.trim()) return;
@@ -335,10 +478,15 @@ function EssayReviewPageInner() {
     setLangMismatchWarning(false);
     setStreamedContent("");
     setStreamingComplete(false);
+    setParseError(false);
+
     transitionPhase("loading");
 
     const startedAt = Date.now();
     const selectedRubricId = universityId !== "general" ? universityId : undefined;
+    const selectedRubricName = selectedRubricId
+      ? availableRubrics.find((r) => r.id === selectedRubricId)?.name
+      : undefined;
     trackPrismEvent("essay_review_streaming_started", {
       universityId: selectedRubricId,
       model: selectedRubricId ? "elite_rubric" : "base",
@@ -347,6 +495,9 @@ function EssayReviewPageInner() {
     let firstTokenReceived = false;
     let outputTokens: number | undefined;
     let streamFailed: string | null = null;
+    // setStreamedContent는 비동기 setState라 consumeSSE 콜백에서 직접 누적 텍스트를
+    // 읽을 수 없음. 로컬 변수로 같이 누적해 streaming 끝난 직후 동기적으로 파싱.
+    let accumulated = "";
 
     try {
       const res = await streamWithAuth("/api/essay-review?stream=1", {
@@ -377,6 +528,7 @@ function EssayReviewPageInner() {
             firstTokenReceived = true;
             transitionPhase("result");
           }
+          accumulated += p.content;
           setStreamedContent((prev) => prev + p.content);
         } else if (p.type === "complete") {
           outputTokens = p.usage?.output_tokens;
@@ -392,8 +544,6 @@ function EssayReviewPageInner() {
         duration_ms: Date.now() - startedAt,
         output_tokens: outputTokens,
       });
-      haptic("success");
-      chime("complete");
     } catch (err) {
       const reason =
         err instanceof ApiError
@@ -411,6 +561,43 @@ function EssayReviewPageInner() {
         setError("스트리밍 중 오류가 발생했어요. 다시 시도해주세요.");
       }
       transitionPhase("input");
+      setLoading(false);
+      return;
+    }
+
+    // 스트리밍은 성공적으로 끝났음. 이제 파싱 + Firestore 저장 단계.
+    // 이 단계 실패는 streaming-level 에러와 다르게 result phase 유지 +
+    // raw 마크다운 + 저장 실패 안내. transitionPhase("input") 안 함.
+    try {
+      const parsed = parseStreamedReview(accumulated, {
+        universityId: selectedRubricId,
+        universityName: selectedRubricName,
+      });
+
+      if (isReviewParseFatal(parsed)) {
+        throw new Error("파싱된 결과에 표시할 내용이 없어요.");
+      }
+
+      setResult(parsed);
+      haptic("success");
+      chime("complete");
+
+      trackPrismEvent("essay_review_submitted", {
+        plan: normalizePlan(profile?.plan),
+        universityId: selectedRubricId,
+        model: selectedRubricId ? "elite_rubric" : "base",
+      });
+
+      await persistReviewToEssay(parsed);
+    } catch (parseErr) {
+      logError("[review] SSE parse/persist failed:", parseErr);
+      setParseError(true);
+      toast({
+        title: "분석은 완료됐지만 저장에 실패했어요",
+        description:
+          "결과는 화면에서 볼 수 있지만 목록에는 저장되지 않았어요. 다시 시도해주세요.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -456,132 +643,7 @@ function EssayReviewPageInner() {
 
       // 대학별 rubric 필드(universityId/universityName/isUniversityRubric/universityFit/
       // universitySpecificFeedback)는 서버가 review 객체에 이미 포함해 보냄.
-      const newReview: EssayReview = {
-        ...data.review,
-        id: `r-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        createdAt: new Date().toISOString(),
-      };
-
-      // 두 브랜치 공통: Firestore 쓰기를 await해서 실패하면 사용자에게 toast로 알림.
-      // 이전엔 fire-and-forget catch(console.error)라 저장 실패가 silent 실패였음.
-      // 실패 시 낙관적 상태를 원복하기 위한 rollback 함수.
-      let updatedEssay: Essay | null = null;
-      let writePromise: Promise<void> | null = null;
-      let rollback: (() => void) | null = null;
-
-      // Branch 1 — linked to existing essay: append review to its reviews array.
-      if (essayId) {
-        // 로컬 state/캐시에 먼저 반영 (optimistic) — 서버 쓰기는 아래에서 await.
-        let targetFound = false;
-        let prevSnapshot: Essay[] | null = null;
-        setEssays(prev => {
-          const target = prev.find(e => e.id === essayId);
-          if (!target) return prev; // 아직 로딩 안 됐을 수 있음 — 아래에서 처리
-          targetFound = true;
-          prevSnapshot = prev;
-          updatedEssay = {
-            ...target,
-            reviews: [...(target.reviews ?? []), newReview],
-            updatedAt: new Date().toISOString(),
-          };
-          const next = prev.map(e => e.id === essayId ? updatedEssay! : e);
-          saveEssaysCache(next);
-          return next;
-        });
-        if (prevSnapshot) {
-          const snap = prevSnapshot;
-          rollback = () => { setEssays(snap); saveEssaysCache(snap); };
-        }
-
-        // Fallback: 로컬 state에 essay가 없으면 Firestore에서 직접 읽어와 병합.
-        // (캐시 비어있는 기기에서 /essays/review?essayId=X로 바로 들어온 케이스)
-        if (!targetFound && user) {
-          try {
-            const snap = await getDoc(doc(db, "users", user.uid, "essays", essayId));
-            if (snap.exists()) {
-              const base = { id: snap.id, ...(snap.data() as Omit<Essay, "id">) };
-              updatedEssay = {
-                ...base,
-                reviews: [...(base.reviews ?? []), newReview],
-                updatedAt: new Date().toISOString(),
-              };
-              let fallbackPrev: Essay[] | null = null;
-              setEssays(prev => {
-                fallbackPrev = prev;
-                const exists = prev.some(e => e.id === essayId);
-                const next = exists
-                  ? prev.map(e => e.id === essayId ? updatedEssay! : e)
-                  : [updatedEssay!, ...prev];
-                saveEssaysCache(next);
-                return next;
-              });
-              if (fallbackPrev) {
-                const snap = fallbackPrev;
-                rollback = () => { setEssays(snap); saveEssaysCache(snap); };
-              }
-            }
-          } catch (e) {
-            logError("[review] fallback fetch failed:", e);
-          }
-        }
-
-        if (user && updatedEssay) {
-          writePromise = setDoc(doc(db, "users", user.uid, "essays", essayId), updatedEssay, { merge: true });
-        }
-      }
-      // Branch 2 — new essay mode: 항상 에세이+리뷰를 함께 저장 (opt-out 없음).
-      else {
-        const newEssayId = Date.now().toString();
-        const limitMatch = prompt.match(/(\d+)자/);
-        const newEssay: Essay = {
-          id: newEssayId,
-          university: university.trim() || "(대학교 미지정)",
-          prompt: prompt.trim(),
-          content: essay,
-          lastSaved: new Date().toISOString().split("T")[0],
-          updatedAt: new Date().toISOString(),
-          wordLimit: limitMatch ? parseInt(limitMatch[1]) : undefined,
-          reviews: [newReview],
-        };
-        const prevList = loadEssays();
-        const next = [newEssay, ...prevList];
-        saveEssaysCache(next);
-        setEssays(next);
-        setSavedAsNew({ id: newEssayId, university: newEssay.university });
-        updatedEssay = newEssay;
-        if (user) {
-          writePromise = setDoc(doc(db, "users", user.uid, "essays", newEssayId), newEssay, { merge: true });
-          rollback = () => {
-            setEssays(prevList);
-            saveEssaysCache(prevList);
-            setSavedAsNew(null);
-          };
-        }
-      }
-
-      // Firestore write를 await — 실패하면 사용자에게 알림 + 낙관적 state 롤백.
-      // 롤백 없으면 UI엔 리뷰가 달린 것처럼 보이지만 새로고침 시 사라져 유저가 혼란.
-      if (writePromise) {
-        try {
-          await writePromise;
-        } catch (e) {
-          logError("[review] essay write failed:", e);
-          rollback?.();
-          toast({
-            title: "저장 실패",
-            description: "첨삭은 받았지만 클라우드 저장에 실패했어요. 네트워크를 확인 후 다시 시도해주세요.",
-            variant: "destructive",
-          });
-        }
-      }
-
-      // Clear draft once a review completes.
-      removeKey(DRAFT_KEY);
-      setDraftDirty(false);
-
-      if (!canReview) {
-        await saveProfile({ essayReviewUsed: (profile?.essayReviewUsed || 0) + 1 });
-      }
+      await persistReviewToEssay(data.review);
     } catch (err) {
       // Elite 전용 기능을 Free/Pro 유저가 호출하면 서버가 403 UPGRADE_REQUIRED.
       // ApiError.code는 서버 응답의 error 필드(= "UPGRADE_REQUIRED") 그대로.
@@ -612,6 +674,7 @@ function EssayReviewPageInner() {
     setSavedAsNew(null);
     setStreamedContent("");
     setStreamingComplete(false);
+    setParseError(false);
     transitionPhase("input");
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -889,11 +952,16 @@ function EssayReviewPageInner() {
           </Card>
         )}
 
-        {/* ═══ Result Phase — SSE master mode ═══ */}
+        {/* ═══ Result Phase — SSE 스트리밍 중 / 파싱 실패 fallback ═══
+            성공 시 result가 set되어 아래 일반 result phase로 자동 전환. */}
         {phase === "result" && useSSE && streamedContent && !result && (
           <div className="space-y-4 pb-4">
-            <StreamingResultView content={streamedContent} complete={streamingComplete} />
-            {streamingComplete && (
+            <StreamingResultView
+              content={streamedContent}
+              complete={streamingComplete}
+              parseError={parseError}
+            />
+            {(streamingComplete || parseError) && (
               <div className="border-t border-border/60 mt-6 pt-6 flex flex-col sm:flex-row gap-3">
                 <Button
                   size="lg"
@@ -993,12 +1061,49 @@ function EssayReviewPageInner() {
               )}
             </Card>
 
+            {/* 5-axis Rubric breakdown — Stage 3 #10에서 추가. 레거시 리뷰는 undefined 자동 스킵 */}
+            {result.rubric && (
+              <div className="space-y-2">
+                <h3 className="font-headline text-base font-bold flex items-center gap-1.5">
+                  <Target className="w-4 h-4 text-primary" /> Rubric 점수
+                </h3>
+                <Card className="p-4 bg-card border border-border rounded-2xl shadow-sm space-y-2.5">
+                  {([
+                    { key: "specificity", label: "구체성" },
+                    { key: "personalVoice", label: "개인성" },
+                    { key: "intellectualDepth", label: "지적 깊이" },
+                    { key: "communityFit", label: "커뮤니티 적합도" },
+                    { key: "storytelling", label: "스토리텔링" },
+                  ] as const).map(({ key, label }) => {
+                    const score = result.rubric![key];
+                    const pct = Math.max(0, Math.min(10, score)) * 10;
+                    return (
+                      <div key={key} className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground w-28 shrink-0">{label}</span>
+                        <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full bg-primary transition-all"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-semibold w-10 text-right tabular-nums">
+                          {score.toFixed(1)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </Card>
+              </div>
+            )}
+
             {/* Tone */}
-            <div className="flex justify-center">
-              <Badge variant="secondary" className="px-4 py-1.5 text-sm rounded-full">
-                톤: {result.tone}
-              </Badge>
-            </div>
+            {result.tone && (
+              <div className="flex justify-center">
+                <Badge variant="secondary" className="px-4 py-1.5 text-sm rounded-full">
+                  톤: {result.tone}
+                </Badge>
+              </div>
+            )}
 
             {/* University-specific feedback — Elite 대학별 rubric 모드 결과만 노출.
                 레거시 리뷰(필드 없음)는 undefined라 자동 스킵 */}

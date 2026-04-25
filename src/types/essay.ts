@@ -72,6 +72,18 @@ export function normalizeOutline(raw: unknown): EssayOutline | undefined {
   };
 }
 
+/**
+ * 5-axis rubric breakdown — Stage 3 #10에서 추가.
+ * SSE 마크다운 모드와 JSON 모드 모두에서 반환. 레거시 리뷰는 undefined로 호환.
+ */
+export interface EssayRubricScores {
+  specificity: number;       // 구체성
+  personalVoice: number;     // 개인성
+  intellectualDepth: number; // 지적 깊이
+  communityFit: number;      // 커뮤니티 적합도
+  storytelling: number;      // 스토리텔링
+}
+
 export interface EssayReview {
   id: string;
   score: number;            // 1–10
@@ -86,6 +98,8 @@ export interface EssayReview {
   revisedOpening?: string;
   /** 에세이 전체를 10점 수준으로 다시 쓴 버전. 에세이 원어와 동일 언어. */
   perfectExample?: string;
+  /** Stage 3 #10 — 5-axis rubric. 레거시 리뷰는 undefined. */
+  rubric?: EssayRubricScores;
   createdAt: string;        // ISO
 
   // --- 대학별 맞춤 rubric (Elite 전용) ---

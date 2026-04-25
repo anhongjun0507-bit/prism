@@ -8,7 +8,10 @@ import { getAdminDb } from "@/lib/firebase-admin";
 import { isMasterEmail } from "@/lib/master";
 import { canUseFeature, normalizePlan, type Plan } from "@/lib/plans";
 import { getRubricById, type UniversityRubric } from "@/lib/university-rubric";
-import { buildEssayReviewSystemPrompt } from "@/lib/prompts/essay-review";
+import {
+  buildEssayReviewSystemPrompt,
+  buildEssayReviewMarkdownPrompt,
+} from "@/lib/prompts/essay-review";
 
 // 기본 첨삭은 Sonnet, 대학별 rubric(Elite 전용)은 Opus 4.7로 품질 차별화.
 // Opus는 비용·레이턴시가 높지만 Elite는 universityRubricEnabled = true 경로만 사용.
@@ -128,15 +131,21 @@ ${wrapUserData("essay_body", safeEssay)}
 
 위 에세이를 입학사정관 시각으로 평가해주세요.`;
 
-    const systemPrompt = buildEssayReviewSystemPrompt(rubric);
     const model = rubric ? MODEL_ELITE_RUBRIC : MODEL_BASE;
 
-    // 듀얼 모드: ?stream=1 또는 Accept: text/event-stream → SSE.
-    // 그 외는 기존 JSON 응답 그대로(step 1은 서버 인프라만 추가, 클라 회귀 0).
+    // 듀얼 모드: ?stream=1 또는 Accept: text/event-stream → SSE(마크다운).
+    // 그 외는 기존 JSON 응답 그대로(회귀 0).
     const url = new URL(req.url);
     const wantsStream =
       url.searchParams.get("stream") === "1" ||
       (req.headers.get("accept") ?? "").includes("text/event-stream");
+
+    // 시스템 프롬프트 분기 — SSE는 마크다운(클라가 점진적 렌더), JSON은 기존 스키마.
+    // 두 프롬프트 모두 동일한 BASE_RULES/BASE_RUBRIC + 대학별 섹션을 공유해 평가
+    // 일관성 유지. 차이는 응답 포맷뿐.
+    const systemPrompt = wantsStream
+      ? buildEssayReviewMarkdownPrompt(rubric)
+      : buildEssayReviewSystemPrompt(rubric);
 
     if (wantsStream) {
       // chat/route.ts와 동일한 abort + 타임아웃 패턴.
