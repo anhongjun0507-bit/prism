@@ -35,6 +35,15 @@ export interface PrismEventPayloads {
   };
   essay_review_phase_changed: { from: EssayReviewPhase; to: EssayReviewPhase };
   essay_review_reset: { rubric_score: number | null };
+  essay_review_streaming_started: {
+    universityId?: string;
+    model: "base" | "elite_rubric";
+  };
+  essay_review_streaming_completed: {
+    duration_ms: number;
+    output_tokens?: number;
+  };
+  essay_review_streaming_error: { reason: string };
   admission_detail_viewed: { plan: Plan; matchId: string };
   planner_generated: { plan: Plan; taskCount: number };
   sample_pdf_downloaded: Record<string, never>;

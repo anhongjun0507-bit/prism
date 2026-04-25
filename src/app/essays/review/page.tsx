@@ -19,7 +19,8 @@ import { PrismLoader } from "@/components/PrismLoader";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import { db } from "@/lib/firebase";
 import { doc, setDoc, getDoc, collection, query, orderBy, limit as fsLimit, getDocs } from "firebase/firestore";
-import { fetchWithAuth, ApiError } from "@/lib/api-client";
+import { fetchWithAuth, ApiError, streamWithAuth, consumeSSE } from "@/lib/api-client";
+import { StreamingResultView } from "@/components/essays/StreamingResultView";
 import { readJSON, writeJSON, removeKey } from "@/lib/storage";
 import { haptic } from "@/hooks/use-haptic";
 import { chime } from "@/lib/chime";
@@ -319,6 +320,102 @@ function EssayReviewPageInner() {
 
   const [langMismatchWarning, setLangMismatchWarning] = useState(false);
 
+  // SSE는 마스터 한정 — Firestore 저장이 step 3까지 미구현이라 일반 유저는
+  // 결과 손실 위험. 마스터만 활성화해 출시 후 안전하게 테스트.
+  const useSSE = isMaster;
+  const [streamedContent, setStreamedContent] = useState("");
+  const [streamingComplete, setStreamingComplete] = useState(false);
+
+  const handleReviewStreaming = async () => {
+    if (!essay.trim()) return;
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    setPriorReviewMeta(null);
+    setLangMismatchWarning(false);
+    setStreamedContent("");
+    setStreamingComplete(false);
+    transitionPhase("loading");
+
+    const startedAt = Date.now();
+    const selectedRubricId = universityId !== "general" ? universityId : undefined;
+    trackPrismEvent("essay_review_streaming_started", {
+      universityId: selectedRubricId,
+      model: selectedRubricId ? "elite_rubric" : "base",
+    });
+
+    let firstTokenReceived = false;
+    let outputTokens: number | undefined;
+    let streamFailed: string | null = null;
+
+    try {
+      const res = await streamWithAuth("/api/essay-review?stream=1", {
+        method: "POST",
+        headers: { Accept: "text/event-stream" },
+        body: JSON.stringify({
+          essay,
+          prompt,
+          university,
+          universityId: selectedRubricId,
+          grade: profile?.grade,
+          gpa: profile?.gpa,
+          sat: profile?.sat,
+          major: profile?.major,
+        }),
+      });
+
+      await consumeSSE(res, (_event, payload) => {
+        if (!payload || typeof payload !== "object") return;
+        const p = payload as {
+          type?: string;
+          content?: string;
+          message?: string;
+          usage?: { output_tokens?: number };
+        };
+        if (p.type === "text" && typeof p.content === "string") {
+          if (!firstTokenReceived) {
+            firstTokenReceived = true;
+            transitionPhase("result");
+          }
+          setStreamedContent((prev) => prev + p.content);
+        } else if (p.type === "complete") {
+          outputTokens = p.usage?.output_tokens;
+        } else if (p.type === "error") {
+          streamFailed = p.message ?? "스트리밍 실패";
+        }
+      });
+
+      if (streamFailed) throw new Error(streamFailed);
+
+      setStreamingComplete(true);
+      trackPrismEvent("essay_review_streaming_completed", {
+        duration_ms: Date.now() - startedAt,
+        output_tokens: outputTokens,
+      });
+      haptic("success");
+      chime("complete");
+    } catch (err) {
+      const reason =
+        err instanceof ApiError
+          ? `${err.status}:${err.code ?? "unknown"}`
+          : err instanceof Error
+            ? err.message
+            : "unknown";
+      trackPrismEvent("essay_review_streaming_error", { reason });
+      logError("[review] SSE stream failed:", err);
+      if (err instanceof ApiError && err.code === "UPGRADE_REQUIRED") {
+        setUpgradeModalOpen(true);
+      } else if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError("스트리밍 중 오류가 발생했어요. 다시 시도해주세요.");
+      }
+      transitionPhase("input");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleReview = async () => {
     if (!essay.trim()) return;
     setLoading(true);
@@ -513,6 +610,8 @@ function EssayReviewPageInner() {
     setError(null);
     setLangMismatchWarning(false);
     setSavedAsNew(null);
+    setStreamedContent("");
+    setStreamingComplete(false);
     transitionPhase("input");
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -730,7 +829,7 @@ function EssayReviewPageInner() {
             )}
             <Button
               size="xl"
-              onClick={handleReview}
+              onClick={useSSE ? handleReviewStreaming : handleReview}
               disabled={loading || !essay.trim()}
               className="w-full rounded-xl gap-2"
             >
@@ -788,6 +887,34 @@ function EssayReviewPageInner() {
               </p>
             )}
           </Card>
+        )}
+
+        {/* ═══ Result Phase — SSE master mode ═══ */}
+        {phase === "result" && useSSE && streamedContent && !result && (
+          <div className="space-y-4 pb-4">
+            <StreamingResultView content={streamedContent} complete={streamingComplete} />
+            {streamingComplete && (
+              <div className="border-t border-border/60 mt-6 pt-6 flex flex-col sm:flex-row gap-3">
+                <Button
+                  size="lg"
+                  onClick={handleResetAndStart}
+                  className="flex-1 rounded-xl gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  다른 에세이 첨삭하기
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => router.push("/essays")}
+                  className="flex-1 rounded-xl gap-2"
+                >
+                  <List className="w-4 h-4" />
+                  에세이 목록으로
+                </Button>
+              </div>
+            )}
+          </div>
         )}
 
         {/* ═══ Result Phase ═══ */}
