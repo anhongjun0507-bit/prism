@@ -43,6 +43,10 @@ export interface PrismEventPayloads {
   landing_sample_cta_clicked: { target: string };
   landing_section_viewed: { section: LandingSection };
   landing_faq_opened: { question_id: FaqQuestionId };
+  pricing_app_download_clicked: {
+    platform: "ios" | "android";
+    source: "cta_button" | "bottom_section";
+  };
   account_delete_requested: Record<string, never>;
   account_delete_confirmed: Record<string, never>;
 }

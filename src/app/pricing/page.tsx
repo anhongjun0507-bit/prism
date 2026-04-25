@@ -8,25 +8,34 @@ import { trackPrismEvent } from "@/lib/analytics/events";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Sparkles, Users, Loader2, Crown } from "lucide-react";
+import { Check, Sparkles, Users, Loader2, Crown, Smartphone } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { SegmentedControl, SegmentedControlItem } from "@/components/ui/segmented-control";
 import { fetchWithAuth } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
+import { detectPlatform, type AppPlatform, APP_STORE_URLS } from "@/lib/app-stores";
+import { AppStoreButton, PlayStoreButton } from "@/components/landing/AppStoreButton";
 
 type PaidPlan = "pro" | "elite";
 
 export default function PricingPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, isMaster } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const currentPlan = normalizePlan(profile?.plan);
   const [billing, setBilling] = useState<BillingCycle>("monthly");
   const [processing, setProcessing] = useState<PaidPlan | null>(null);
+  // SSR에는 navigator 없음 → 초기 "desktop"으로 두고 mount 후 보정.
+  // 하이드레이션 mismatch 방지를 위해 플랫폼-의존 UI는 platform 결정 이후에만 렌더.
+  const [platform, setPlatform] = useState<AppPlatform>("desktop");
 
   useEffect(() => {
     trackPrismEvent("pricing_page_viewed", { plan: currentPlan });
   }, [currentPlan]);
+
+  useEffect(() => {
+    setPlatform(detectPlatform());
+  }, []);
 
   const handlePlanSelect = async (planId: PaidPlan, cycle: BillingCycle) => {
     if (!user) {
@@ -103,6 +112,18 @@ export default function PricingPage() {
             대치동 컨설팅 1회 가격으로 한 달 내내 무제한
           </p>
         </div>
+
+        {/* App-only payment notice (일반 유저 대상). 마스터는 Toss 결제 가능하므로 안내 불필요. */}
+        {!isMaster && (
+          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-center">
+            <p className="text-sm font-medium text-foreground">
+              구독은 PRISM 모바일 앱(iOS, Android)에서 가능해요.
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              안전한 결제 환경을 위해 앱스토어 결제만 지원합니다.
+            </p>
+          </div>
+        )}
 
         {/* Billing toggle */}
         <SegmentedControl
@@ -210,7 +231,8 @@ export default function PricingPage() {
                 <Button variant="outline" className="w-full" disabled>
                   기본 제공
                 </Button>
-              ) : (
+              ) : isMaster ? (
+                // 마스터 전용 Toss 결제 (관리자 테스트). 일반 유저에는 노출되지 않음.
                 <Button
                   className={`w-full rounded-xl ${isElite ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}`}
                   onClick={() => handlePlanSelect(plan.id as PaidPlan, billing)}
@@ -223,9 +245,24 @@ export default function PricingPage() {
                       결제창을 여는 중...
                     </span>
                   ) : (
-                    `${plan.displayName} 시작하기`
+                    `Toss 결제 (마스터 전용) · ${plan.displayName}`
                   )}
                 </Button>
+              ) : platform === "ios" ? (
+                <AppStoreButton
+                  source="cta_button"
+                  className={`w-full rounded-xl ${isElite ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}`}
+                />
+              ) : platform === "android" ? (
+                <PlayStoreButton
+                  source="cta_button"
+                  className={`w-full rounded-xl ${isElite ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}`}
+                />
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <AppStoreButton source="cta_button" className="w-full rounded-xl" />
+                  <PlayStoreButton source="cta_button" className="w-full rounded-xl" />
+                </div>
               )}
             </Card>
           );
@@ -336,13 +373,35 @@ export default function PricingPage() {
             </span>
             <span className="flex items-center gap-1">
               <Check className="w-3.5 h-3.5 text-emerald-500" aria-hidden="true" />
-              토스 안전 결제
+              {isMaster ? "토스 안전 결제" : "앱스토어 안전 결제"}
             </span>
           </div>
           <p className="text-xs text-muted-foreground/70">
-            카드 결제 · 해지 후 남은 기간 끝까지 이용
+            해지 후 남은 기간 끝까지 이용
           </p>
         </div>
+
+        {/* 앱 다운로드 섹션 (일반 유저 대상). */}
+        {!isMaster && (
+          <section className="my-12 text-center space-y-4" aria-label="PRISM 앱 다운로드">
+            <Smartphone className="w-10 h-10 text-primary mx-auto" aria-hidden="true" />
+            <div className="space-y-1">
+              <h2 className="text-xl font-bold font-headline">PRISM 앱 다운로드</h2>
+              <p className="text-sm text-muted-foreground">
+                iOS와 Android에서 무료로 시작하세요
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+              <AppStoreButton size="lg" source="bottom_section" className="w-full sm:w-auto" />
+              <PlayStoreButton size="lg" source="bottom_section" className="w-full sm:w-auto" />
+            </div>
+            {APP_STORE_URLS.ios === "#" && APP_STORE_URLS.android === "#" && (
+              <p className="text-[11px] text-muted-foreground/70">
+                * 출시 후 스토어 URL이 활성화됩니다
+              </p>
+            )}
+          </section>
+        )}
 
         <p className="text-xs text-muted-foreground/60 text-center leading-relaxed px-4">
           합격 예측은 각 대학교의 공개 합격률 및 지원자 통계 기반입니다.
