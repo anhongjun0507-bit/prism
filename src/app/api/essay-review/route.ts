@@ -131,6 +131,96 @@ ${wrapUserData("essay_body", safeEssay)}
     const systemPrompt = buildEssayReviewSystemPrompt(rubric);
     const model = rubric ? MODEL_ELITE_RUBRIC : MODEL_BASE;
 
+    // 듀얼 모드: ?stream=1 또는 Accept: text/event-stream → SSE.
+    // 그 외는 기존 JSON 응답 그대로(step 1은 서버 인프라만 추가, 클라 회귀 0).
+    const url = new URL(req.url);
+    const wantsStream =
+      url.searchParams.get("stream") === "1" ||
+      (req.headers.get("accept") ?? "").includes("text/event-stream");
+
+    if (wantsStream) {
+      // chat/route.ts와 동일한 abort + 타임아웃 패턴.
+      const abortController = new AbortController();
+      let timedOut = false;
+      const onUpstreamAbort = () => abortController.abort();
+      if (req.signal.aborted) abortController.abort();
+      else req.signal.addEventListener("abort", onUpstreamAbort, { once: true });
+      const timer = setTimeout(() => {
+        timedOut = true;
+        abortController.abort();
+      }, 90_000);
+
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        async start(streamController) {
+          const send = (payload: unknown) => {
+            streamController.enqueue(
+              encoder.encode(`data: ${JSON.stringify(payload)}\n\n`),
+            );
+          };
+          try {
+            const claudeStream = anthropic.messages.stream(
+              {
+                model,
+                max_tokens: 6000,
+                system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
+                messages: [{ role: "user", content: userPrompt }],
+              },
+              { signal: abortController.signal },
+            );
+
+            for await (const event of claudeStream) {
+              if (
+                event.type === "content_block_delta" &&
+                event.delta.type === "text_delta"
+              ) {
+                send({ type: "text", content: event.delta.text });
+              }
+            }
+
+            const finalMessage = await claudeStream.finalMessage();
+            // rubric 메타는 step 3에서 클라가 parse 결과에 머지하기 위해 complete에 동봉.
+            // langMismatch는 클라가 누적 텍스트로 산출(서버 텍스트 파싱 중복 회피).
+            send({
+              type: "complete",
+              model: finalMessage.model,
+              usage: finalMessage.usage,
+              isUniversityRubric: !!rubric,
+              universityId: rubric?.id,
+              universityName: rubric?.name,
+              essayLang,
+            });
+          } catch (err) {
+            if (timedOut) {
+              send({
+                type: "error",
+                message: "첨삭 분석이 너무 오래 걸렸어요. 잠시 후 다시 시도해주세요.",
+              });
+            } else if (req.signal.aborted) {
+              // client disconnect — no event to send
+            } else {
+              console.error("[essay-review] stream error:", err);
+              send({ type: "error", message: "에세이 첨삭에 실패했어요" });
+            }
+          } finally {
+            clearTimeout(timer);
+            req.signal.removeEventListener("abort", onUpstreamAbort);
+            streamController.close();
+          }
+        },
+      });
+
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
+          // nginx/Vercel proxy buffering 차단 — 토큰이 batch되어 한 번에 도착하는 것 방지.
+          "X-Accel-Buffering": "no",
+        },
+      });
+    }
+
     const response = await createMessageWithTimeout(
       anthropic,
       {
