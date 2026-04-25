@@ -22,7 +22,6 @@ export const STORAGE_KEYS = {
 
   // UI 프리퍼런스
   THEME: "prism_theme",
-  ACCENT: "prism_accent",
   HAPTIC: "prism_haptic",
   CHIME: "prism_chime",
 
@@ -44,6 +43,7 @@ export const LEGACY_KEYS = [
   "prism_saved_specs",   // → prism_specs
   "prism_planner",       // → prism_tasks
   "prism_essay_review",  // → prism_essays 서브필드
+  "prism_accent",        // 5-color accent 커스터마이즈 제거 (단일 브랜드 정체성)
 ] as const;
 
 export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS];

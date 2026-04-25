@@ -44,7 +44,7 @@ function ProfilePageInner() {
   const router = useRouter();
   const { user, profile, saveProfile, logout } = useAuth();
   const { toast } = useToast();
-  const { theme, setTheme, accent, setAccent } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { locale, setLocale } = useI18n();
 
   const [name, setName] = useState("");
@@ -320,27 +320,6 @@ function ProfilePageInner() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-sm">테마 색상</span>
-            <div className="flex items-center gap-2">
-              {([
-                { key: "orange" as const, color: "#9a3c12" },
-                { key: "blue" as const, color: "#2563eb" },
-                { key: "violet" as const, color: "#7c3aed" },
-                { key: "emerald" as const, color: "#059669" },
-                { key: "pink" as const, color: "#db2777" },
-              ]).map(({ key, color }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setAccent(key)}
-                  aria-label={`테마 색상 ${key}`}
-                  className={`w-6 h-6 rounded-full transition-all ${accent === key ? "ring-2 ring-offset-2 ring-offset-background" : ""}`}
-                  style={{ backgroundColor: color, ...(accent === key ? { ["--tw-ring-color" as string]: color } : {}) }}
-                />
-              ))}
-            </div>
-          </div>
         </Card>
 
         {/* Save */}

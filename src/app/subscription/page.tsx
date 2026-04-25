@@ -11,7 +11,6 @@ import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { Check, Crown, ArrowUpRight, Download, Upload, Sun, Moon } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
-import { ACCENTS } from "@/lib/accent";
 import { isHapticEnabled, setHapticEnabled, haptic } from "@/hooks/use-haptic";
 import { isChimeEnabled, setChimeEnabled, chime } from "@/lib/chime";
 import { useRouter } from "next/navigation";
@@ -29,7 +28,7 @@ function SubscriptionPageInner() {
   const { toast } = useToast();
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
-  const { theme, setTheme, accent, setAccent } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [hapticOn, setHapticOn] = useState(() => isHapticEnabled());
   const [chimeOn, setChimeOn] = useState(() => isChimeEnabled());
   const [cancelling, setCancelling] = useState(false);
@@ -202,34 +201,6 @@ function SubscriptionPageInner() {
                 </button>
               ))}
             </div>
-          </div>
-
-          <div className="space-y-3">
-            <h3 className="font-bold text-sm">강조 색상</h3>
-            <div className="flex gap-2.5">
-              {ACCENTS.map((a) => {
-                const selected = accent === a.key;
-                return (
-                  <button
-                    key={a.key}
-                    onClick={() => setAccent(a.key)}
-                    aria-label={`${a.label} 색상`}
-                    aria-pressed={selected}
-                    className={`group relative flex-1 aspect-square rounded-xl transition-all ${
-                      selected ? "ring-2 ring-offset-2 ring-offset-card" : "hover:scale-105"
-                    }`}
-                    style={{ backgroundColor: a.swatch, ...(selected ? { ["--tw-ring-color" as string]: a.swatch } : {}) }}
-                  >
-                    {selected && (
-                      <span className="absolute inset-0 flex items-center justify-center text-white drop-shadow">
-                        <Check className="w-4 h-4" aria-hidden="true" />
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="text-xs text-muted-foreground">{ACCENTS.find(a => a.key === accent)?.label}</p>
           </div>
 
           <div className="space-y-3">
