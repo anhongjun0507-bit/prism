@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { CAT_STYLE } from "@/lib/analysis-helpers";
 import { TodayFocusCard } from "@/components/dashboard/TodayFocusCard";
+import { LiveStatsBar } from "@/components/landing/LiveStatsBar";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -299,6 +300,8 @@ function DashboardPageInner() {
 
         {/* TodayFocusCard — Hero 바로 아래, Urgent Deadline 위. 조건 미매치 시 null. */}
         <TodayFocusCard />
+        {/* 임계값 미달이면 자체 숨김 — inline 텍스트 한 줄. */}
+        <LiveStatsBar variant="mini" />
 
         {/* Urgent deadline alert — D-30 이하만 */}
         {nextDeadline > 0 && nextDeadline <= 30 && (

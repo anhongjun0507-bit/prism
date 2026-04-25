@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AuthSection } from "@/components/landing/AuthSection";
 import { SampleReportShowcase } from "@/components/landing/SampleReportShowcase";
 import { TrustSignalBar } from "@/components/landing/TrustSignalBar";
+import { LiveStatsBar } from "@/components/landing/LiveStatsBar";
 import { PersonaSection } from "@/components/landing/PersonaSection";
 import { FAQAccordion } from "@/components/landing/FAQAccordion";
 import { PrismLogo } from "@/components/brand/PrismLogo";
@@ -134,6 +135,8 @@ export default function LandingPage() {
 
         {/* ═══ Trust signals — 3 metrics directly under hero ═══ */}
         <TrustSignalBar />
+        {/* 임계값 미달이면 자체 숨김 — 출시 직후엔 보이지 않다가 데이터 누적되면 자동 노출. */}
+        <LiveStatsBar />
 
         {/* ═══ SEO: Hidden structured content for crawlers ═══ */}
         <section className="sr-only" aria-label="PRISM 서비스 소개">

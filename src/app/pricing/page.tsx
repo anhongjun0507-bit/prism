@@ -15,6 +15,7 @@ import { fetchWithAuth } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import { detectPlatform, type AppPlatform, APP_STORE_URLS } from "@/lib/app-stores";
 import { AppStoreButton, PlayStoreButton } from "@/components/landing/AppStoreButton";
+import { LiveStatsBar } from "@/components/landing/LiveStatsBar";
 
 type PaidPlan = "pro" | "elite";
 
@@ -112,6 +113,9 @@ export default function PricingPage() {
             대치동 컨설팅 1회 가격으로 한 달 내내 무제한
           </p>
         </div>
+
+        {/* 임계값 미달이면 자체 숨김. ROI 강한 위치라 카드 위에 노출. */}
+        <LiveStatsBar />
 
         {/* App-only payment notice (일반 유저 대상). 마스터는 Toss 결제 가능하므로 안내 불필요. */}
         {!isMaster && (

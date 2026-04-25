@@ -53,6 +53,7 @@ export interface PrismEventPayloads {
 
 export type LandingSection =
   | "trust_signals"
+  | "live_stats"
   | "how_it_works"
   | "sample_showcase"
   | "personas"
