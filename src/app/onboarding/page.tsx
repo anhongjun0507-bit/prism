@@ -429,70 +429,106 @@ export default function OnboardingPage() {
           </div>
 
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">GPA (Unweighted, 4.0 만점)</Label>
-              <Input
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                min="0"
-                max="4.0"
-                placeholder="예: 3.5"
-                className="h-12 rounded-xl border-2"
-                value={formData.gpa}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === "" || (parseFloat(v) >= 0 && parseFloat(v) <= 4.0)) {
-                    setFormData({ ...formData, gpa: v });
-                  }
-                }}
-              />
-              {formData.gpa && (parseFloat(formData.gpa) < 0 || parseFloat(formData.gpa) > 4.0) && (
-                <p className="text-xs text-red-500">GPA는 0.0 ~ 4.0 사이여야 합니다</p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">SAT (400-1600)</Label>
-              <Input
-                type="number"
-                inputMode="numeric"
-                min="400"
-                max="1600"
-                placeholder="예: 1250"
-                className="h-12 rounded-xl border-2"
-                value={formData.sat}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === "" || (parseInt(v) >= 0 && parseInt(v) <= 1600)) {
-                    setFormData({ ...formData, sat: v });
-                  }
-                }}
-              />
-              {formData.sat && (parseInt(formData.sat) < 400 || parseInt(formData.sat) > 1600) && (
-                <p className="text-xs text-red-500">SAT는 400 ~ 1600 사이여야 합니다</p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">TOEFL (0-120)</Label>
-              <Input
-                type="number"
-                inputMode="numeric"
-                min="0"
-                max="120"
-                placeholder="예: 95"
-                className="h-12 rounded-xl border-2"
-                value={formData.toefl}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === "" || (parseInt(v) >= 0 && parseInt(v) <= 120)) {
-                    setFormData({ ...formData, toefl: v });
-                  }
-                }}
-              />
-              {formData.toefl && (parseInt(formData.toefl) < 0 || parseInt(formData.toefl) > 120) && (
-                <p className="text-xs text-red-500">TOEFL은 0 ~ 120 사이여야 합니다</p>
-              )}
-            </div>
+            {(() => {
+              const gpaInvalid =
+                !!formData.gpa &&
+                (parseFloat(formData.gpa) < 0 || parseFloat(formData.gpa) > 4.0);
+              const satInvalid =
+                !!formData.sat &&
+                (parseInt(formData.sat) < 400 || parseInt(formData.sat) > 1600);
+              const toeflInvalid =
+                !!formData.toefl &&
+                (parseInt(formData.toefl) < 0 || parseInt(formData.toefl) > 120);
+              return (
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="onboarding-gpa" className="text-xs text-muted-foreground">
+                      GPA (Unweighted, 4.0 만점)
+                    </Label>
+                    <Input
+                      id="onboarding-gpa"
+                      type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      min="0"
+                      max="4.0"
+                      placeholder="예: 3.5"
+                      className="h-12 rounded-xl border-2"
+                      value={formData.gpa}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "" || (parseFloat(v) >= 0 && parseFloat(v) <= 4.0)) {
+                          setFormData({ ...formData, gpa: v });
+                        }
+                      }}
+                      aria-invalid={gpaInvalid}
+                      aria-describedby={gpaInvalid ? "onboarding-gpa-error" : undefined}
+                    />
+                    {gpaInvalid && (
+                      <p id="onboarding-gpa-error" className="text-xs text-destructive mt-1">
+                        GPA는 0.0 ~ 4.0 사이여야 합니다
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="onboarding-sat" className="text-xs text-muted-foreground">
+                      SAT (400-1600)
+                    </Label>
+                    <Input
+                      id="onboarding-sat"
+                      type="number"
+                      inputMode="numeric"
+                      min="400"
+                      max="1600"
+                      placeholder="예: 1250"
+                      className="h-12 rounded-xl border-2"
+                      value={formData.sat}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "" || (parseInt(v) >= 0 && parseInt(v) <= 1600)) {
+                          setFormData({ ...formData, sat: v });
+                        }
+                      }}
+                      aria-invalid={satInvalid}
+                      aria-describedby={satInvalid ? "onboarding-sat-error" : undefined}
+                    />
+                    {satInvalid && (
+                      <p id="onboarding-sat-error" className="text-xs text-destructive mt-1">
+                        SAT는 400 ~ 1600 사이여야 합니다
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="onboarding-toefl" className="text-xs text-muted-foreground">
+                      TOEFL (0-120)
+                    </Label>
+                    <Input
+                      id="onboarding-toefl"
+                      type="number"
+                      inputMode="numeric"
+                      min="0"
+                      max="120"
+                      placeholder="예: 95"
+                      className="h-12 rounded-xl border-2"
+                      value={formData.toefl}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "" || (parseInt(v) >= 0 && parseInt(v) <= 120)) {
+                          setFormData({ ...formData, toefl: v });
+                        }
+                      }}
+                      aria-invalid={toeflInvalid}
+                      aria-describedby={toeflInvalid ? "onboarding-toefl-error" : undefined}
+                    />
+                    {toeflInvalid && (
+                      <p id="onboarding-toefl-error" className="text-xs text-destructive mt-1">
+                        TOEFL은 0 ~ 120 사이여야 합니다
+                      </p>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
           </div>
 
           {/* Preview 실패 시 안내 — 이전엔 silent catch로 아무것도 안 보여 혼란 유발 */}

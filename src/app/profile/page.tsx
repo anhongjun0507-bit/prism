@@ -54,6 +54,8 @@ function ProfilePageInner() {
   const [major, setMajor] = useState("Computer Science");
   const [saving, setSaving] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  // 이름 validation 에러 — toast 대신 input 하단 inline 노출 (접근성 + 즉각 인지)
+  const [nameError, setNameError] = useState<string | null>(null);
 
   // 계정 삭제 플로우: step 1 = 경고, step 2 = 이메일 재입력, closed = 닫힘
   const [deleteStep, setDeleteStep] = useState<"closed" | "warn" | "confirm">("closed");
@@ -95,9 +97,10 @@ function ProfilePageInner() {
       return;
     }
     if (!name.trim()) {
-      toast({ title: "이름을 입력해주세요", variant: "destructive" });
+      setNameError("이름을 입력해주세요");
       return;
     }
+    setNameError(null);
     setSaving(true);
     try {
       // Firebase Auth 메타(displayName·photoURL) 갱신 — user 객체에 즉시 반영돼
@@ -224,18 +227,29 @@ function ProfilePageInner() {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">
+            <Label htmlFor="profile-name" className="text-xs text-muted-foreground">
               이름 <span className="text-red-500" aria-hidden="true">*</span>
             </Label>
             <Input
+              id="profile-name"
               type="text"
               placeholder="홍길동"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (nameError) setNameError(null);
+              }}
               className="h-11 rounded-xl text-sm"
               autoComplete="name"
               aria-required="true"
+              aria-invalid={!!nameError}
+              aria-describedby={nameError ? "profile-name-error" : undefined}
             />
+            {nameError && (
+              <p id="profile-name-error" className="text-xs text-destructive mt-1">
+                {nameError}
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -505,7 +519,18 @@ function ProfilePageInner() {
                   onChange={(e) => setConfirmEmailInput(e.target.value)}
                   disabled={deleting}
                   className="h-11 rounded-xl text-sm"
+                  aria-invalid={confirmEmailInput.trim().length > 0 && !emailMatches}
+                  aria-describedby={
+                    confirmEmailInput.trim().length > 0 && !emailMatches
+                      ? "delete-confirm-email-error"
+                      : undefined
+                  }
                 />
+                {confirmEmailInput.trim().length > 0 && !emailMatches && (
+                  <p id="delete-confirm-email-error" className="text-xs text-destructive mt-1">
+                    이메일이 일치하지 않아요
+                  </p>
+                )}
               </div>
               <AlertDialogFooter>
                 <Button
