@@ -142,6 +142,12 @@ body {
     --cat-reach: 0 72% 48%;
     --cat-reach-fg: 0 75% 35%;
     --cat-reach-soft: 0 70% 96%;
+
+    /* PrismLogo full-variant beams — tonal variation around primary (orange).
+       Beam 2 == --primary; beam 1 shifts red-ward, beam 3 shifts yellow-ward. */
+    --logo-beam-1: 15 79% 45%;
+    --logo-beam-2: 19 79% 34%;
+    --logo-beam-3: 25 75% 50%;
   }
 
   .dark {
@@ -184,6 +190,11 @@ body {
     --cat-reach: 0 75% 60%;
     --cat-reach-fg: 0 80% 78%;
     --cat-reach-soft: 0 50% 14%;
+
+    /* PrismLogo beams — brighter in dark for legibility on near-black background. */
+    --logo-beam-1: 15 79% 55%;
+    --logo-beam-2: 19 79% 50%;
+    --logo-beam-3: 25 75% 65%;
   }
 }
 
