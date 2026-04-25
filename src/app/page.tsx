@@ -1,16 +1,28 @@
 import type { Metadata } from "next";
 import { AuthSection } from "@/components/landing/AuthSection";
 import { SampleReportShowcase } from "@/components/landing/SampleReportShowcase";
+import { TrustSignalBar } from "@/components/landing/TrustSignalBar";
+import { PersonaSection } from "@/components/landing/PersonaSection";
+import { FAQAccordion } from "@/components/landing/FAQAccordion";
 
 export const metadata: Metadata = {
-  title: "PRISM — 미국 대학 입시 매니저 | AI 합격 예측",
+  title: "PRISM - 한국 국제학교 학생을 위한 AI 미국 입시 매니저",
   description:
-    "한국 국제학교 학생을 위한 AI 기반 미국 대학 입시 가이드. 1,001개 대학 합격 확률 분석, AI 에세이 첨삭, 맞춤 입시 플래너. 내 스펙으로 갈 수 있는 대학, 3초면 알 수 있어요.",
+    "1,001개 대학 분석 · Top 20 대학별 맞춤 에세이 첨삭 · 검증된 합격 사례 32+건. AI가 만드는 맞춤 입시 전략.",
   openGraph: {
-    title: "PRISM — 미국 대학 입시 매니저",
+    type: "website",
+    locale: "ko_KR",
+    siteName: "PRISM",
+    title: "PRISM - 한국 국제학교 학생을 위한 AI 미국 입시 매니저",
     description:
-      "AI가 분석하는 1,001개 미국 대학 합격 확률. 내 스펙으로 갈 수 있는 대학, 3초면 알 수 있어요.",
+      "1,001개 대학 분석 · Top 20 대학별 맞춤 에세이 첨삭 · 검증된 합격 사례 32+건. AI가 만드는 맞춤 입시 전략.",
     url: "https://prismedu.kr",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PRISM - 한국 국제학교 학생을 위한 AI 미국 입시 매니저",
+    description:
+      "1,001개 대학 분석 · Top 20 대학별 맞춤 에세이 첨삭 · 검증된 합격 사례 32+건.",
   },
   alternates: {
     canonical: "https://prismedu.kr",
@@ -129,6 +141,9 @@ export default function LandingPage() {
           </div>
         </header>
 
+        {/* ═══ Trust signals — 3 metrics directly under hero ═══ */}
+        <TrustSignalBar />
+
         {/* ═══ SEO: Hidden structured content for crawlers ═══ */}
         <section className="sr-only" aria-label="PRISM 서비스 소개">
           <h2>PRISM — AI 기반 미국 대학 입시 매니저</h2>
@@ -206,6 +221,12 @@ export default function LandingPage() {
 
         {/* ═══ Sample report preview — visual proof of output ═══ */}
         <SampleReportShowcase />
+
+        {/* ═══ Persona scenarios — relatable user contexts ═══ */}
+        <PersonaSection />
+
+        {/* ═══ FAQ — answers critical conversion blockers ═══ */}
+        <FAQAccordion />
       </div>
     </div>
   );

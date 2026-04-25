@@ -41,9 +41,26 @@ export interface PrismEventPayloads {
   today_focus_clicked: { type: TodayFocusType; target: string };
   landing_sample_viewed: Record<string, never>;
   landing_sample_cta_clicked: { target: string };
+  landing_section_viewed: { section: LandingSection };
+  landing_faq_opened: { question_id: FaqQuestionId };
   account_delete_requested: Record<string, never>;
   account_delete_confirmed: Record<string, never>;
 }
+
+export type LandingSection =
+  | "trust_signals"
+  | "how_it_works"
+  | "sample_showcase"
+  | "personas"
+  | "faq";
+
+export type FaqQuestionId =
+  | "plan_difference"
+  | "refund_policy"
+  | "ai_accuracy"
+  | "privacy"
+  | "korea_admissions"
+  | "payment";
 
 export type PrismEventName = keyof PrismEventPayloads;
 
