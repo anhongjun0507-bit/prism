@@ -33,6 +33,8 @@ export interface PrismEventPayloads {
     universityId?: string;
     model: "base" | "elite_rubric";
   };
+  essay_review_phase_changed: { from: EssayReviewPhase; to: EssayReviewPhase };
+  essay_review_reset: { rubric_score: number | null };
   admission_detail_viewed: { plan: Plan; matchId: string };
   planner_generated: { plan: Plan; taskCount: number };
   sample_pdf_downloaded: Record<string, never>;
@@ -58,6 +60,8 @@ export type LandingSection =
   | "sample_showcase"
   | "personas"
   | "faq";
+
+export type EssayReviewPhase = "input" | "loading" | "result";
 
 export type FaqQuestionId =
   | "plan_difference"

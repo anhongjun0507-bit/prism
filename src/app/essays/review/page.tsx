@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, CheckCircle2, AlertCircle, Lightbulb, Sparkles,
   Target, MessageCircle, RotateCcw, X, Download, FileText, GraduationCap, Crown, HelpCircle,
+  ChevronRight, Plus, List,
 } from "lucide-react";
 import { exportReviewToPDF, exportReviewToDoc } from "@/lib/essay-export";
 import type { Essay, EssayReview } from "@/types/essay";
@@ -167,6 +168,20 @@ function EssayReviewPageInner() {
   const [draftPrompt, setDraftPrompt] = useState<{ school: string; prompt: string; content: string; savedAt: number } | null>(null);
   const [draftDirty, setDraftDirty] = useState(false);
 
+  // Phase: input → loading → result.
+  // `loading` boolean은 in-flight 시그널(autosave/beforeunload)로 유지하되, UI 분기는
+  // phase 단일 소스로 통합. 결과 복원 시 prefill effect에서 "result"로 바로 진입.
+  type Phase = "input" | "loading" | "result";
+  const [phase, setPhaseState] = useState<Phase>("input");
+  const transitionPhase = (next: Phase) => {
+    setPhaseState((prev) => {
+      if (prev !== next) {
+        trackPrismEvent("essay_review_phase_changed", { from: prev, to: next });
+      }
+      return next;
+    });
+  };
+
   // Prefill from linked essay (only when essayId is in URL).
   // Triggered only on id change — not on content/prompt/university — so live edits aren't clobbered.
   useEffect(() => {
@@ -191,9 +206,11 @@ function EssayReviewPageInner() {
       if (last.universityId) {
         setUniversityId(last.universityId);
       }
+      transitionPhase("result");
     } else {
       setResult(null);
       setPriorReviewMeta(null);
+      transitionPhase("input");
     }
     // linkedEssay 전체를 deps로 넣으면 parent re-render마다 effect가 재실행돼 편집 중 내용 clobber.
     // id 기준 최초 prefill만 의도적으로 수행.
@@ -309,6 +326,7 @@ function EssayReviewPageInner() {
     setResult(null);
     setPriorReviewMeta(null); // 과거 리뷰 뱃지 숨김 — 새 리뷰 받는 중
     setLangMismatchWarning(false);
+    transitionPhase("loading");
 
     try {
       const selectedRubricId = universityId !== "general" ? universityId : undefined;
@@ -323,11 +341,13 @@ function EssayReviewPageInner() {
 
       if (!data.review) {
         setError("AI가 답을 잘 못 만들었어요. 다시 시도해주세요.");
+        transitionPhase("input");
         return;
       }
 
       setResult(data.review);
       setLangMismatchWarning(!!data.langMismatch);
+      transitionPhase("result");
       haptic("success");
       chime("complete");
 
@@ -475,9 +495,29 @@ function EssayReviewPageInner() {
       } else {
         setError("연결에 문제가 있어요. 잠시 후 다시 시도해주세요.");
       }
+      // 에러 시 input phase로 복귀 — 입력 내용은 보존됨.
+      transitionPhase("input");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResetAndStart = () => {
+    const priorScore = result?.score ?? null;
+    setEssay("");
+    setPrompt("");
+    setUniversity("");
+    setUniversityId("general");
+    setResult(null);
+    setPriorReviewMeta(null);
+    setError(null);
+    setLangMismatchWarning(false);
+    setSavedAsNew(null);
+    transitionPhase("input");
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    trackPrismEvent("essay_review_reset", { rubric_score: priorScore });
   };
 
   const hasEssayPrefill = essayId && linkedEssay;
@@ -496,6 +536,17 @@ function EssayReviewPageInner() {
       />
 
       <div className="px-gutter space-y-4">
+        {/* Phase indicator — 3-step breadcrumb */}
+        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground" aria-label="진행 단계">
+          <span className={phase === "input" ? "text-primary font-semibold" : ""}>1. 입력</span>
+          <ChevronRight className="w-3 h-3" aria-hidden="true" />
+          <span className={phase === "loading" ? "text-primary font-semibold" : ""}>2. 분석 중</span>
+          <ChevronRight className="w-3 h-3" aria-hidden="true" />
+          <span className={phase === "result" ? "text-primary font-semibold" : ""}>3. 결과</span>
+        </div>
+
+        {/* ═══ Input Phase ═══ */}
+        {phase === "input" && <>
         {/* Draft restore banner — only in new-essay mode */}
         {!essayId && draftPrompt && (
           <Card className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 flex items-start gap-3">
@@ -698,8 +749,20 @@ function EssayReviewPageInner() {
           </div>
         )}
 
-        {/* Long-call loading state — PrismLoader + time estimate + 3-stage progress */}
-        {loading && (
+        {/* Error — input phase 복귀 후 노출 */}
+        {error && (
+          <Card className="p-4 border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800 space-y-3">
+            <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+            <Button variant="outline" size="sm" onClick={handleReview} disabled={!essay.trim()}>
+              다시 시도
+            </Button>
+          </Card>
+        )}
+        </>}
+        {/* ═══ /Input Phase ═══ */}
+
+        {/* ═══ Loading Phase — PrismLoader + 시간 안내 + 3-stage progress ═══ */}
+        {phase === "loading" && (
           <Card variant="elevated" className="p-8 text-center space-y-3">
             <div className="flex justify-center">
               <PrismLoader size={56} />
@@ -727,18 +790,8 @@ function EssayReviewPageInner() {
           </Card>
         )}
 
-        {/* Error */}
-        {error && (
-          <Card className="p-4 border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800 space-y-3">
-            <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
-            <Button variant="outline" size="sm" onClick={handleReview} disabled={!essay.trim()}>
-              다시 시도
-            </Button>
-          </Card>
-        )}
-
-        {/* Results */}
-        {result && (
+        {/* ═══ Result Phase ═══ */}
+        {phase === "result" && result && (
           <div className="space-y-4 pb-4">
             {/* 이전에 저장된 리뷰를 복원해 보여주는 중임을 안내 */}
             {priorReviewMeta && (
@@ -962,18 +1015,29 @@ function EssayReviewPageInner() {
             </div>
             )}
 
-            {/* Back to essay list */}
-            {(essayId || savedAsNew) && (
+            {/* Next-action CTAs — 결과 받은 후 다음 행동 명시 */}
+            <div className="border-t border-border/60 mt-6 pt-6 flex flex-col sm:flex-row gap-3">
+              <Button
+                size="lg"
+                onClick={handleResetAndStart}
+                className="flex-1 rounded-xl gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                다른 에세이 첨삭하기
+              </Button>
               <Button
                 variant="outline"
+                size="lg"
                 onClick={() => router.push("/essays")}
-                className="w-full rounded-xl"
+                className="flex-1 rounded-xl gap-2"
               >
-                에세이 목록으로 돌아가기
+                <List className="w-4 h-4" />
+                에세이 목록으로
               </Button>
-            )}
+            </div>
           </div>
         )}
+        {/* ═══ /Result Phase ═══ */}
       </div>
 
       {/* Elite 업그레이드 유도 Modal — Free/Pro 유저가 대학별 rubric으로 제출 시 */}
