@@ -54,6 +54,12 @@ export const metadata: Metadata = {
     follow: true,
   },
   manifest: '/manifest.json',
+  // SVG favicon takes precedence in modern browsers; app/favicon.ico stays as legacy fallback via Next.js convention.
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+  },
   alternates: {
     canonical: 'https://prismedu.kr',
   },

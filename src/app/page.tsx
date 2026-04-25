@@ -4,6 +4,7 @@ import { SampleReportShowcase } from "@/components/landing/SampleReportShowcase"
 import { TrustSignalBar } from "@/components/landing/TrustSignalBar";
 import { PersonaSection } from "@/components/landing/PersonaSection";
 import { FAQAccordion } from "@/components/landing/FAQAccordion";
+import { PrismLogo } from "@/components/brand/PrismLogo";
 
 export const metadata: Metadata = {
   title: "PRISM - 한국 국제학교 학생을 위한 AI 미국 입시 매니저",
@@ -82,23 +83,13 @@ export default function LandingPage() {
       <div className="relative w-full max-w-[380px] flex flex-col items-center py-12 px-6">
         {/* ═══ SEO-friendly Hero Section (Server-rendered) ═══ */}
         <header className="flex flex-col items-center text-center mb-10">
-          {/* Prism Logo with halo */}
+          {/* Prism Logo — solid terracotta with subtle primary glow halo. */}
           <div className="animate-welcome-logo mb-7 relative" style={{ animationDelay: "0.1s" }}>
             <div
-              className="absolute inset-0 rounded-[22px] prism-logo-spectrum blur-2xl opacity-50 scale-150"
+              className="absolute inset-0 rounded-full bg-primary/30 blur-2xl scale-150"
               aria-hidden="true"
             />
-            <div className="relative w-[68px] h-[68px] rounded-[22px] prism-logo-spectrum flex items-center justify-center shadow-glow-lg ring-1 ring-white/30">
-              <svg className="w-8 h-8 text-white drop-shadow-md" viewBox="0 0 32 32" fill="none">
-                <path d="M16 4L28 26H4L16 4Z" fill="white" fillOpacity="0.95" />
-                <path
-                  d="M16 4L28 26H4L16 4Z"
-                  stroke="white"
-                  strokeWidth="1"
-                  strokeOpacity="0.3"
-                />
-              </svg>
-            </div>
+            <PrismLogo size={68} variant="full" className="relative" title="PRISM" />
           </div>
 
           <h1

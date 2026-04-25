@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, BarChart3, FileText, MessageSquare, Calendar, Sparkles } from "lucide-react";
+import { Home, BarChart3, FileText, MessageSquare, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PrismLogo } from "@/components/brand/PrismLogo";
 
 /**
  * DesktopSidebar — lg+ 화면에서 BottomNav 대신 표시되는 사이드 네비.
@@ -37,13 +38,9 @@ export function DesktopSidebar() {
       <Link
         href="/dashboard"
         className="flex items-center gap-2.5 px-card-lg py-card-lg group"
+        aria-label="PRISM 홈"
       >
-        <span
-          className="w-8 h-8 rounded-xl prism-logo-spectrum shadow-glow-sm flex items-center justify-center"
-          aria-hidden="true"
-        >
-          <Sparkles className="w-4 h-4 text-white" />
-        </span>
+        <PrismLogo size={28} variant="compact" />
         <span className="font-headline font-bold text-lg tracking-tight">PRISM</span>
       </Link>
 

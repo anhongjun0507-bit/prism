@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PrismLogo } from "@/components/brand/PrismLogo";
 
 export const metadata: Metadata = {
   title: "탈퇴 완료 — PRISM",
@@ -17,13 +18,8 @@ export default function GoodbyePage() {
   return (
     <main className="min-h-screen bg-background flex flex-col items-center justify-center px-gutter py-16">
       <div className="w-full max-w-sm text-center space-y-6">
-        <div
-          className="w-16 h-16 rounded-[22px] prism-logo-spectrum flex items-center justify-center mx-auto opacity-60"
-          aria-hidden="true"
-        >
-          <svg className="w-7 h-7 text-white" viewBox="0 0 32 32" fill="none">
-            <path d="M16 4L28 26H4L16 4Z" fill="white" fillOpacity="0.95" />
-          </svg>
+        <div className="flex justify-center opacity-60">
+          <PrismLogo size={64} variant="compact" />
         </div>
 
         <div className="space-y-2">
