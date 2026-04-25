@@ -21,6 +21,7 @@ import { InstallPrompt } from "@/components/InstallPrompt";
 import { DesktopSidebar } from "@/components/DesktopSidebar";
 import { StorageQuotaBanner } from "@/components/StorageQuotaBanner";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { ConditionalFooter } from "@/components/ConditionalFooter";
 import { I18nProvider } from "@/lib/i18n";
 
 export const metadata: Metadata = {
@@ -150,6 +151,7 @@ export default function RootLayout({
                 <main id="main-content" className="max-w-md md:max-w-2xl lg:max-w-5xl mx-auto min-h-screen bg-background relative overflow-x-hidden">
                   <PageTransition>{children}</PageTransition>
                 </main>
+                <ConditionalFooter />
                 <Toaster />
                 <StorageQuotaBanner />
                 <InstallPrompt />
