@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Activity, Trophy } from "lucide-react";
 import { trackPrismEvent } from "@/lib/analytics/events";
+import { useCountUp } from "@/hooks/use-count-up";
 import { isAdmissionSeason } from "@/lib/season";
 
 interface LiveStatsResponse {
@@ -66,6 +67,16 @@ export function LiveStatsBar({ variant = "full" }: Props) {
     return () => io.disconnect();
   }, [visible, variant]);
 
+  // 토스 카운트업 — full 카드일 때만 트윈, mini는 텍스트 안 끼어 있어 일반 표시.
+  const animatedAnalysis = useCountUp(stats?.analysisCount ?? 0, {
+    duration: 1200,
+    disabled: variant !== "full" || !showAnalysis,
+  });
+  const animatedAdmissions = useCountUp(stats?.weeklyAdmissions ?? 0, {
+    duration: 900,
+    disabled: variant !== "full" || !showAdmissions,
+  });
+
   if (!stats || !visible) return null;
 
   if (variant === "mini") {
@@ -86,7 +97,7 @@ export function LiveStatsBar({ variant = "full" }: Props) {
           <li className="flex items-center gap-1.5">
             <Activity className="w-4 h-4 text-primary shrink-0" aria-hidden="true" />
             <span>
-              AI 분석 <strong>{stats.analysisCount.toLocaleString()}</strong>회 누적
+              AI 분석 <strong className="tabular-nums">{Number(animatedAnalysis).toLocaleString()}</strong>회 누적
             </span>
           </li>
         )}
@@ -94,7 +105,7 @@ export function LiveStatsBar({ variant = "full" }: Props) {
           <li className="flex items-center gap-1.5">
             <Trophy className="w-4 h-4 text-primary shrink-0" aria-hidden="true" />
             <span>
-              이번 주 합격 <strong>{stats.weeklyAdmissions}</strong>건 추가
+              이번 주 합격 <strong className="tabular-nums">{animatedAdmissions}</strong>건 추가
             </span>
           </li>
         )}

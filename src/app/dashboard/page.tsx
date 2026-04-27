@@ -361,7 +361,7 @@ function DashboardPageInner() {
               href="/analysis"
               onClick={() => trackSectionClick(SECTION_IDS.HOME_SPEC_CTA, 0, "/analysis")}
             >
-              <Card className="p-5 rounded-2xl border border-primary/25 bg-primary/5 flex items-center gap-3 hover:bg-primary/10 transition-all active:scale-[0.98]">
+              <Card className="p-5 rounded-2xl border border-primary/25 bg-primary/5 flex items-center gap-3 hover:bg-primary/10 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ease-toss active:scale-[0.98]">
                 <div className="w-12 h-12 rounded-xl bg-primary/12 flex items-center justify-center shrink-0">
                   <Sparkles className="w-5 h-5 text-primary" />
                 </div>
@@ -447,7 +447,7 @@ function DashboardPageInner() {
               return (
                 <Card
                   key={school.n}
-                  className="p-3.5 rounded-2xl border border-border/60 bg-card shadow-sm flex items-center gap-3 cursor-pointer hover:shadow-md active:scale-[0.98] transition-all"
+                  className="p-3.5 rounded-2xl border border-border/60 bg-card shadow-sm flex items-center gap-3 cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 ease-toss"
                   onClick={() => setSelectedSchool(school)}
                 >
                   <SchoolLogo domain={school.d} color={school.c} name={school.n} rank={school.rk} size="md" />
@@ -485,7 +485,7 @@ function DashboardPageInner() {
             href="/pricing"
             onClick={() => trackSectionClick(SECTION_IDS.HOME_UPGRADE_NUDGE, 0, "/pricing")}
           >
-            <Card className="p-4 rounded-2xl border border-primary/20 bg-primary/5 shadow-none flex items-center gap-3 hover:bg-primary/10 transition-all active:scale-[0.98]">
+            <Card className="p-4 rounded-2xl border border-primary/20 bg-primary/5 shadow-none flex items-center gap-3 hover:bg-primary/10 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ease-toss active:scale-[0.98]">
               <div className="w-10 h-10 rounded-xl bg-primary/12 flex items-center justify-center shrink-0">
                 <Crown className="w-4 h-4 text-primary" />
               </div>

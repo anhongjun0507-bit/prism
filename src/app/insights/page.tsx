@@ -18,6 +18,7 @@ import { CAT_STYLE } from "@/lib/analysis-helpers";
 import { fetchWithAuth } from "@/lib/api-client";
 import { getCachedMatch, setCachedMatch } from "@/lib/match-cache";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
+import { useCountUp } from "@/hooks/use-count-up";
 import { trackPrismEvent } from "@/lib/analytics/events";
 import { MigrationNudgeBanner } from "@/components/ia/MigrationNudgeBanner";
 import { useSectionViewTracking } from "@/hooks/useSectionViewTracking";
@@ -177,19 +178,13 @@ function InsightsPageInner() {
                   style={{ gridTemplateColumns: `repeat(${statsItems.length}, 1fr)` }}
                 >
                   {statsItems.map(({ label, count, dot }, i) => (
-                    <div
+                    <CountTile
                       key={label}
-                      className={`p-4 text-center ${i < statsItems.length - 1 ? "border-r border-border/50" : ""}`}
-                    >
-                      <div className="flex items-center justify-center gap-1.5 mb-1">
-                        <span className={`w-2 h-2 rounded-full ${dot}`} aria-hidden="true" />
-                        <p className="text-2xs text-muted-foreground font-medium">{label}</p>
-                      </div>
-                      <p className="text-lg font-bold tabular-nums leading-tight text-foreground">
-                        {count}
-                        <span className="text-2xs font-normal text-muted-foreground ml-0.5">개</span>
-                      </p>
-                    </div>
+                      label={label}
+                      count={count}
+                      dot={dot}
+                      borderRight={i < statsItems.length - 1}
+                    />
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
@@ -307,6 +302,32 @@ function InsightsPageInner() {
       </main>
 
       <BottomNav />
+    </div>
+  );
+}
+
+function CountTile({
+  label,
+  count,
+  dot,
+  borderRight,
+}: {
+  label: string;
+  count: number;
+  dot: string;
+  borderRight: boolean;
+}) {
+  const display = useCountUp(count, { duration: 900 });
+  return (
+    <div className={`p-4 text-center ${borderRight ? "border-r border-border/50" : ""}`}>
+      <div className="flex items-center justify-center gap-1.5 mb-1">
+        <span className={`w-2 h-2 rounded-full ${dot}`} aria-hidden="true" />
+        <p className="text-2xs text-muted-foreground font-medium">{label}</p>
+      </div>
+      <p className="text-lg font-bold tabular-nums leading-tight text-foreground">
+        {display}
+        <span className="text-2xs font-normal text-muted-foreground ml-0.5">개</span>
+      </p>
     </div>
   );
 }

@@ -35,7 +35,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           "file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground",
           "placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
           // Brand focus glow
-          "outline-none transition-shadow",
+          "outline-none transition-shadow duration-200 ease-toss",
           "focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/20 focus-visible:shadow-glow-sm",
           // Error state
           error && "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20",

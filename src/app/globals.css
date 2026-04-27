@@ -315,14 +315,18 @@ body {
 }
 
 /* Hover lift — 카드/버튼이 들어올린 듯한 미세 움직임.
-   transform-gpu로 GPU 가속, transition 빠르게. */
+   토스 ease + shadow lift로 클릭 가능 여부를 시각적으로 hint. */
 .hover-lift {
-  transition: transform 0.18s ease-out, box-shadow 0.18s ease-out;
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
 }
 @media (hover: hover) {
   .hover-lift:hover {
     transform: translateY(-2px);
+    box-shadow:
+      0 6px 16px -4px hsl(var(--foreground) / 0.08),
+      0 2px 4px -2px hsl(var(--foreground) / 0.06);
   }
 }
 

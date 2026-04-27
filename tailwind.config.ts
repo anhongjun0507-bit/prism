@@ -147,6 +147,11 @@ export default {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      // 토스 standard ease — 모든 마이크로 인터랙션의 기본 easing.
+      // bezier(0.22, 1, 0.36, 1) = ease-out, 끝에서 부드럽게 안착.
+      transitionTimingFunction: {
+        toss: 'cubic-bezier(0.22, 1, 0.36, 1)',
+      },
       // Keyframes + animation utilities. 단일 source of truth.
       // (예전에 일부 keyframes가 globals.css에만 있어 drift 위험이 있었음.)
       keyframes: {
@@ -199,6 +204,12 @@ export default {
           from: { opacity: '0', transform: 'translateX(-16px)' },
           to: { opacity: '1', transform: 'translateX(0)' },
         },
+        // 새 알림/배지 등장 시 살짝 over-shoot → settle. 시선 끌기용.
+        'notification-pop': {
+          '0%': { transform: 'scale(0)', opacity: '0' },
+          '60%': { transform: 'scale(1.2)', opacity: '1' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
       },
       // Animation duration tiers:
       //   Fast       0.2s  — micro-feedback (accordion, tooltip)
@@ -217,6 +228,7 @@ export default {
         'page-enter': 'page-enter 0.3s ease-out both',
         'page-forward': 'page-forward 0.3s cubic-bezier(0.22, 1, 0.36, 1) both',
         'page-back': 'page-back 0.3s cubic-bezier(0.22, 1, 0.36, 1) both',
+        'notification-pop': 'notification-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both',
       },
     },
   },

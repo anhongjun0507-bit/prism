@@ -106,7 +106,7 @@ function ToolsPageInner() {
               }}
               className="block"
             >
-              <Card className="p-4 rounded-2xl border border-border/60 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all active:scale-[0.98] h-full flex flex-col gap-2.5">
+              <Card className="p-4 rounded-2xl border border-border/60 bg-card shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-primary/30 transition-all duration-200 ease-toss active:scale-[0.98] h-full flex flex-col gap-2.5">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                   <Icon className="w-5 h-5 text-primary" aria-hidden="true" />
                 </div>

@@ -66,14 +66,14 @@ export function BottomNav() {
             onClick={() => trackPrismEvent("bottom_nav_clicked", { tab_id: item.id })}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "flex flex-col items-center justify-center gap-0.5 px-3 min-h-[44px] min-w-[44px] rounded-xl transition-colors relative",
+              "flex flex-col items-center justify-center gap-0.5 px-3 min-h-[44px] min-w-[44px] rounded-xl transition-colors duration-200 ease-toss relative",
               isActive ? "text-primary bg-primary/8" : "text-muted-foreground hover:text-foreground"
             )}
           >
             <item.icon className={cn("w-5 h-5", isActive && "stroke-[2.5px]")} aria-hidden="true" />
             {isActive && (
               <>
-                <span className="w-1 h-1 rounded-full bg-primary absolute top-1 right-2" aria-hidden="true" />
+                <span className="w-1 h-1 rounded-full bg-primary absolute top-1 right-2 animate-notification-pop" aria-hidden="true" />
                 <span className="sr-only">현재 페이지: </span>
               </>
             )}
@@ -99,7 +99,7 @@ export function BottomNav() {
         )}
       >
         <MoreHorizontal className={cn("w-5 h-5", onMoreRoute && "stroke-[2.5px]")} aria-hidden="true" />
-        {onMoreRoute && <span className="w-1 h-1 rounded-full bg-primary absolute top-1 right-2" aria-hidden="true" />}
+        {onMoreRoute && <span className="w-1 h-1 rounded-full bg-primary absolute top-1 right-2 animate-notification-pop" aria-hidden="true" />}
         <span className="text-[13px] leading-tight font-medium">더보기</span>
       </button>
     </nav>
