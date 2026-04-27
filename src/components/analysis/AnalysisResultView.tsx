@@ -164,7 +164,7 @@ export function AnalysisResultView({ specs, onBack, toggleFavorite, isFavorite }
           </Card>
         </Link>
 
-        <Card className="dark-hero-gradient text-white border-none p-5 rounded-2xl">
+        <Card className="hero-navy-gradient text-white border-none p-5 rounded-2xl">
           <div className="flex items-center justify-between mb-3 gap-2">
             <p className="text-xs text-white/70">{results.length}개 대학교 분석</p>
             <div className="flex items-center gap-2">

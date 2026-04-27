@@ -153,7 +153,7 @@ export function SpecAnalysisPanel({ profile, hasAccess }: SpecAnalysisPanelProps
           {analysis && !loading && (
             <>
               {/* Overall Score — compact hero */}
-              <Card className="dark-hero-gradient text-white border-none p-card relative overflow-hidden">
+              <Card className="hero-navy-gradient text-white border-none p-card relative overflow-hidden">
                 <div className="absolute top-[-20%] right-[-10%] w-24 h-24 bg-primary/20 rounded-full blur-[40px]" />
                 <div className="relative z-10 flex items-center gap-4">
                   <div>

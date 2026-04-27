@@ -86,7 +86,7 @@ export function SpecAnalysisView({ profile, hasAccess }: SpecAnalysisViewProps) 
       <div className="px-gutter space-y-5">
         <div className="relative">
           <div className="pointer-events-none select-none blur-sm opacity-50">
-            <Card className="dark-hero-gradient text-white border-none p-6">
+            <Card className="hero-navy-gradient text-white border-none p-6">
               <h2 className="font-headline text-2xl font-bold">스펙 종합 점수</h2>
               <p className="text-6xl font-bold font-headline mt-3">85</p>
               <p className="text-sm text-white/70 mt-2">전반적으로 견고한 스펙입니다...</p>
@@ -185,7 +185,7 @@ export function SpecAnalysisView({ profile, hasAccess }: SpecAnalysisViewProps) 
       {analysis && !loading && (
         <>
           {/* Overall Score Card */}
-          <Card className="dark-hero-gradient text-white border-none p-6 relative overflow-hidden">
+          <Card className="hero-navy-gradient text-white border-none p-6 relative overflow-hidden">
             <div className="absolute top-[-20%] right-[-10%] w-32 h-32 bg-primary/20 rounded-full blur-[60px]" />
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-2">

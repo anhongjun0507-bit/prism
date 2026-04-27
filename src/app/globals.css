@@ -80,6 +80,11 @@ body {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+  .hero-navy-gradient {
+    background: linear-gradient(135deg, #1a2436 0%, #2c3850 100%) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
   main, .max-w-md, .max-w-2xl, .max-w-4xl {
     max-width: 100% !important;
     padding: 0 !important;
@@ -435,6 +440,18 @@ body {
 
 .dark .dark-hero-gradient {
   background: linear-gradient(135deg, hsl(30 10% 4%) 0%, hsl(30 10% 10%) 100%);
+}
+
+/* Hero — navy gradient for trust signal (Stage 3 #12 phase 2).
+   warm-brown(.dark-hero-gradient)는 학부모 리포트·SplashScreen 등 brand 친근감용으로 유지하고,
+   Dashboard·Spec Analysis 등 신뢰가 핵심인 Hero에는 이 navy 톤을 사용한다.
+   white text 전제(WCAG AA 4.5:1+ for hsl(220 60% 25%) 위 #fff). */
+.hero-navy-gradient {
+  background: linear-gradient(135deg, hsl(220 60% 25%) 0%, hsl(215 65% 18%) 100%);
+}
+
+.dark .hero-navy-gradient {
+  background: linear-gradient(135deg, hsl(220 55% 15%) 0%, hsl(215 60% 10%) 100%);
 }
 
 .dark .glass-card {

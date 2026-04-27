@@ -220,7 +220,7 @@ function DashboardPageInner() {
       {/* ── Main content ── */}
       <main className="px-gutter space-y-5">
         {/* Hero — 목표 대학 · D-day · 합격 확률 */}
-        <Card className="p-6 rounded-2xl border-none shadow-lg overflow-hidden relative dark-hero-gradient text-hero">
+        <Card className="p-6 rounded-2xl border-none shadow-lg overflow-hidden relative hero-navy-gradient text-hero">
           <div className="absolute inset-0 bg-hero-overlay pointer-events-none" style={{ background: "radial-gradient(ellipse at top right, hsl(var(--hero-overlay) / 0.12), transparent 60%)" }} aria-hidden="true" />
           <div className="relative">
             <p className="text-2xs text-hero-muted uppercase tracking-wide mb-1.5 font-medium">목표 대학교</p>
