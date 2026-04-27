@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ParentReportData } from "@/lib/parent/types";
 import { PARENT_TERMS, categoryLabel } from "@/lib/parent/term-map";
+import { ParentNav } from "@/components/parent/ParentNav";
 
 /**
  * 학부모 view-only 리포트 화면. Server Component.
@@ -14,7 +15,7 @@ import { PARENT_TERMS, categoryLabel } from "@/lib/parent/term-map";
  * sensitive 필드(이메일·결제·채팅 등)는 prop 타입(`ParentReportData`)이
  * 차단 — 다른 필드는 컴파일 에러로 들어올 수 없다.
  */
-export function ParentReportView({ data }: { data: ParentReportData }) {
+export function ParentReportView({ data, token }: { data: ParentReportData; token: string }) {
   const { studentName, plan, scores, admissionSummary, recommendedSchools, weeklyActivity } = data;
   const todayLabel = new Date().toLocaleDateString("ko-KR", {
     year: "numeric",
@@ -24,6 +25,8 @@ export function ParentReportView({ data }: { data: ParentReportData }) {
 
   return (
     <main className="parent-track min-h-screen bg-background pb-12">
+      <ParentNav token={token} active="dashboard" />
+
       {/* Header */}
       <header className="bg-gradient-to-br from-primary/10 via-background to-background border-b border-border/60 px-6 py-10">
         <div className="max-w-2xl mx-auto space-y-2">
@@ -189,6 +192,59 @@ export function ParentReportView({ data }: { data: ParentReportData }) {
           </Link>
         </section>
 
+        {/* 다른 학부모 페이지 (sub-page nav) */}
+        <section className="space-y-3">
+          <h2 className="font-headline text-xl font-bold text-foreground">더 알아보기</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <SubPageCard
+              href={`/parent-view/${token}/timeline`}
+              title="입시 일정 보기"
+              desc="10–12학년 미국 입시 1년 흐름"
+              icon="📅"
+            />
+            <SubPageCard
+              href={`/parent-view/${token}/comparison`}
+              title="작년과 비교"
+              desc="작년 합격자 평균 대비 자녀 위치"
+              icon="📊"
+            />
+            <SubPageCard
+              href={`/parent-view/${token}/glossary`}
+              title="입시 용어 사전"
+              desc="모르는 영어 약어를 한국어로"
+              icon="📖"
+            />
+          </div>
+        </section>
+
+        {/* P2 (유학파 아버지) — 데이터 출처 신뢰 강화 */}
+        <section className="bg-muted/30 rounded-2xl border border-border/60 p-5 space-y-3">
+          <h2 className="font-headline text-base font-bold text-foreground">어떻게 분석하나요?</h2>
+          <ul className="space-y-2 text-sm text-foreground/80">
+            <li className="flex items-start gap-2">
+              <span className="mt-0.5 shrink-0">•</span>
+              <span>
+                <strong className="text-foreground">1,001개 대학 공식 데이터</strong>
+                <span className="text-muted-foreground"> · Common Data Set</span>
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-0.5 shrink-0">•</span>
+              <span>
+                <strong className="text-foreground">32+ 검증된 합격 사례</strong>
+                <span className="text-muted-foreground"> · 국제학교 시드 데이터</span>
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-0.5 shrink-0">•</span>
+              <span>
+                <strong className="text-foreground">AI: Anthropic Claude</strong>
+                <span className="text-muted-foreground"> · 미국 회사 (San Francisco)</span>
+              </span>
+            </li>
+          </ul>
+        </section>
+
         {/* 푸터 */}
         <footer className="pt-6 border-t border-border/60 text-center space-y-2">
           <p className="text-sm text-muted-foreground">
@@ -245,6 +301,33 @@ function ActivityCell({ label, count }: { label: string; count: number }) {
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="font-headline text-2xl font-bold text-foreground tabular-nums">{count}</p>
     </div>
+  );
+}
+
+function SubPageCard({
+  href,
+  title,
+  desc,
+  icon,
+}: {
+  href: string;
+  title: string;
+  desc: string;
+  icon: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="block bg-card rounded-2xl border border-border/60 p-5 shadow-sm hover:border-primary/40 hover:bg-primary/[0.02] transition-colors min-h-[112px]"
+    >
+      <div className="flex items-start gap-3">
+        <span className="text-2xl shrink-0" aria-hidden="true">{icon}</span>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-foreground text-base">{title}</p>
+          <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{desc}</p>
+        </div>
+      </div>
+    </Link>
   );
 }
 
