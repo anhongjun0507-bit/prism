@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -343,6 +344,11 @@ function EssaysPageInner() {
       });
     return () => { cancelled = true; };
   }, [selectedSchool]);
+
+  const [essayListRef] = useAutoAnimate<HTMLDivElement>({
+    duration: 250,
+    easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+  });
 
   const wordCount = activeEssay ? countWords(activeEssay.content) : 0;
   const charCount = activeEssay?.content.length || 0;
@@ -690,7 +696,7 @@ function EssaysPageInner() {
         </Link>
       </div>
 
-      <div className="px-6 space-y-3 md:grid md:grid-cols-2 md:gap-3 md:items-start md:space-y-0">
+      <div ref={essayListRef} className="px-6 space-y-3 md:grid md:grid-cols-2 md:gap-3 md:items-start md:space-y-0">
         {essaysLoading && essays.length === 0 ? (
           Array.from({ length: 2 }).map((_, i) => (
             <Card key={i} variant="elevated" className="h-full">

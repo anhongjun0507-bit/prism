@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { Copy, Share2, Trash2, Plus, AlertCircle } from "lucide-react";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
@@ -8,6 +9,7 @@ import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { trackPrismEvent } from "@/lib/analytics/events";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { SkeletonWrapper } from "@/components/ui/skeleton-wrapper";
 import type { ParentViewTokenLike } from "@/lib/parent/types";
 
 type IssueResponse = ParentViewTokenLike;
@@ -24,6 +26,10 @@ export function ParentShareSection() {
   const [revoking, setRevoking] = useState<string | null>(null);
   const { toast } = useToast();
   const showApiError = useApiErrorToast();
+  const [tokensRef] = useAutoAnimate<HTMLUListElement>({
+    duration: 250,
+    easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+  });
 
   const refresh = useCallback(async () => {
     try {
@@ -130,30 +136,35 @@ export function ParentShareSection() {
         </p>
       </div>
 
-      {loading ? (
-        <div className="space-y-2">
-          {[0, 1].map((i) => (
-            <div key={i} className="h-20 rounded-xl bg-muted/30 animate-pulse" />
-          ))}
-        </div>
-      ) : tokens.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-2">
-          아직 발급된 링크가 없어요. 아래 버튼으로 새 링크를 만들어주세요.
-        </p>
-      ) : (
-        <ul className="space-y-3">
-          {tokens.map((t) => (
-            <TokenCard
-              key={t.token}
-              token={t}
-              busy={revoking === t.token}
-              onCopy={() => handleCopy(t.token)}
-              onShare={() => handleShare(t)}
-              onRevoke={() => handleRevoke(t.token)}
-            />
-          ))}
-        </ul>
-      )}
+      <SkeletonWrapper
+        loading={loading}
+        skeleton={
+          <div className="space-y-2">
+            {[0, 1].map((i) => (
+              <div key={i} className="h-20 rounded-xl bg-muted/30 animate-pulse" />
+            ))}
+          </div>
+        }
+      >
+        {tokens.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-2">
+            아직 발급된 링크가 없어요. 아래 버튼으로 새 링크를 만들어주세요.
+          </p>
+        ) : (
+          <ul ref={tokensRef} className="space-y-3">
+            {tokens.map((t) => (
+              <TokenCard
+                key={t.token}
+                token={t}
+                busy={revoking === t.token}
+                onCopy={() => handleCopy(t.token)}
+                onShare={() => handleShare(t)}
+                onRevoke={() => handleRevoke(t.token)}
+              />
+            ))}
+          </ul>
+        )}
+      </SkeletonWrapper>
 
       {canIssue ? (
         <Button

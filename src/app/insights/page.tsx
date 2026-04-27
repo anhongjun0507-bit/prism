@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useAutoAnimate } from "@formkit/auto-animate/react";
 import dynamic from "next/dynamic";
 import { TrendingUp, ChevronRight } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
@@ -9,6 +10,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/EmptyState";
+import { SkeletonWrapper } from "@/components/ui/skeleton-wrapper";
 import { Button } from "@/components/ui/button";
 import { LiveStatsBar } from "@/components/landing/LiveStatsBar";
 import { AdmissionFeed } from "@/components/AdmissionFeed";
@@ -113,6 +115,11 @@ function InsightsPageInner() {
 
   const showStats = hasSpecs && quickResults.length > 0 && statsItems.length > 0;
 
+  const [statsGridRef] = useAutoAnimate<HTMLDivElement>({
+    duration: 250,
+    easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+  });
+
   return (
     <div className="min-h-screen bg-background pb-nav">
       <PageHeader
@@ -140,12 +147,15 @@ function InsightsPageInner() {
         ) : (
           <>
             {/* Stats row */}
-            {matchLoading ? (
-              <div className="rounded-2xl bg-muted/40 border border-border/50 p-4 h-[88px] animate-pulse" />
-            ) : showStats ? (
+            <SkeletonWrapper
+              loading={matchLoading}
+              skeleton={<div className="rounded-2xl bg-muted/40 border border-border/50 p-4 h-[88px] animate-pulse" />}
+            >
+              {showStats ? (
               <section aria-label="합격 가능성 분포">
                 <h2 className="font-headline text-base font-bold mb-2.5">합격 가능성 분포</h2>
                 <div
+                  ref={statsGridRef}
                   className="grid rounded-2xl bg-muted/40 border border-border/50 overflow-hidden"
                   style={{ gridTemplateColumns: `repeat(${statsItems.length}, 1fr)` }}
                 >
@@ -173,7 +183,8 @@ function InsightsPageInner() {
                   에서.
                 </p>
               </section>
-            ) : null}
+              ) : null}
+            </SkeletonWrapper>
 
             {/* LiveStatsBar full */}
             <section aria-label="실시간 통계">

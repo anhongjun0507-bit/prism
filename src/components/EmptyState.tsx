@@ -24,7 +24,7 @@ export function EmptyState({
   className,
 }: EmptyStateProps) {
   return (
-    <div className={cn("text-center px-6 py-10", className)}>
+    <div className={cn("text-center px-6 py-10 animate-fade-up", className)}>
       <div className="relative w-32 h-32 mx-auto mb-6">
         {/* Soft gradient halo behind illustration */}
         <div className="absolute inset-0 rounded-full bg-prismatic-soft blur-2xl opacity-60" aria-hidden="true" />

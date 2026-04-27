@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useAutoAnimate } from "@formkit/auto-animate/react";
 import Link from "next/link";
 import {
   Wand2, Sparkles, Zap, Calendar, Users, Scale,
@@ -69,6 +70,10 @@ export default function ToolsPage() {
 function ToolsPageInner() {
   const { profile } = useAuth();
   const currentPlan = normalizePlan(profile?.plan);
+  const [gridRef] = useAutoAnimate<HTMLDivElement>({
+    duration: 250,
+    easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+  });
 
   useEffect(() => {
     trackPrismEvent("tools_page_viewed", { plan: currentPlan });
@@ -83,7 +88,7 @@ function ToolsPageInner() {
       />
 
       <main className="px-gutter">
-        <div className="grid grid-cols-2 gap-3">
+        <div ref={gridRef} className="grid grid-cols-2 gap-3">
           {TOOLS.map(({ id, href, label, desc, Icon }) => (
             <Link
               key={id}

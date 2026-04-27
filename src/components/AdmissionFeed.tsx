@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,10 @@ export function AdmissionFeed() {
   const canFilter = currentPlan !== "free"; // Pro+만 필터 가능
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [feedRef] = useAutoAnimate<HTMLDivElement>({
+    duration: 250,
+    easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+  });
 
   useEffect(() => {
     async function loadFeed() {
@@ -101,7 +106,7 @@ export function AdmissionFeed() {
         <Badge variant="secondary" className="text-xs">{new Date().getFullYear()}시즌</Badge>
       </div>
 
-      <div className="space-y-2 max-h-48 overflow-y-auto">
+      <div ref={feedRef} className="space-y-2 max-h-48 overflow-y-auto">
         {feed.slice(0, canFilter ? 15 : 5).map((item, i) => {
           const config = RESULT_CONFIG[item.result];
           const Icon = config.icon;
