@@ -413,6 +413,20 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+   PARENT TRACK — 학부모 view-only 페이지 전용 디자인 토큰
+   ─────────────────────────────────────────────────────────────────────── */
+/* 학부모(P1·P3)는 앱 기본 15px 본문이 작게 느껴진다. 디자인 감사
+   "큰 글자, 단순 네비, 요약 중심" 권고에 맞춰 본문 17px + 줄간격 1.65로 1단계 키움. */
+.parent-track {
+  font-size: 1.0625rem; /* 17px */
+  line-height: 1.65;
+}
+.parent-track h1 { font-size: 1.875rem; line-height: 1.3; }
+.parent-track h2 { font-size: 1.375rem; line-height: 1.4; }
+.parent-track h3 { font-size: 1.125rem; line-height: 1.5; }
+.parent-track p  { font-size: 1.0625rem; line-height: 1.65; }
+
+/* ═══════════════════════════════════════════════════════════════════════
    PAGE-SPECIFIC LEGACY
    ─────────────────────────────────────────────────────────────────────── */
 .dark-hero-gradient {

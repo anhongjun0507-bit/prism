@@ -48,6 +48,10 @@ export interface PrismEventPayloads {
   planner_generated: { plan: Plan; taskCount: number };
   sample_pdf_downloaded: Record<string, never>;
   parent_report_viewed: { plan: Plan; reportType: string };
+  parent_token_issued: { plan: "pro" | "elite" };
+  parent_token_shared: { method: "web_share" | "clipboard" };
+  parent_token_revoked: Record<string, never>;
+  parent_view_opened: { plan: "pro" | "elite"; reportType: "basic" | "weekly" };
   today_focus_shown: { type: TodayFocusType };
   today_focus_clicked: { type: TodayFocusType; target: string };
   landing_sample_viewed: Record<string, never>;

@@ -135,6 +135,41 @@ service cloud.firestore {
     }
 
     /* ──────────────────────────────────────────────────────────
+       학부모 view-only 토큰: parent_view_tokens/{token}
+       ────────────────────────────────────────────────────────
+       학생이 발급한 view-only 링크. 학부모는 로그인 없이 /parent-view/{token}로 접근.
+       클라이언트(학생)는 본인 토큰만 read/list/revoke 가능. 발급은 서버 API 경유 권장
+       (서버 Admin SDK가 plan 검증·active count cap·viewLimit 강제).
+
+       클라이언트 발급 분기는 Rules로 초기 invariants(viewCount=0, revoked=false)만 체크하고
+       나머지(plan, active count cap)는 거부할 수 없다. 그러므로 /api/parent/tokens 경유 권장.
+
+       서버 Admin SDK는 이 Rules를 우회하므로 viewCount/lastViewedAt 자유 갱신 가능.
+       /parent-view/[token] Server Component도 Admin SDK 사용 → 학부모는 인증 없이 접근.
+       ──────────────────────────────────────────────────────── */
+    match /parent_view_tokens/{tokenId} {
+      // 학생 본인만 자기 토큰 조회/리스트
+      allow read: if request.auth != null
+                  && resource.data.studentUid == request.auth.uid;
+
+      // 생성: 본인 uid + 초기값 invariants 검증
+      // (실제 발급은 서버 /api/parent/tokens 권장 — plan·active count cap 적용)
+      allow create: if request.auth != null
+                    && request.resource.data.studentUid == request.auth.uid
+                    && request.resource.data.viewCount == 0
+                    && request.resource.data.revoked == false;
+
+      // 업데이트: 학생은 revoked만 변경 가능 (다른 필드 변경 차단)
+      // viewCount/lastViewedAt 등은 서버 Admin SDK 전용.
+      allow update: if request.auth != null
+                    && resource.data.studentUid == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['revoked']);
+
+      // 직접 삭제 불가 — revoke만 (감사 트레일 유지)
+      allow delete: if false;
+    }
+
+    /* ──────────────────────────────────────────────────────────
        기본 deny — 명시되지 않은 모든 경로는 차단
        ──────────────────────────────────────────────────────── */
     match /{document=**} {

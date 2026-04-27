@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
+import { ParentShareSection } from "@/components/parent/ParentShareSection";
 import { Users, TrendingUp, Award, Download, Sparkles, FileText } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import Link from "next/link";
@@ -162,6 +163,9 @@ function ParentReportPageInner() {
 
   const reportContent = (
     <div className="space-y-6">
+      {/* 학부모와 공유 — Pro/Elite만 보이는 섹션. blur 처리된 Free 사용자는 가려짐. */}
+      <ParentShareSection />
+
       {/* Header card */}
       <Card className="dark-hero-gradient text-white border-none p-6 relative overflow-hidden">
         <div className="absolute top-[-20%] right-[-10%] w-32 h-32 bg-primary/20 rounded-full blur-[60px]" />

@@ -43,7 +43,11 @@ export function BottomNav() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
 
-  const hideNav = pathname === "/" || pathname === "/onboarding";
+  // /parent-view/* 는 학부모 view-only 페이지 — 학생용 nav 숨김.
+  const hideNav =
+    pathname === "/" ||
+    pathname === "/onboarding" ||
+    pathname.startsWith("/parent-view");
   if (hideNav) return null;
 
   const onMoreRoute = moreItems.some(i => pathname === i.href || pathname.startsWith(i.href + "/"));
