@@ -166,7 +166,6 @@ function DashboardPageInner() {
   // ── IA analytics: 첫 방문 nudge + scroll depth + exit time + section→action funnel ──
   const mountedAtRef = useRef<number>(0);
   const maxScrollPercentRef = useRef(0);
-  const reportedScrollRef = useRef(0);
   const actionClicksRef = useRef(0);
   const exitRouteRef = useRef<string>("unmount");
 
@@ -201,7 +200,7 @@ function DashboardPageInner() {
     return () => {
       window.removeEventListener("scroll", onScroll);
       const max = maxScrollPercentRef.current;
-      if (max > 0 && max !== reportedScrollRef.current) {
+      if (max > 0) {
         trackPrismEvent("dashboard_scroll_depth", { max_percent: max });
       }
       const elapsed = Date.now() - mountedAtRef.current;

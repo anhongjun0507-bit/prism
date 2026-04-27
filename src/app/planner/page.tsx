@@ -219,7 +219,7 @@ function PlannerPageInner() {
       }
     }, () => { /* ignore errors, keep local state */ });
     return unsub;
-  }, [user]);
+  }, [user, toast]);
 
   // Logged-out: persist to localStorage
   useEffect(() => {
