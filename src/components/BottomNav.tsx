@@ -4,32 +4,31 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
-  Home, BarChart3, FileText, MessageSquare, Calendar,
-  MoreHorizontal, User, CreditCard, Sparkles, Scale, LineChart, Users,
+  Home, BarChart3, FileText, MessageSquare,
+  MoreHorizontal, User, CreditCard, Activity, Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+import { trackPrismEvent } from "@/lib/analytics/events";
 
 const navItems = [
-  { label: "홈", icon: Home, href: "/dashboard" },
-  { label: "분석", icon: BarChart3, href: "/analysis" },
-  { label: "에세이", icon: FileText, href: "/essays" },
-  { label: "AI 상담", icon: MessageSquare, href: "/chat" },
-  { label: "플래너", icon: Calendar, href: "/planner" },
+  { id: "home",     label: "홈",      icon: Home,           href: "/dashboard" },
+  { id: "insights", label: "현황",    icon: Activity,       href: "/insights" },
+  { id: "tools",    label: "도구",    icon: Wrench,         href: "/tools" },
+  { id: "essays",   label: "에세이",  icon: FileText,       href: "/essays" },
+  { id: "chat",     label: "AI 상담", icon: MessageSquare,  href: "/chat" },
 ];
 
-// 더보기 sheet에 노출할 라우트 — bottom nav에 없지만 직접 진입 경로가 필요한 주요 페이지.
+// 더보기 sheet에 노출할 라우트 — bottom nav에 없지만 직접 진입 경로가 필요한 페이지.
 // pathname이 이 중 하나면 "더보기" 탭이 active 상태로 표시됨.
-const moreItems: { label: string; description: string; icon: typeof User; href: string }[] = [
-  { label: "프로필",       description: "내 정보·스펙 관리",         icon: User,      href: "/profile" },
-  { label: "요금제",       description: "Free·Pro·Elite 비교",        icon: CreditCard, href: "/pricing" },
-  { label: "구독 관리",    description: "결제 내역·플랜 변경",         icon: CreditCard, href: "/subscription" },
-  { label: "스펙 분석",    description: "AI가 내 스펙을 진단",         icon: Sparkles,  href: "/spec-analysis" },
-  { label: "What-If",      description: "스펙 바뀌면 합격률은?",       icon: LineChart, href: "/what-if" },
-  { label: "대학 비교",     description: "여러 학교를 한눈에",          icon: Scale,     href: "/compare" },
-  { label: "학부모 리포트", description: "요약 리포트 공유",            icon: Users,     href: "/parent-report" },
+// (스펙 분석·What-If·대학 비교·학부모 리포트·플래너는 /tools hub로 이동)
+const moreItems: { id: string; label: string; description: string; icon: typeof User; href: string }[] = [
+  { id: "profile",      label: "프로필",        description: "내 정보·스펙 관리",         icon: User,       href: "/profile" },
+  { id: "pricing",      label: "요금제",        description: "Free·Pro·Elite 비교",       icon: CreditCard, href: "/pricing" },
+  { id: "subscription", label: "구독 관리",     description: "결제 내역·플랜 변경",        icon: CreditCard, href: "/subscription" },
+  { id: "analysis",     label: "분석 (legacy)", description: "전체 합격 확률 분석 페이지", icon: BarChart3,  href: "/analysis" },
 ];
 
 /**
@@ -64,6 +63,7 @@ export function BottomNav() {
           <Link
             key={item.href}
             href={item.href}
+            onClick={() => trackPrismEvent("bottom_nav_clicked", { tab_id: item.id })}
             aria-current={isActive ? "page" : undefined}
             className={cn(
               "flex flex-col items-center justify-center gap-0.5 px-3 min-h-[44px] min-w-[44px] rounded-xl transition-colors relative",
@@ -83,7 +83,10 @@ export function BottomNav() {
       })}
       <button
         type="button"
-        onClick={() => setMoreOpen(true)}
+        onClick={() => {
+          trackPrismEvent("bottom_nav_clicked", { tab_id: "more" });
+          setMoreOpen(true);
+        }}
         aria-haspopup="dialog"
         aria-expanded={moreOpen}
         aria-current={onMoreRoute ? "page" : undefined}
@@ -111,7 +114,10 @@ export function BottomNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={() => setMoreOpen(false)}
+                onClick={() => {
+                  trackPrismEvent("bottom_nav_clicked", { tab_id: `more_${item.id}` });
+                  setMoreOpen(false);
+                }}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-3 px-3 py-3 rounded-xl transition-colors min-h-[52px]",

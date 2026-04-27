@@ -64,6 +64,10 @@ export interface PrismEventPayloads {
   };
   account_delete_requested: Record<string, never>;
   account_delete_confirmed: Record<string, never>;
+  insights_page_viewed: { plan: Plan };
+  tools_page_viewed: { plan: Plan };
+  tools_card_clicked: { tool_id: string };
+  bottom_nav_clicked: { tab_id: string };
 }
 
 export type LandingSection =

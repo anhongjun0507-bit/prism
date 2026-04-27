@@ -2,16 +2,13 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { AdmissionResultBanner, AdmissionResultModal } from "@/components/AdmissionResultModal";
-import { AdmissionFeed } from "@/components/AdmissionFeed";
-import { SimilarAdmissionCard } from "@/components/admissions/SimilarAdmissionCard";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
-  Sparkles, ChevronRight, ChevronDown,
-  LogOut, Crown, Settings, TrendingUp, Heart, Search,
-  Zap, Users, Wand2,
+  Sparkles, ChevronRight,
+  LogOut, Crown, Settings, Heart, Search,
 } from "lucide-react";
 import { CAT_STYLE } from "@/lib/analysis-helpers";
 import { TodayFocusCard } from "@/components/dashboard/TodayFocusCard";
@@ -35,14 +32,8 @@ import { SchoolLogo } from "@/components/SchoolLogo";
 import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import dynamic from "next/dynamic";
-// Sparkline은 recharts(~100KB) 의존 — dynamic import로 초기 번들 분리
-const Sparkline = dynamic(() => import("@/components/Sparkline").then(m => ({ default: m.Sparkline })), {
-  ssr: false,
-  loading: () => <div style={{ height: 48 }} aria-hidden="true" />,
-});
 // SchoolModal: Tabs + 4 tab 컴포넌트 + ProbabilityReveal까지 포함해 ~25KB.
-// 카드 탭 전까진 안 쓰이므로 dynamic import. modal은 사용자 동작 후 렌더라
-// loading placeholder 불필요 (open=true 직후 React Suspense가 표시 잠깐 지연시킴).
+// 카드 탭 전까진 안 쓰이므로 dynamic import.
 const SchoolModal = dynamic(
   () => import("@/components/analysis/SchoolModal").then((m) => ({ default: m.SchoolModal })),
   { ssr: false },
@@ -70,7 +61,7 @@ export default function DashboardPage() {
 }
 
 function DashboardPageInner() {
-  const { profile, user, logout, snapshots, toggleFavorite, isFavorite } = useAuth();
+  const { profile, user, logout, toggleFavorite, isFavorite } = useAuth();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const showApiError = useApiErrorToast();
   const displayName = profile?.name || user?.displayName || "학생";
@@ -83,11 +74,7 @@ function DashboardPageInner() {
     return schoolsIndex.find((s) => s.n === profile.dreamSchool) || null;
   }, [profile?.dreamSchool, schoolsIndex]);
 
-  // 프로필에 gpa/sat 둘 다 없으면 매칭 요청 자체를 생략 — 이전엔 fallback "3.8"/"1500"로
-  // 가짜 결과를 보여줬는데, 사용자가 "내 데이터?"로 착각할 수 있었음.
   const hasSpecs = !!(profile?.gpa || profile?.sat);
-  // 매칭 결과 입력은 스펙 필드 4개뿐 — 이 필드들만 deps로 쓰면 다른 profile 변경
-  // (favoriteSchools 토글 등)이 불필요한 match 호출을 유발하지 않음.
   const matchGpa = profile?.gpa || "";
   const matchSat = profile?.sat || "";
   const matchToefl = profile?.toefl || "";
@@ -110,7 +97,6 @@ function DashboardPageInner() {
       earlyApp: "", needAid: false, gender: "",
       intl: true, major: matchMajor || "Computer Science",
     };
-    // 같은 specs로 이미 받은 적 있으면 즉시 복원 — 페이지 전환 후 재방문 시 깜빡임 제거.
     const uid = user?.uid || "anon";
     const cached = getCachedMatch(uid, specs);
     if (cached) {
@@ -119,8 +105,6 @@ function DashboardPageInner() {
       return;
     }
     setMatchLoading(true);
-    // 스펙 변경 burst(사용자가 폼 입력 중, 또는 다른 탭 동기화) 대응:
-    // 500ms debounce + AbortController로 in-flight 요청 취소.
     const ac = new AbortController();
     const timer = setTimeout(() => {
       fetchWithAuth<{ results: School[]; plan?: string; totalAvailable?: number; lockedCount?: number }>("/api/match", {
@@ -134,7 +118,7 @@ function DashboardPageInner() {
           setCachedMatch(uid, specs, data);
         })
         .catch((e) => {
-          if (e?.name === "AbortError") return; // 다음 요청이 덮어씀
+          if (e?.name === "AbortError") return;
           showApiError(e, { title: "분석 결과를 불러오지 못했어요" });
           setMatchLoading(false);
         });
@@ -142,16 +126,11 @@ function DashboardPageInner() {
     return () => { clearTimeout(timer); ac.abort(); };
   }, [hasSpecs, matchGpa, matchSat, matchToefl, matchMajor, showApiError, user?.uid]);
 
-  const quickResults = useMemo(() => allMatchResults.slice(0, 8), [allMatchResults]);
   const savedSchoolResults = useMemo(() => {
     const fav = profile?.favoriteSchools || [];
     if (fav.length === 0) return [];
     return allMatchResults.filter(s => fav.includes(s.n));
   }, [allMatchResults, profile?.favoriteSchools]);
-
-  const safetyCount = quickResults.filter((s) => s.cat === "Safety").length;
-  const targetCount = quickResults.filter((s) => s.cat === "Target" || s.cat === "Hard Target").length;
-  const reachCount = quickResults.filter((s) => s.cat === "Reach").length;
 
   const nextDeadline = dreamSchoolData
     ? getDDay(dreamSchoolData.ea || dreamSchoolData.rd || "Jan 1")
@@ -161,7 +140,6 @@ function DashboardPageInner() {
   const currentPlan = normalizePlan(profile?.plan);
   const planInfo = PLANS[currentPlan];
 
-  // 목표 대학 합격 확률 — hero 카드에 요약 표시
   const dreamProb = useMemo(() => {
     if (!profile?.dreamSchool) return null;
     return allMatchResults.find(s => s.n === profile.dreamSchool)?.prob ?? null;
@@ -175,29 +153,16 @@ function DashboardPageInner() {
 
   const [showResultModal, setShowResultModal] = useState(false);
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
-  const [toolsOpen, setToolsOpen] = useState(false);
   const currentMonth = new Date().getMonth() + 1;
   const isAdmissionSeason = currentMonth >= 3 && currentMonth <= 5;
-
-  // 보조 도구 — 분석/에세이/AI상담/플래너는 BottomNav에 이미 있어 제외.
-  // What-If·스펙 분석·에세이 리뷰·학부모 리포트는 특수 기능이라 dashboard에 surface.
-  // 시각적 무게는 모두 동일 — 차별화는 아이콘·라벨로만 (palette noise 축소).
-  const tools = [
-    { href: "/what-if",       label: "What-If",     desc: "가상 점수 시뮬레이션", Icon: Wand2 },
-    { href: "/spec-analysis", label: "스펙 분석",    desc: "강약점 상세 리포트",   Icon: Sparkles },
-    { href: "/essays/review", label: "에세이 리뷰",  desc: "AI 첨삭·10점 예문",    Icon: Zap },
-    { href: "/parent-report", label: "학부모 리포트", desc: "공유용 요약",         Icon: Users },
-  ] as const;
 
   return (
     <div className="min-h-screen bg-background pb-nav">
       {/* ── Clean header: avatar · name · plan · icons ── */}
       <header className="px-gutter pt-safe pb-4 flex items-center gap-3">
-        {/* 아바타 탭 → 프로필 설정 페이지. 사용자가 직접 이름/사진/학년 수정 가능. */}
         <Link href="/profile" aria-label="프로필 설정" className="shrink-0">
           <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm overflow-hidden hover:ring-2 hover:ring-primary/30 transition-all">
             {(profile?.photoURL || user?.photoURL) ? (
-              // OAuth provider가 URL을 다양하게 반환 — plain <img>로 유지
               // eslint-disable-next-line @next/next/no-img-element
               <img src={profile?.photoURL || user?.photoURL || ""} alt={`${profile?.name || "내"} 프로필 사진`} className="w-full h-full object-cover" />
             ) : initials}
@@ -256,7 +221,6 @@ function DashboardPageInner() {
       <main className="px-gutter space-y-5">
         {/* Hero — 목표 대학 · D-day · 합격 확률 */}
         <Card className="p-6 rounded-2xl border-none shadow-lg overflow-hidden relative dark-hero-gradient text-hero">
-          {/* subtle radial overlay only — no parallax orbs */}
           <div className="absolute inset-0 bg-hero-overlay pointer-events-none" style={{ background: "radial-gradient(ellipse at top right, hsl(var(--hero-overlay) / 0.12), transparent 60%)" }} aria-hidden="true" />
           <div className="relative">
             <p className="text-2xs text-hero-muted uppercase tracking-wide mb-1.5 font-medium">목표 대학교</p>
@@ -298,9 +262,9 @@ function DashboardPageInner() {
           </div>
         </Card>
 
-        {/* TodayFocusCard — Hero 바로 아래, Urgent Deadline 위. 조건 미매치 시 null. */}
+        {/* TodayFocusCard — Hero 바로 아래 */}
         <TodayFocusCard />
-        {/* 임계값 미달이면 자체 숨김 — inline 텍스트 한 줄. */}
+        {/* 임계값 미달이면 자체 숨김 */}
         <LiveStatsBar variant="mini" />
 
         {/* Urgent deadline alert — D-30 이하만 */}
@@ -318,7 +282,7 @@ function DashboardPageInner() {
           </div>
         )}
 
-        {/* 스펙 미입력 — 단일 CTA만 노출. 도구/피드/스탯은 숨김. */}
+        {/* 스펙 미입력 — 단일 CTA만 노출 */}
         {!hasSpecs && (
           <>
             <Link href="/analysis">
@@ -339,38 +303,12 @@ function DashboardPageInner() {
           </>
         )}
 
-        {/* Admission season banner + feed — 스펙 입력 완료된 경우만 */}
+        {/* Admission season banner — 시즌+12학년 */}
         {hasSpecs && isAdmissionSeason && (profile?.grade === "12학년" || profile?.grade === "졸업생/Gap Year") && (
           <AdmissionResultBanner onOpen={() => setShowResultModal(true)} />
         )}
-        {hasSpecs && <SimilarAdmissionCard />}
 
-        {/* Stats row — cat-* dot indicator로만 차별화. 배경은 공통 muted. */}
-        {hasSpecs && quickResults.length > 0 && (() => {
-          const items = [
-            { label: "Reach", count: reachCount, dot: CAT_STYLE.Reach.dot },
-            { label: "Target", count: targetCount, dot: CAT_STYLE.Target.dot },
-            { label: "Safety", count: safetyCount, dot: CAT_STYLE.Safety.dot },
-          ].filter(item => item.count > 0);
-          if (items.length === 0) return null;
-          return (
-            <div className="grid rounded-2xl bg-muted/40 border border-border/50 overflow-hidden" style={{ gridTemplateColumns: `repeat(${items.length}, 1fr)` }}>
-              {items.map(({ label, count, dot }, i) => (
-                <div key={label} className={`p-4 text-center ${i < items.length - 1 ? "border-r border-border/50" : ""}`}>
-                  <div className="flex items-center justify-center gap-1.5 mb-1">
-                    <span className={`w-2 h-2 rounded-full ${dot}`} aria-hidden="true" />
-                    <p className="text-2xs text-muted-foreground font-medium">{label}</p>
-                  </div>
-                  <p className="text-lg font-bold tabular-nums leading-tight text-foreground">
-                    {count}<span className="text-2xs font-normal text-muted-foreground ml-0.5">개</span>
-                  </p>
-                </div>
-              ))}
-            </div>
-          );
-        })()}
-
-        {/* My schools — tools보다 위에 배치 (사용자 핵심 정보 우선) */}
+        {/* My schools — Top 3만 (전체는 /analysis) */}
         {hasSpecs && (
         <div className="space-y-2.5">
           <div className="flex justify-between items-center">
@@ -408,7 +346,7 @@ function DashboardPageInner() {
               />
             </Card>
           ) : (
-            savedSchoolResults.slice(0, 5).map((school) => {
+            savedSchoolResults.slice(0, 3).map((school) => {
               const userGpa = parseFloat(profile?.gpa || "0");
               const userSat = parseInt(profile?.sat || "0");
               const satMid = school.sat ? Math.round((school.sat[0] + school.sat[1]) / 2) : 0;
@@ -462,44 +400,6 @@ function DashboardPageInner() {
         </div>
         )}
 
-        {/* 도구 — 저장/리뷰/시뮬레이션은 core flow 아래 collapsible로 숨김 */}
-        {hasSpecs && (
-          <div className="space-y-2">
-            <button
-              type="button"
-              onClick={() => setToolsOpen((v) => !v)}
-              aria-expanded={toolsOpen}
-              className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 bg-muted/40 hover:bg-muted/60 transition-colors min-h-[44px]"
-            >
-              <span className="text-sm font-semibold">더 많은 도구</span>
-              <ChevronDown
-                className={`w-4 h-4 text-muted-foreground transition-transform ${toolsOpen ? "rotate-180" : ""}`}
-                aria-hidden="true"
-              />
-            </button>
-            {toolsOpen && (
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                {tools.map(({ href, label, desc, Icon }) => (
-                  <Link key={href} href={href} className="block">
-                    <Card className="p-4 rounded-2xl border border-border/60 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all active:scale-[0.98] h-full flex flex-col gap-2.5">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <Icon className="w-5 h-5 text-primary" aria-hidden="true" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold">{label}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{desc}</p>
-                      </div>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 합격 실황 피드 — 스펙 입력 후 도구 아래에 위치 */}
-        {hasSpecs && isAdmissionSeason && <AdmissionFeed />}
-
         {/* Free user upgrade nudge */}
         {currentPlan === "free" && hasSpecs && (
           <Link href="/pricing">
@@ -515,62 +415,6 @@ function DashboardPageInner() {
             </Card>
           </Link>
         )}
-
-        {/* Growth — 2회 이상 snapshot이 있을 때만 */}
-        {snapshots.length >= 2 && (() => {
-          const first = snapshots[0];
-          const current = snapshots[snapshots.length - 1];
-          const totalSatDiff = first.sat && current.sat ? parseInt(current.sat) - parseInt(first.sat) : 0;
-          const totalProbDiff = first.dreamSchoolProb != null && current.dreamSchoolProb != null
-            ? current.dreamSchoolProb - first.dreamSchoolProb : null;
-          const probData = snapshots.filter((s) => s.dreamSchoolProb != null).map((s) => ({ x: s.date, y: s.dreamSchoolProb as number }));
-
-          return (
-            <Card className="p-4 rounded-2xl bg-card border border-border/60 shadow-sm">
-              <div className="flex items-center gap-2 mb-3">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                <p className="text-sm font-bold">나의 성장</p>
-                <span className="text-xs text-muted-foreground ml-auto">{snapshots.length}회 기록</span>
-              </div>
-
-              {probData.length >= 2 && (
-                <div className="mb-3">
-                  <p className="text-2xs text-muted-foreground mb-1">{current.dreamSchool} 합격 확률</p>
-                  <Sparkline data={probData} height={48} />
-                </div>
-              )}
-
-              <div className="flex items-center gap-2">
-                <div className="flex-1 bg-accent/30 rounded-xl p-2.5 text-center">
-                  <p className="text-2xs text-muted-foreground">{first.date}</p>
-                  {first.sat && <p className="text-sm font-bold mt-0.5">SAT {first.sat}</p>}
-                  {first.dreamSchoolProb != null && <p className="text-2xs text-muted-foreground">{first.dreamSchoolProb}%</p>}
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                <div className="flex-1 bg-primary/5 rounded-xl p-2.5 text-center border border-primary/15">
-                  <p className="text-2xs text-primary font-medium">현재</p>
-                  {current.sat && <p className="text-sm font-bold mt-0.5">SAT {current.sat}</p>}
-                  {current.dreamSchoolProb != null && <p className="text-2xs text-primary font-semibold">{current.dreamSchoolProb}%</p>}
-                </div>
-              </div>
-
-              {(totalSatDiff !== 0 || (totalProbDiff != null && totalProbDiff !== 0)) && (
-                <div className="flex items-center justify-center gap-3 mt-3 pt-3 border-t border-border/50 text-xs">
-                  {totalSatDiff !== 0 && (
-                    <span className={`font-semibold ${totalSatDiff > 0 ? "text-success" : "text-destructive"}`}>
-                      SAT {totalSatDiff > 0 ? "+" : ""}{totalSatDiff}
-                    </span>
-                  )}
-                  {totalProbDiff != null && totalProbDiff !== 0 && (
-                    <span className={`font-semibold ${totalProbDiff > 0 ? "text-success" : "text-destructive"}`}>
-                      합격 확률 {totalProbDiff > 0 ? "+" : ""}{totalProbDiff}%
-                    </span>
-                  )}
-                </div>
-              )}
-            </Card>
-          );
-        })()}
 
       </main>
 
