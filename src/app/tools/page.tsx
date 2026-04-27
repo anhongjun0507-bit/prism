@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import Link from "next/link";
 import {
@@ -12,6 +12,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { trackPrismEvent } from "@/lib/analytics/events";
+import { MigrationNudgeBanner } from "@/components/ia/MigrationNudgeBanner";
 import { normalizePlan } from "@/lib/plans";
 
 const TOOLS = [
@@ -74,9 +75,11 @@ function ToolsPageInner() {
     duration: 250,
     easing: "cubic-bezier(0.22, 1, 0.36, 1)",
   });
+  const mountedAtRef = useRef<number>(0);
 
   useEffect(() => {
     trackPrismEvent("tools_page_viewed", { plan: currentPlan });
+    mountedAtRef.current = Date.now();
   }, [currentPlan]);
 
   return (
@@ -87,13 +90,20 @@ function ToolsPageInner() {
         backHref="/dashboard"
       />
 
-      <main className="px-gutter">
+      <main className="px-gutter space-y-4">
+        <MigrationNudgeBanner source="tools" />
         <div ref={gridRef} className="grid grid-cols-2 gap-3">
           {TOOLS.map(({ id, href, label, desc, Icon }) => (
             <Link
               key={id}
               href={href}
-              onClick={() => trackPrismEvent("tools_card_clicked", { tool_id: id })}
+              onClick={() => {
+                const dwell_time_ms = mountedAtRef.current
+                  ? Date.now() - mountedAtRef.current
+                  : 0;
+                trackPrismEvent("tools_card_clicked", { tool_id: id, dwell_time_ms });
+                trackPrismEvent("tools_to_external_route", { tool_id: id, target_route: href });
+              }}
               className="block"
             >
               <Card className="p-4 rounded-2xl border border-border/60 bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all active:scale-[0.98] h-full flex flex-col gap-2.5">

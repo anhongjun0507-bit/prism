@@ -85,6 +85,9 @@ export function BottomNav() {
         type="button"
         onClick={() => {
           trackPrismEvent("bottom_nav_clicked", { tab_id: "more" });
+          trackPrismEvent("bottom_nav_more_opened", {
+            items_visible: moreItems.map((i) => i.id),
+          });
           setMoreOpen(true);
         }}
         aria-haspopup="dialog"

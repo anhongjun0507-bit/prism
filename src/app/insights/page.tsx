@@ -19,6 +19,9 @@ import { fetchWithAuth } from "@/lib/api-client";
 import { getCachedMatch, setCachedMatch } from "@/lib/match-cache";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { trackPrismEvent } from "@/lib/analytics/events";
+import { MigrationNudgeBanner } from "@/components/ia/MigrationNudgeBanner";
+import { useSectionViewTracking } from "@/hooks/useSectionViewTracking";
+import { SECTION_IDS } from "@/lib/analytics/section-ids";
 import { normalizePlan } from "@/lib/plans";
 import type { Specs, School } from "@/lib/matching";
 import Link from "next/link";
@@ -120,6 +123,19 @@ function InsightsPageInner() {
     easing: "cubic-bezier(0.22, 1, 0.36, 1)",
   });
 
+  const statsViewRef = useSectionViewTracking<HTMLElement>(
+    SECTION_IDS.INSIGHTS_STATS_DISTRIBUTION,
+  );
+  const liveStatsViewRef = useSectionViewTracking<HTMLElement>(
+    SECTION_IDS.INSIGHTS_LIVE_STATS,
+  );
+  const feedViewRef = useSectionViewTracking<HTMLElement>(
+    SECTION_IDS.INSIGHTS_ADMISSION_FEED,
+  );
+  const growthViewRef = useSectionViewTracking<HTMLDivElement>(
+    SECTION_IDS.INSIGHTS_GROWTH,
+  );
+
   return (
     <div className="min-h-screen bg-background pb-nav">
       <PageHeader
@@ -129,6 +145,7 @@ function InsightsPageInner() {
       />
 
       <main className="px-gutter space-y-5">
+        <MigrationNudgeBanner source="insights" />
         {!hasSpecs ? (
           <Card variant="elevated" className="overflow-hidden">
             <EmptyState
@@ -152,7 +169,7 @@ function InsightsPageInner() {
               skeleton={<div className="rounded-2xl bg-muted/40 border border-border/50 p-4 h-[88px] animate-pulse" />}
             >
               {showStats ? (
-              <section aria-label="합격 가능성 분포">
+              <section aria-label="합격 가능성 분포" ref={statsViewRef}>
                 <h2 className="font-headline text-base font-bold mb-2.5">합격 가능성 분포</h2>
                 <div
                   ref={statsGridRef}
@@ -187,13 +204,13 @@ function InsightsPageInner() {
             </SkeletonWrapper>
 
             {/* LiveStatsBar full */}
-            <section aria-label="실시간 통계">
+            <section aria-label="실시간 통계" ref={liveStatsViewRef}>
               <LiveStatsBar variant="full" />
             </section>
 
             {/* AdmissionFeed — 시즌(Mar–May) */}
             {isAdmissionSeason && (
-              <section aria-label="합격 실황 피드">
+              <section aria-label="합격 실황 피드" ref={feedViewRef}>
                 <h2 className="font-headline text-base font-bold mb-2.5">합격 실황</h2>
                 <AdmissionFeed />
               </section>
@@ -215,7 +232,7 @@ function InsightsPageInner() {
                   .map((s) => ({ x: s.date, y: s.dreamSchoolProb as number }));
 
                 return (
-                  <Card className="p-4 rounded-2xl bg-card border border-border/60 shadow-sm">
+                  <Card ref={growthViewRef} className="p-4 rounded-2xl bg-card border border-border/60 shadow-sm">
                     <div className="flex items-center gap-2 mb-3">
                       <TrendingUp className="w-4 h-4 text-primary" />
                       <p className="text-sm font-bold">나의 성장</p>

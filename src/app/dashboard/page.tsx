@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { AdmissionResultBanner, AdmissionResultModal } from "@/components/AdmissionResultModal";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
@@ -28,6 +28,13 @@ import type { Specs, School } from "@/lib/matching";
 import { fetchWithAuth } from "@/lib/api-client";
 import { getCachedMatch, setCachedMatch } from "@/lib/match-cache";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
+import { toast as showToast } from "@/hooks/use-toast";
+import { trackPrismEvent } from "@/lib/analytics/events";
+import { SECTION_IDS, type SectionId } from "@/lib/analytics/section-ids";
+import {
+  shouldShowMigrationNudge,
+  markMigrationNudgeSeen,
+} from "@/lib/analytics/migration-nudge";
 import { SchoolLogo } from "@/components/SchoolLogo";
 import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -155,6 +162,71 @@ function DashboardPageInner() {
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
   const currentMonth = new Date().getMonth() + 1;
   const isAdmissionSeason = currentMonth >= 3 && currentMonth <= 5;
+
+  // ── IA analytics: 첫 방문 nudge + scroll depth + exit time + section→action funnel ──
+  const mountedAtRef = useRef<number>(0);
+  const maxScrollPercentRef = useRef(0);
+  const reportedScrollRef = useRef(0);
+  const actionClicksRef = useRef(0);
+  const exitRouteRef = useRef<string>("unmount");
+
+  useEffect(() => {
+    mountedAtRef.current = Date.now();
+    if (shouldShowMigrationNudge()) {
+      trackPrismEvent("ia_migration_nudge_shown", {});
+      showToast({
+        title: "탭 구성이 새로워졌어요",
+        description:
+          "현황·도구 탭에서 합격 라인업과 6가지 입시 도구를 빠르게 만나보세요.",
+        duration: 6000,
+      });
+      markMigrationNudgeSeen();
+      // dashboard에서 자동 dismiss는 'main' source로 기록
+      trackPrismEvent("ia_migration_nudge_dismissed", { source: "main" });
+    }
+
+    const onScroll = () => {
+      const scrollTop =
+        window.scrollY || document.documentElement.scrollTop || 0;
+      const docHeight =
+        document.documentElement.scrollHeight - window.innerHeight;
+      if (docHeight <= 0) return;
+      const pct = Math.min(100, Math.round((scrollTop / docHeight) * 100));
+      if (pct > maxScrollPercentRef.current) {
+        maxScrollPercentRef.current = pct;
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      const max = maxScrollPercentRef.current;
+      if (max > 0 && max !== reportedScrollRef.current) {
+        trackPrismEvent("dashboard_scroll_depth", { max_percent: max });
+      }
+      const elapsed = Date.now() - mountedAtRef.current;
+      trackPrismEvent("ia_funnel_dashboard_exit", {
+        exit_route: exitRouteRef.current,
+        time_on_dashboard_ms: elapsed,
+      });
+    };
+  }, []);
+
+  const trackSectionClick = useCallback(
+    (sectionId: SectionId, position: number, targetRoute: string) => {
+      trackPrismEvent("dashboard_section_clicked", {
+        section_id: sectionId,
+        position,
+      });
+      actionClicksRef.current += 1;
+      trackPrismEvent("ia_funnel_dashboard_to_action", {
+        action: sectionId,
+        click_count: actionClicksRef.current,
+      });
+      exitRouteRef.current = targetRoute;
+    },
+    [],
+  );
 
   return (
     <div className="min-h-screen bg-background pb-nav">
@@ -285,7 +357,10 @@ function DashboardPageInner() {
         {/* 스펙 미입력 — 단일 CTA만 노출 */}
         {!hasSpecs && (
           <>
-            <Link href="/analysis">
+            <Link
+              href="/analysis"
+              onClick={() => trackSectionClick(SECTION_IDS.HOME_SPEC_CTA, 0, "/analysis")}
+            >
               <Card className="p-5 rounded-2xl border border-primary/25 bg-primary/5 flex items-center gap-3 hover:bg-primary/10 transition-all active:scale-[0.98]">
                 <div className="w-12 h-12 rounded-xl bg-primary/12 flex items-center justify-center shrink-0">
                   <Sparkles className="w-5 h-5 text-primary" />
@@ -314,7 +389,11 @@ function DashboardPageInner() {
           <div className="flex justify-between items-center">
             <h2 className="font-headline text-base font-bold">나의 지원 대학교</h2>
             {savedSchoolResults.length > 0 && (
-              <Link href="/analysis" className="text-xs text-primary font-semibold flex items-center">
+              <Link
+                href="/analysis"
+                onClick={() => trackSectionClick(SECTION_IDS.HOME_MY_SCHOOLS, 0, "/analysis")}
+                className="text-xs text-primary font-semibold flex items-center"
+              >
                 전체 보기 <ChevronRight className="w-3 h-3" />
               </Link>
             )}
@@ -402,7 +481,10 @@ function DashboardPageInner() {
 
         {/* Free user upgrade nudge */}
         {currentPlan === "free" && hasSpecs && (
-          <Link href="/pricing">
+          <Link
+            href="/pricing"
+            onClick={() => trackSectionClick(SECTION_IDS.HOME_UPGRADE_NUDGE, 0, "/pricing")}
+          >
             <Card className="p-4 rounded-2xl border border-primary/20 bg-primary/5 shadow-none flex items-center gap-3 hover:bg-primary/10 transition-all active:scale-[0.98]">
               <div className="w-10 h-10 rounded-xl bg-primary/12 flex items-center justify-center shrink-0">
                 <Crown className="w-4 h-4 text-primary" />

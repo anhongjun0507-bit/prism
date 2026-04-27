@@ -1,4 +1,5 @@
 import type { Plan } from "@/lib/plans";
+import type { SectionId } from "@/lib/analytics/section-ids";
 
 /**
  * 업그레이드 CTA 진입점 분류 — funnel 분석에서 어느 화면이 전환을 만드는지 추적.
@@ -66,8 +67,18 @@ export interface PrismEventPayloads {
   account_delete_confirmed: Record<string, never>;
   insights_page_viewed: { plan: Plan };
   tools_page_viewed: { plan: Plan };
-  tools_card_clicked: { tool_id: string };
+  tools_card_clicked: { tool_id: string; dwell_time_ms: number };
   bottom_nav_clicked: { tab_id: string };
+  // Stage 3 #11 Phase 3 — IA analytics polish
+  dashboard_section_clicked: { section_id: SectionId; position: number };
+  dashboard_scroll_depth: { max_percent: number };
+  insights_section_viewed: { section_id: SectionId };
+  tools_to_external_route: { tool_id: string; target_route: string };
+  bottom_nav_more_opened: { items_visible: string[] };
+  ia_funnel_dashboard_to_action: { action: string; click_count: number };
+  ia_funnel_dashboard_exit: { exit_route: string; time_on_dashboard_ms: number };
+  ia_migration_nudge_shown: Record<string, never>;
+  ia_migration_nudge_dismissed: { source: "insights" | "tools" | "main" };
 }
 
 export type LandingSection =
