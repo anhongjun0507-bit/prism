@@ -29,6 +29,7 @@ export const STORAGE_KEYS = {
   ANALYTICS_CONSENT: "prism_analytics_consent",
   INSTALL_DISMISSED: "prism_install_dismissed",
   LANDING_ONBOARDING_SEEN: "prism_seen_landing_onboarding",
+  DASHBOARD_TOUR_SEEN: "prism_dashboard_tour_seen",
 } as const;
 
 /** sessionStorage 전용 prefix (동적 키) */
@@ -37,6 +38,8 @@ export const STORAGE_PREFIXES = {
   REVEAL_SEEN: "prism_reveal_seen_",
   LOGO_CACHE: "logo_cache_",
   CAMPUS_CACHE: "campus_cache_",
+  /** 도구 페이지별 첫-방문 인트로 dismiss 키 — 예: prism_tool_intro_seen_what-if */
+  TOOL_INTRO_SEEN: "prism_tool_intro_seen_",
 } as const;
 
 /** 마이그레이션 후 cleanup 대상 — 'prism_' 버전업 시 일괄 삭제용 */

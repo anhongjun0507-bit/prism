@@ -17,6 +17,7 @@ import { UpgradeCTA } from "@/components/UpgradeCTA";
 import { ParentShareSection } from "@/components/parent/ParentShareSection";
 import { Users, TrendingUp, Award, Download, Sparkles, FileText } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
 import Link from "next/link";
 
 export default function ParentReportPage() {
@@ -216,15 +217,25 @@ function ParentReportPageInner() {
 
   const bodyPane = (
     <div className="space-y-6">
-      {/* 스펙 없음 — 합격 분석/추천 대학교 섹션 대신 안내 카드. */}
+      {/* 스펙 없음 — illustration + CTA로 다음 액션 명확화 (Phase 2 EmptyState 통일). */}
       {!hasSpecs && (
         <Card className="p-5 bg-card border-none shadow-sm">
           <h3 className="font-headline font-bold text-base flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-primary" /> 합격 분석
           </h3>
-          <p className="text-sm text-muted-foreground mt-2">
-            자녀의 GPA·SAT 정보가 아직 입력되지 않았어요. 프로필에서 성적을 입력하면 합격 가능성·추천 대학교가 여기 표시돼요.
-          </p>
+          <EmptyState
+            illustration="analysis"
+            title="GPA·SAT 정보가 비어 있어요"
+            description="프로필에서 성적을 입력하면 합격 가능성·추천 대학교가 여기 표시돼요."
+            action={
+              <Link href="/profile">
+                <Button size="lg" className="gap-2">
+                  <Sparkles className="w-4 h-4" /> 프로필 채우기
+                </Button>
+              </Link>
+            }
+            className="!py-6"
+          />
         </Card>
       )}
 

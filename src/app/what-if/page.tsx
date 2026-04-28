@@ -16,6 +16,7 @@ import { fetchWithAuth } from "@/lib/api-client";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import { CAT_STYLE } from "@/lib/analysis-helpers";
 import { useToast } from "@/hooks/use-toast";
+import { PageIntroCard } from "@/components/PageIntroCard";
 
 /* ───── helpers ───── */
 function buildSpecs(
@@ -371,6 +372,15 @@ function WhatIfPageInner() {
 
   const simulatorContent = (
     <div className="space-y-5">
+      <PageIntroCard
+        toolId="what-if"
+        title="What-If 시뮬레이터란?"
+        description="GPA·SAT·비교과 등급을 가상으로 조정하면 합격 카테고리가 어떻게 바뀌는지 실시간으로 보여드려요."
+        bullets={[
+          "슬라이더·입력 변경 시 자동 재계산 (0.5초 debounce)",
+          "베이스라인(현재 프로필) 대비 +/- 변화량을 카드로 표시",
+        ]}
+      />
       {statusBlock}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:gap-8 lg:items-start space-y-5 lg:space-y-0">
         <aside className="lg:sticky lg:top-6 lg:self-start min-w-0">

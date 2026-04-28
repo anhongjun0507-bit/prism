@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { CAT_STYLE } from "@/lib/analysis-helpers";
 import { TodayFocusCard } from "@/components/dashboard/TodayFocusCard";
+import { DashboardTipCard } from "@/components/dashboard/DashboardTipCard";
 import { LiveStatsBar } from "@/components/landing/LiveStatsBar";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -365,6 +366,8 @@ function DashboardPageInner() {
 
         {/* TodayFocusCard — Hero 바로 아래 */}
         <TodayFocusCard />
+        {/* 첫 방문자 비차단 안내 — 30일 TTL, dismiss 후 미노출 */}
+        <DashboardTipCard />
         {/* 임계값 미달이면 자체 숨김 */}
         <LiveStatsBar variant="mini" />
 

@@ -1,19 +1,21 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import Link from "next/link";
 import {
-  Wand2, Sparkles, Zap, Calendar, Users, Scale,
+  Wand2, Sparkles, Zap, Calendar, Users, Scale, Compass,
 } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth, type UserProfile } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { trackPrismEvent } from "@/lib/analytics/events";
 import { MigrationNudgeBanner } from "@/components/ia/MigrationNudgeBanner";
 import { normalizePlan } from "@/lib/plans";
+import { cn } from "@/lib/utils";
 
 // `useWhen` — 사용자가 "이 도구는 언제 쓰나요?"에 답하는 시점 hint.
 // 학생 시점 1인칭 톤("내가 ~할 때")으로 작성해 발견성 + 행동 유도 동시 충족.
@@ -68,6 +70,27 @@ const TOOLS = [
   },
 ] as const;
 
+type ToolId = (typeof TOOLS)[number]["id"];
+
+/**
+ * 사용자 상태 기반 추천 — 이 시점 가장 임팩트 큰 도구를 강조.
+ *
+ * 우선순위:
+ *   1) 프로필 미완성(grade/gpa/major/dreamSchool 중 누락) → "스펙 분석"
+ *      Why: 다른 모든 도구가 프로필 데이터에 의존. 가장 먼저 채워야 가치 발현.
+ *   2) 프로필 완성 → "What-If"
+ *      Why: 첫 탐색은 시뮬레이션으로 시작. 안전·도전 라인업이 자연 분리됨.
+ *
+ * SSR 안전: profile 없으면 null 반환 → 추천 badge 미표시.
+ */
+function pickRecommendedTool(profile: UserProfile | null): ToolId | null {
+  if (!profile) return null;
+  const profileComplete = !!(
+    profile.grade && profile.gpa && profile.major && profile.dreamSchool
+  );
+  return profileComplete ? "what_if" : "spec_analysis";
+}
+
 export default function ToolsPage() {
   return (
     <AuthRequired>
@@ -85,6 +108,14 @@ function ToolsPageInner() {
   });
   const mountedAtRef = useRef<number>(0);
 
+  const recommendedId = useMemo(() => pickRecommendedTool(profile), [profile]);
+  const recommendReason =
+    recommendedId === "spec_analysis"
+      ? "프로필이 비어 있어요. 스펙 분석으로 시작하면 다른 도구도 정확해져요."
+      : recommendedId === "what_if"
+        ? "프로필이 채워졌어요. What-If로 시나리오를 비교해보세요."
+        : null;
+
   useEffect(() => {
     trackPrismEvent("tools_page_viewed", { plan: currentPlan });
     mountedAtRef.current = Date.now();
@@ -100,34 +131,78 @@ function ToolsPageInner() {
 
       <main className="px-gutter space-y-4 lg:max-w-content-wide lg:mx-auto">
         <MigrationNudgeBanner source="tools" />
+
+        {/* Intro card — 첫 방문자에게 도구 hub의 역할을 명시 */}
+        {recommendReason && (
+          <Card
+            role="region"
+            aria-label="추천 도구"
+            className="p-4 rounded-2xl border border-primary/20 bg-primary/5 flex items-start gap-3"
+          >
+            <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+              <Compass className="w-[18px] h-[18px] text-primary" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold leading-tight">
+                지금 가장 도움 될 도구
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                {recommendReason}
+              </p>
+            </div>
+          </Card>
+        )}
+
         <div ref={gridRef} className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-          {TOOLS.map(({ id, href, label, desc, useWhen, Icon }) => (
-            <Link
-              key={id}
-              href={href}
-              onClick={() => {
-                const dwell_time_ms = mountedAtRef.current
-                  ? Date.now() - mountedAtRef.current
-                  : 0;
-                trackPrismEvent("tools_card_clicked", { tool_id: id, dwell_time_ms });
-                trackPrismEvent("tools_to_external_route", { tool_id: id, target_route: href });
-              }}
-              className="block"
-            >
-              <Card className="hover-card p-4 rounded-2xl border border-border/60 bg-card shadow-sm h-full flex flex-col gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Icon className="w-5 h-5 text-primary" aria-hidden="true" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold">{label}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{desc}</p>
-                </div>
-                <p className="mt-auto pl-2 border-l-2 border-primary/30 text-[11px] text-primary/75 leading-snug">
-                  {useWhen}
-                </p>
-              </Card>
-            </Link>
-          ))}
+          {TOOLS.map(({ id, href, label, desc, useWhen, Icon }) => {
+            const isRecommended = recommendedId === id;
+            return (
+              <Link
+                key={id}
+                href={href}
+                onClick={() => {
+                  const dwell_time_ms = mountedAtRef.current
+                    ? Date.now() - mountedAtRef.current
+                    : 0;
+                  trackPrismEvent("tools_card_clicked", { tool_id: id, dwell_time_ms });
+                  trackPrismEvent("tools_to_external_route", { tool_id: id, target_route: href });
+                }}
+                className="block"
+                aria-label={isRecommended ? `${label} (추천)` : undefined}
+              >
+                <Card
+                  className={cn(
+                    "hover-card p-4 rounded-2xl bg-card shadow-sm h-full flex flex-col gap-2.5 relative",
+                    isRecommended
+                      ? "border-2 border-primary/50 shadow-md"
+                      : "border border-border/60",
+                  )}
+                >
+                  {isRecommended && (
+                    <Badge
+                      variant="default"
+                      className="absolute top-3 right-3 px-2 py-0 text-[10px] tracking-tight shadow-sm"
+                    >
+                      추천
+                    </Badge>
+                  )}
+                  <div className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center",
+                    isRecommended ? "bg-primary/15" : "bg-primary/10",
+                  )}>
+                    <Icon className="w-5 h-5 text-primary" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">{label}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{desc}</p>
+                  </div>
+                  <p className="mt-auto pl-2 border-l-2 border-primary/30 text-2xs text-primary/75 leading-snug">
+                    {useWhen}
+                  </p>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       </main>
 

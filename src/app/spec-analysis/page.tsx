@@ -21,6 +21,7 @@ import { BarChart3, AlertCircle, CheckCircle2, Lightbulb, Download, Sparkles, Ey
 import { PageHeader } from "@/components/PageHeader";
 import { PrismLoader } from "@/components/PrismLoader";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { PageIntroCard } from "@/components/PageIntroCard";
 import { cn } from "@/lib/utils";
 
 interface AnalysisItem {
@@ -499,7 +500,18 @@ function SpecAnalysisPageInner() {
         action={!hasAccess && <Badge variant="secondary" className="text-xs">Pro</Badge>}
       />
 
-      <div className="px-gutter lg:max-w-content-full lg:mx-auto">
+      <div className="px-gutter lg:max-w-content-full lg:mx-auto space-y-5">
+        {hasAccess && (
+          <PageIntroCard
+            toolId="spec-analysis"
+            title="AI 스펙 분석이란?"
+            description="GPA·SAT·TOEFL·전공·목표 대학교를 입력하면 Claude AI가 강점·약점·숨은 강점·다음 단계를 카테고리별로 진단해드려요."
+            bullets={[
+              "10–15초 내 결과 — sessionStorage·Firestore 자동 캐시",
+              "프로필을 그대로 쓰지 않고, 가상 값으로도 분석 가능",
+            ]}
+          />
+        )}
         {hasAccess ? (
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:gap-8 lg:items-start space-y-6 lg:space-y-0">
             <aside className="lg:sticky lg:top-6 lg:self-start min-w-0">

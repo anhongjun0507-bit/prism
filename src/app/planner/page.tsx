@@ -31,6 +31,7 @@ import {
 import { Calendar as CalendarIcon, CheckCircle2, ChevronRight, Plus, Trash2, Sparkles } from "lucide-react";
 import { readJSON, writeJSON } from "@/lib/storage";
 import { EmptyState } from "@/components/EmptyState";
+import { PageIntroCard } from "@/components/PageIntroCard";
 import { logError } from "@/lib/log";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
 import { trackPrismEvent } from "@/lib/analytics/events";
@@ -444,6 +445,16 @@ function PlannerPageInner() {
       )}
 
       <div className="px-gutter space-y-6 lg:max-w-content-wide lg:mx-auto">
+        <PageIntroCard
+          toolId="planner"
+          title="입시 플래너란?"
+          description="목표 대학교 마감일·할 일을 한 곳에서 관리하고, AI가 다음 주 일정을 자동으로 생성해드려요."
+          bullets={[
+            "AI 자동 생성: 학년·GPA·전공·목표 대학교 입력 후 사용",
+            "마감 D-7 이내 항목은 상단 빨강 배너에 자동 노출",
+          ]}
+        />
+
         {/* Urgent deadlines banner */}
         {urgent.length > 0 && (
           <Card className="p-4 bg-red-50 border-red-200 space-y-2">

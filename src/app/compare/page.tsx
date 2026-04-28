@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, X, Plus, GraduationCap } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
+import { PageIntroCard } from "@/components/PageIntroCard";
 import { useSchoolsIndex, schoolMatchesQuery } from "@/lib/schools-index";
 import { SchoolLogo } from "@/components/SchoolLogo";
 import { useAuth } from "@/lib/auth-context";
@@ -246,6 +247,16 @@ function ComparePageInner() {
       <PageHeader title="대학 비교" backHref="/analysis" sticky />
 
       <div className="max-w-2xl lg:max-w-content-full mx-auto px-gutter py-6 space-y-6">
+        <PageIntroCard
+          toolId="compare"
+          title="대학 비교란?"
+          description="최대 3개 대학교를 한 화면에서 합격률·학비·전공 강점 등 주요 지표로 비교해드려요."
+          bullets={[
+            "각 행에서 가장 유리한 대학을 자동 하이라이트",
+            "ED·EA·RD 지원 전략 결정 시 활용",
+          ]}
+        />
+
         {/* School selector slots */}
         <div className="space-y-3">
           <p className="text-sm font-semibold text-foreground">
