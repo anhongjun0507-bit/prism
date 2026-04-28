@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { Home, Activity, Wrench, FileText, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PrismLogo } from "@/components/brand/PrismLogo";
+import { useAuth } from "@/lib/auth-context";
+import { shouldShowSidebar } from "@/lib/sidebar-visibility";
 
 /**
  * DesktopSidebar — lg+ 화면에서 BottomNav 대신 표시되는 사이드 네비.
@@ -25,11 +27,8 @@ const navItems = [
 
 export function DesktopSidebar() {
   const pathname = usePathname();
-  const hideNav =
-    pathname === "/" ||
-    pathname === "/onboarding" ||
-    pathname.startsWith("/parent-view/");
-  if (hideNav) return null;
+  const { user, loading } = useAuth();
+  if (!shouldShowSidebar(pathname, !!user, loading)) return null;
 
   return (
     <aside
