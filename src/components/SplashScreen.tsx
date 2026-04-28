@@ -1,8 +1,10 @@
+import { PrismLogo } from "@/components/brand/PrismLogo";
+
 /**
  * SplashScreen — 인증 초기화 중 표시.
  *
- * 로고: public/icon.svg와 동일한 브랜드 마크 (레인보우 그라디언트 사각형 + 흰 삼각 프리즘).
- * favicon · OG 이미지 · 스플래시가 한 몸으로 인식되도록 통일.
+ * 로고: PrismLogo (단색 terracotta + 3 dispersed beams) — favicon · OG · #4 logo와 통일.
+ * 다크 hero 배경 위에 inverse(흰색) 변형으로 렌더.
  */
 export function SplashScreen() {
   return (
@@ -11,36 +13,9 @@ export function SplashScreen() {
       <div className="absolute top-[-10%] right-[-10%] w-64 h-64 rounded-full opacity-15" style={{ background: 'radial-gradient(circle, hsl(var(--primary)) 0%, transparent 70%)' }} />
       <div className="absolute bottom-[-10%] left-[-10%] w-64 h-64 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, hsl(var(--primary)) 0%, transparent 70%)' }} />
 
-      {/* Brand mark — icon.svg와 1:1 동일 */}
-      <div className="relative z-10">
-        <svg
-          viewBox="0 0 512 512"
-          className="w-28 h-28 drop-shadow-2xl"
-          aria-label="PRISM"
-          role="img"
-        >
-          <defs>
-            <linearGradient id="splash-brand" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#3B82F6" />
-              <stop offset="25%" stopColor="#8B5CF6" />
-              <stop offset="50%" stopColor="#EC4899" />
-              <stop offset="75%" stopColor="#F97316" />
-              <stop offset="100%" stopColor="#F59E0B" />
-            </linearGradient>
-            <filter id="splash-glow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="6" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          <rect width="512" height="512" rx="112" fill="url(#splash-brand)" />
-          <g filter="url(#splash-glow)">
-            <path d="M256 96 L416 384 H96 L256 96 Z" fill="white" fillOpacity="0.96" />
-            <path d="M256 96 L416 384 H96 L256 96 Z" stroke="white" strokeOpacity="0.4" strokeWidth="6" fill="none" />
-          </g>
-        </svg>
+      {/* Brand mark — PrismLogo (#4 design), inverse 흰색 위 dark-hero-gradient. */}
+      <div className="relative z-10 drop-shadow-2xl">
+        <PrismLogo size={96} variant="full" inverse title="PRISM" />
       </div>
 
       <h1 className="font-headline text-4xl font-bold tracking-tight mt-8 z-10">PRISM</h1>

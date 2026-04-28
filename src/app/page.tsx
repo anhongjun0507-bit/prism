@@ -81,9 +81,9 @@ export default function LandingPage() {
         aria-hidden="true"
       />
 
-      <div className="relative w-full max-w-[380px] flex flex-col items-center py-12 px-6">
+      <div className="relative w-full max-w-[380px] md:max-w-2xl lg:max-w-3xl flex flex-col items-center py-12 px-6 lg:py-16">
         {/* ═══ SEO-friendly Hero Section (Server-rendered) ═══ */}
-        <header className="flex flex-col items-center text-center mb-10">
+        <header className="flex flex-col items-center text-center mb-10 lg:max-w-xl">
           {/* Prism Logo — solid terracotta with subtle primary glow halo. */}
           <div className="animate-welcome-logo mb-7 relative" style={{ animationDelay: "0.1s" }}>
             <div
@@ -166,7 +166,9 @@ export default function LandingPage() {
         </section>
 
         {/* ═══ Client-side Auth UI ═══ */}
-        <AuthSection />
+        <div className="w-full lg:max-w-md lg:mx-auto">
+          <AuthSection />
+        </div>
 
         {/* ═══ How it works — 3 simple steps ═══ */}
         <section
@@ -176,7 +178,7 @@ export default function LandingPage() {
           <h2 className="text-center text-base font-bold text-foreground">
             3단계로 시작해요
           </h2>
-          <ol className="space-y-3">
+          <ol className="space-y-3 md:space-y-0 md:grid md:grid-cols-3 md:gap-4">
             {[
               {
                 step: "1",
@@ -196,7 +198,7 @@ export default function LandingPage() {
             ].map((s) => (
               <li
                 key={s.step}
-                className="flex gap-3 p-4 rounded-2xl bg-card/70 dark:bg-card/40 border border-border/50 backdrop-blur-sm"
+                className="flex md:flex-col gap-3 p-4 md:p-5 rounded-2xl bg-card/70 dark:bg-card/40 border border-border/50 backdrop-blur-sm"
               >
                 <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary font-bold flex items-center justify-center shrink-0 text-sm">
                   {s.step}

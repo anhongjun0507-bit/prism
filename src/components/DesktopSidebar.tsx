@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, BarChart3, FileText, MessageSquare, Calendar } from "lucide-react";
+import { Home, Activity, Wrench, FileText, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PrismLogo } from "@/components/brand/PrismLogo";
 
@@ -13,15 +13,14 @@ import { PrismLogo } from "@/components/brand/PrismLogo";
  *   - 모바일/태블릿(<lg): 숨김. BottomNav가 표시됨.
  *   - lg+: 좌측 고정. 컨텐츠는 lg:pl-64 으로 자체 보정.
  *
- * 사이드바는 sticky가 아니라 fixed — 스크롤 시에도 항상 같은 위치.
- * BottomNav와 동일한 hideRoutes 정책 (welcome / onboarding 에서 숨김).
+ * IA: BottomNav와 동일 5탭 (홈·현황·도구·에세이·AI 상담) — #11 재설계 반영.
  */
 const navItems = [
-  { label: "홈", icon: Home, href: "/dashboard", hint: "대시보드" },
-  { label: "분석", icon: BarChart3, href: "/analysis", hint: "1001개 학교 합격 확률" },
-  { label: "에세이", icon: FileText, href: "/essays", hint: "에세이 작성·첨삭" },
-  { label: "AI 상담", icon: MessageSquare, href: "/chat", hint: "AI 카운슬러" },
-  { label: "플래너", icon: Calendar, href: "/planner", hint: "입시 일정" },
+  { label: "홈",      icon: Home,          href: "/dashboard", hint: "대시보드" },
+  { label: "현황",    icon: Activity,      href: "/insights",  hint: "합격 라인업·통계" },
+  { label: "도구",    icon: Wrench,        href: "/tools",     hint: "What-If·스펙·비교 등" },
+  { label: "에세이",  icon: FileText,      href: "/essays",    hint: "에세이 작성·첨삭" },
+  { label: "AI 상담", icon: MessageSquare, href: "/chat",      hint: "AI 카운슬러" },
 ];
 
 export function DesktopSidebar() {
