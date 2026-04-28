@@ -145,7 +145,7 @@ function InsightsPageInner() {
         backHref="/dashboard"
       />
 
-      <main className="px-gutter space-y-5 lg:max-w-3xl lg:mx-auto">
+      <main className="px-gutter space-y-5 lg:max-w-content-wide lg:mx-auto">
         <MigrationNudgeBanner source="insights" />
         {!hasSpecs ? (
           <Card variant="elevated" className="overflow-hidden">

@@ -166,9 +166,8 @@ function WhatIfPageInner() {
   const awardLabels: Record<number, string> = { 0: "없음", 1: "국제", 2: "전국", 3: "지역", 4: "교내" };
 
   /* ═══ RENDER ═══ */
-  const simulatorContent = (
-    <div className="space-y-5">
-      {/* ── Status: simulating / error ── */}
+  const statusBlock = (
+    <>
       {simulating && !simError && (
         <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground py-2" role="status" aria-live="polite">
           <Loader2 className="w-4 h-4 animate-spin text-primary" aria-hidden="true" />
@@ -191,7 +190,11 @@ function WhatIfPageInner() {
           </Button>
         </Card>
       )}
+    </>
+  );
 
+  const specsPane = (
+    <div className="space-y-5">
       {/* ── Adjustable Specs ── */}
       <Card className="rounded-2xl bg-card shadow-sm p-5 space-y-4">
         <div className="flex items-center justify-between">
@@ -283,7 +286,11 @@ function WhatIfPageInner() {
           </div>
         </div>
       </Card>
+    </div>
+  );
 
+  const resultsPane = (
+    <div className="space-y-5">
       {/* ── Category Summary ── */}
       <Card className="rounded-2xl bg-card shadow-sm p-5 space-y-3">
         <h2 className="font-headline font-bold text-sm">카테고리 변화</h2>
@@ -362,6 +369,20 @@ function WhatIfPageInner() {
     </div>
   );
 
+  const simulatorContent = (
+    <div className="space-y-5">
+      {statusBlock}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:gap-8 lg:items-start space-y-5 lg:space-y-0">
+        <aside className="lg:sticky lg:top-6 lg:self-start min-w-0">
+          {specsPane}
+        </aside>
+        <section className="min-w-0">
+          {resultsPane}
+        </section>
+      </div>
+    </div>
+  );
+
   return (
     <main className="min-h-screen bg-background pb-nav">
       <PageHeader
@@ -381,7 +402,7 @@ function WhatIfPageInner() {
       />
 
 
-      <div className="max-w-lg lg:max-w-3xl mx-auto px-5 py-5">
+      <div className="max-w-lg lg:max-w-content-full mx-auto px-5 py-5">
         {canUseWhatIf ? (
           simulatorContent
         ) : (

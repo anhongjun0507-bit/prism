@@ -245,7 +245,7 @@ function ComparePageInner() {
     <div className="min-h-screen bg-background pb-nav">
       <PageHeader title="대학 비교" backHref="/analysis" sticky />
 
-      <div className="max-w-2xl lg:max-w-4xl mx-auto px-gutter py-6 space-y-6">
+      <div className="max-w-2xl lg:max-w-content-full mx-auto px-gutter py-6 space-y-6">
         {/* School selector slots */}
         <div className="space-y-3">
           <p className="text-sm font-semibold text-foreground">

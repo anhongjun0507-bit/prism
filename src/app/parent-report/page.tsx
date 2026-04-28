@@ -161,11 +161,8 @@ function ParentReportPageInner() {
     </Card>
   ) : null;
 
-  const reportContent = (
+  const metaPane = (
     <div className="space-y-6">
-      {/* 학부모와 공유 — Pro/Elite만 보이는 섹션. blur 처리된 Free 사용자는 가려짐. */}
-      <ParentShareSection />
-
       {/* Header card */}
       <Card className="dark-hero-gradient text-white border-none p-6 relative overflow-hidden">
         <div className="absolute top-[-20%] right-[-10%] w-32 h-32 bg-primary/20 rounded-full blur-[60px]" />
@@ -214,7 +211,11 @@ function ParentReportPageInner() {
           </div>
         </div>
       </Card>
+    </div>
+  );
 
+  const bodyPane = (
+    <div className="space-y-6">
       {/* 스펙 없음 — 합격 분석/추천 대학교 섹션 대신 안내 카드. */}
       {!hasSpecs && (
         <Card className="p-5 bg-card border-none shadow-sm">
@@ -331,6 +332,21 @@ function ParentReportPageInner() {
     </div>
   );
 
+  const reportContent = (
+    <div className="space-y-6">
+      {/* 학부모와 공유 — Pro/Elite만 보이는 섹션. blur 처리된 Free 사용자는 가려짐. */}
+      <ParentShareSection />
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:gap-8 lg:items-start space-y-6 lg:space-y-0 print:block print:space-y-6">
+        <aside className="lg:sticky lg:top-6 lg:self-start min-w-0 print:static">
+          {metaPane}
+        </aside>
+        <section className="min-w-0">
+          {bodyPane}
+        </section>
+      </div>
+    </div>
+  );
+
   return (
     <main className="min-h-screen bg-background pb-nav print:pb-0">
       <PageHeader
@@ -339,7 +355,7 @@ function ParentReportPageInner() {
         action={!hasAccess && <Badge variant="secondary" className="text-xs">Pro</Badge>}
       />
 
-      <div className="px-gutter lg:max-w-4xl lg:mx-auto">
+      <div className="px-gutter lg:max-w-content-full lg:mx-auto">
         {hasAccess ? (
           matchLoading && hasSpecs && matchResults.length === 0 ? (
             reportSkeleton

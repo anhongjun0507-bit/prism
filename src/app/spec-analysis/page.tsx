@@ -291,7 +291,7 @@ function SpecAnalysisPageInner() {
     </Card>
   );
 
-  const reportContent = (
+  const editorPane = (
     <div className="space-y-6">
       {/* Always show spec editor or collapsed summary */}
       {!analysis && !loading && specEditorCard}
@@ -320,7 +320,11 @@ function SpecAnalysisPageInner() {
 
       {/* Expanded editor when editing after results */}
       {analysis && !loading && showEditor && specEditorCard}
+    </div>
+  );
 
+  const resultsPane = (
+    <div className="space-y-6">
       {loading && (
         <Card variant="elevated" className="p-12 text-center">
           <div className="flex justify-center mb-4">
@@ -495,9 +499,16 @@ function SpecAnalysisPageInner() {
         action={!hasAccess && <Badge variant="secondary" className="text-xs">Pro</Badge>}
       />
 
-      <div className="px-gutter lg:max-w-4xl lg:mx-auto">
+      <div className="px-gutter lg:max-w-content-full lg:mx-auto">
         {hasAccess ? (
-          reportContent
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:gap-8 lg:items-start space-y-6 lg:space-y-0">
+            <aside className="lg:sticky lg:top-6 lg:self-start min-w-0">
+              {editorPane}
+            </aside>
+            <section className="min-w-0">
+              {resultsPane}
+            </section>
+          </div>
         ) : (
           <div className="relative">
             <div className="pointer-events-none select-none blur-sm opacity-50">

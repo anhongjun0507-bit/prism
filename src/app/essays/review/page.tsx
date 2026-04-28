@@ -697,7 +697,7 @@ function EssayReviewPageInner() {
         backHref="/essays"
       />
 
-      <div className="px-gutter space-y-4 lg:max-w-4xl lg:mx-auto">
+      <div className="px-gutter space-y-4 lg:max-w-content-wide lg:mx-auto">
         {/* Phase indicator — 3-step breadcrumb */}
         <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground" aria-label="진행 단계">
           <span className={phase === "input" ? "text-primary font-semibold" : ""}>1. 입력</span>
@@ -1139,7 +1139,8 @@ function EssayReviewPageInner() {
               </div>
             )}
 
-            {/* Strengths */}
+            {/* Strengths / Weaknesses / Suggestions — 3-column on lg */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4 lg:items-start">
             {result.strengths.length > 0 && (
             <div className="space-y-2">
               <h3 className="font-headline text-base font-bold flex items-center gap-1.5">
@@ -1156,7 +1157,6 @@ function EssayReviewPageInner() {
             </div>
             )}
 
-            {/* Weaknesses */}
             {result.weaknesses.length > 0 && (
             <div className="space-y-2">
               <h3 className="font-headline text-base font-bold flex items-center gap-1.5">
@@ -1173,7 +1173,6 @@ function EssayReviewPageInner() {
             </div>
             )}
 
-            {/* Suggestions */}
             {result.suggestions.length > 0 && (
             <div className="space-y-2">
               <h3 className="font-headline text-base font-bold flex items-center gap-1.5">
@@ -1189,6 +1188,7 @@ function EssayReviewPageInner() {
               ))}
             </div>
             )}
+            </div>
 
             {/* Key Change */}
             {result.keyChange && (

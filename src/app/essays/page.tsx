@@ -681,7 +681,7 @@ function EssaysPageInner() {
         }
       />
 
-      <div className="px-gutter mb-3 lg:max-w-4xl lg:mx-auto">
+      <div className="px-gutter mb-3 lg:max-w-content-wide lg:mx-auto">
         <Link href="/essays/review">
           <Card className="p-4 bg-primary/5 border border-primary/20 flex items-center gap-3 transition-all active:scale-[0.98]">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
@@ -696,7 +696,7 @@ function EssaysPageInner() {
         </Link>
       </div>
 
-      <div ref={essayListRef} className="px-6 space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-3 md:items-start md:space-y-0 lg:max-w-5xl lg:mx-auto">
+      <div ref={essayListRef} className="px-6 space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-3 md:items-start md:space-y-0 lg:max-w-content-wide lg:mx-auto">
         {essaysLoading && essays.length === 0 ? (
           Array.from({ length: 2 }).map((_, i) => (
             <Card key={i} variant="elevated" className="h-full">
