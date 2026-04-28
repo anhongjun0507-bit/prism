@@ -29,7 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, CheckCircle2, AlertCircle, Lightbulb, Sparkles,
   Target, MessageCircle, RotateCcw, X, Download, FileText, GraduationCap, Crown, HelpCircle,
-  ChevronRight, Plus, List,
+  ChevronRight, Plus, List, Copy,
 } from "lucide-react";
 import { exportReviewToPDF, exportReviewToDoc } from "@/lib/essay-export";
 import type { Essay, EssayReview } from "@/types/essay";
@@ -961,6 +961,52 @@ function EssayReviewPageInner() {
               complete={streamingComplete}
               parseError={parseError}
             />
+            {/* Parse 실패 복구 액션 — 분석은 끝났지만 저장 못한 상태에서 사용자가
+                결과를 잃지 않도록 "다시 시도" + "내용 복사" 제공 (USER_REPORTED 6 대응). */}
+            {parseError && (
+              <div className="rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-950/20 p-4 space-y-3">
+                <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">
+                  결과를 잃지 않도록 복구할 수 있어요
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleReviewStreaming}
+                    disabled={loading || !essay.trim()}
+                    className="flex-1 rounded-xl gap-1.5"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    다시 시도
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(streamedContent);
+                        toast({
+                          title: "복사 완료",
+                          description: "분석 결과를 클립보드에 복사했어요.",
+                        });
+                        trackPrismEvent("essay_review_parse_error_copied", {
+                          length: streamedContent.length,
+                        });
+                      } catch {
+                        toast({
+                          title: "복사 실패",
+                          description: "텍스트를 직접 선택해 복사해주세요.",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    className="flex-1 rounded-xl gap-1.5"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    내용 복사
+                  </Button>
+                </div>
+              </div>
+            )}
             {(streamingComplete || parseError) && (
               <div className="border-t border-border/60 mt-6 pt-6 flex flex-col sm:flex-row gap-3">
                 <Button

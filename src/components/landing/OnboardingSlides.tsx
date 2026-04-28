@@ -71,13 +71,9 @@ function useShouldShow(): [boolean, () => void, () => void] {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const seen = window.localStorage.getItem(STORAGE_KEY);
-      if (!seen) setOpen(true);
-    } catch {
-      // localStorage 차단 시(시크릿 모드) 표시 생략 — 매 진입마다 강제 노출하면 노이즈.
-    }
+    // 자동 노출 OFF — 첫 진입 시 AuthSection을 풀스크린 모달이 가려 로그인 전환율을
+    // 차단하던 문제(USER_REPORTED 1, P0)로 비활성화. 사용자는 우측 aside의
+    // "PRISM 더 알아보기" 버튼으로 명시 호출. STORAGE_KEY/dismiss는 replay 경로에 보존.
   }, []);
 
   const dismiss = useCallback(() => {

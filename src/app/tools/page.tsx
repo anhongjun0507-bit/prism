@@ -15,12 +15,15 @@ import { trackPrismEvent } from "@/lib/analytics/events";
 import { MigrationNudgeBanner } from "@/components/ia/MigrationNudgeBanner";
 import { normalizePlan } from "@/lib/plans";
 
+// `useWhen` — 사용자가 "이 도구는 언제 쓰나요?"에 답하는 시점 hint.
+// 학생 시점 1인칭 톤("내가 ~할 때")으로 작성해 발견성 + 행동 유도 동시 충족.
 const TOOLS = [
   {
     id: "what_if",
     href: "/what-if",
     label: "What-If",
     desc: "가상 점수로 합격 확률 시뮬레이션",
+    useWhen: "GPA·SAT가 오르면 어떻게 바뀔지 궁금할 때",
     Icon: Wand2,
   },
   {
@@ -28,6 +31,7 @@ const TOOLS = [
     href: "/spec-analysis",
     label: "스펙 분석",
     desc: "AI가 강·약점을 진단하는 상세 리포트",
+    useWhen: "내 스펙이 객관적으로 어디쯤인지 알고 싶을 때",
     Icon: Sparkles,
   },
   {
@@ -35,6 +39,7 @@ const TOOLS = [
     href: "/essays/review",
     label: "에세이 첨삭",
     desc: "AI 첨삭과 10점 예문 비교",
+    useWhen: "에세이 초안을 Top 20 기준으로 다듬고 싶을 때",
     Icon: Zap,
   },
   {
@@ -42,6 +47,7 @@ const TOOLS = [
     href: "/planner",
     label: "플래너",
     desc: "맞춤 입시 일정·할일 관리",
+    useWhen: "마감일이 많아 뭐부터 할지 모를 때",
     Icon: Calendar,
   },
   {
@@ -49,6 +55,7 @@ const TOOLS = [
     href: "/parent-report",
     label: "학부모 리포트",
     desc: "view-only 링크로 진행 상황 공유",
+    useWhen: "부모님께 진행 상황을 한 번에 공유하고 싶을 때",
     Icon: Users,
   },
   {
@@ -56,6 +63,7 @@ const TOOLS = [
     href: "/compare",
     label: "대학 비교",
     desc: "여러 대학교를 한눈에 비교",
+    useWhen: "ED·EA로 어느 대학을 쓸지 결정할 때",
     Icon: Scale,
   },
 ] as const;
@@ -93,7 +101,7 @@ function ToolsPageInner() {
       <main className="px-gutter space-y-4 lg:max-w-content-wide lg:mx-auto">
         <MigrationNudgeBanner source="tools" />
         <div ref={gridRef} className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-          {TOOLS.map(({ id, href, label, desc, Icon }) => (
+          {TOOLS.map(({ id, href, label, desc, useWhen, Icon }) => (
             <Link
               key={id}
               href={href}
@@ -114,6 +122,9 @@ function ToolsPageInner() {
                   <p className="text-sm font-bold">{label}</p>
                   <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{desc}</p>
                 </div>
+                <p className="mt-auto pl-2 border-l-2 border-primary/30 text-[11px] text-primary/75 leading-snug">
+                  {useWhen}
+                </p>
               </Card>
             </Link>
           ))}

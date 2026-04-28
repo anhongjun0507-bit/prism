@@ -148,7 +148,9 @@ export default function PricingPage() {
           </SegmentedControlItem>
         </SegmentedControl>
 
-        {/* Plan cards — PC에서 3열 비교 (md+). Pro 카드는 lg에서 살짝 위로 올려 강조. */}
+        {/* Plan cards — PC에서 3열 비교 (md+). Pro 강조는 border + shadow-glow + 추천 badge로 통일.
+            과거 md:-translate-y-2를 사용했으나 (a) items-stretch와 결합 시 CTA가 시각적으로 misalign,
+            (b) -top-3 badge와 합쳐 grid 위 space-y-5을 가득 채워 sm/md 경계에서 잘림 우려 → 제거. */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 md:items-stretch">
         {planOrder.map((planId) => {
           const plan = PLANS[planId];
@@ -170,7 +172,7 @@ export default function PricingPage() {
               variant={isRecommended ? "elevated" : "default"}
               className={`relative p-6 border-2 transition-all hover-lift flex flex-col ${
                 isRecommended
-                  ? "border-primary shadow-glow-lg md:-translate-y-2"
+                  ? "border-primary shadow-glow-lg"
                   : isElite
                   ? "border-amber-300 dark:border-amber-700 shadow-sm"
                   : "border-transparent shadow-sm"
@@ -403,7 +405,7 @@ export default function PricingPage() {
             </div>
             {APP_STORE_URLS.ios === "#" && APP_STORE_URLS.android === "#" && (
               <p className="text-[11px] text-muted-foreground/70">
-                * 출시 후 스토어 URL이 활성화됩니다
+                * iOS·Android 앱은 곧 출시됩니다. 지금은 웹에서 사용해보세요.
               </p>
             )}
           </section>

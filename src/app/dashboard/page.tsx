@@ -158,6 +158,33 @@ function DashboardPageInner() {
     return schoolsIndex.filter(s => schoolMatchesQuery(s, searchQuery)).slice(0, 5);
   }, [searchQuery, schoolsIndex]);
 
+  // 모바일 키보드가 검색 드롭다운 하단 결과를 가리는 P0(USER_REPORTED 4) 대응.
+  // visualViewport API로 키보드를 제외한 가시 영역을 측정해 드롭다운 maxHeight를 산출.
+  // fallback: API 미지원 환경(iOS Safari ≤12 등)은 window.innerHeight 사용.
+  const searchInputBoxRef = useRef<HTMLDivElement>(null);
+  const [searchDropdownMaxH, setSearchDropdownMaxH] = useState<number | undefined>();
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const vp = window.visualViewport;
+    const update = () => {
+      const ref = searchInputBoxRef.current;
+      if (!ref) return;
+      const rect = ref.getBoundingClientRect();
+      const visualBottom = vp ? vp.offsetTop + vp.height : window.innerHeight;
+      const available = visualBottom - rect.bottom - 16;
+      setSearchDropdownMaxH(Math.max(120, available));
+    };
+    update();
+    vp?.addEventListener("resize", update);
+    vp?.addEventListener("scroll", update);
+    window.addEventListener("resize", update);
+    return () => {
+      vp?.removeEventListener("resize", update);
+      vp?.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
   const [showResultModal, setShowResultModal] = useState(false);
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
   const currentMonth = new Date().getMonth() + 1;
@@ -264,7 +291,7 @@ function DashboardPageInner() {
 
       {/* ── Search ── */}
       <div className="px-gutter pb-5 relative lg:max-w-content-wide lg:mx-auto">
-        <div className="relative">
+        <div ref={searchInputBoxRef} className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <Input
             placeholder="대학교 검색..."
@@ -274,7 +301,10 @@ function DashboardPageInner() {
           />
         </div>
         {searchResults.length > 0 && (
-          <div className="absolute top-[52px] left-gutter right-gutter bg-card rounded-xl shadow-lg border z-50 overflow-hidden">
+          <div
+            className="absolute top-[52px] left-gutter right-gutter bg-card rounded-xl shadow-lg border z-50 overflow-y-auto overscroll-contain"
+            style={searchDropdownMaxH ? { maxHeight: `${searchDropdownMaxH}px` } : undefined}
+          >
             {searchResults.map(s => (
               <Link key={s.n} href="/analysis" onClick={() => setSearchQuery("")} className="flex items-center gap-3 p-3 hover:bg-accent/50 transition-colors">
                 <SchoolLogo domain={s.d} color={s.c} name={s.n} size="sm" />
@@ -304,13 +334,13 @@ function DashboardPageInner() {
                 <p className="text-2xs text-hero-muted uppercase tracking-wide font-semibold mb-1">
                   {dreamSchoolData?.ea ? "조기 지원" : "정시 지원"}
                 </p>
-                <p key={dday.primary} className="text-3xl font-bold tabular-nums leading-none font-headline animate-count-pulse">{dday.primary}</p>
+                <p className="text-3xl font-bold tabular-nums leading-none font-headline">{dday.primary}</p>
                 <p className="text-2xs text-hero-muted mt-1.5">{dday.hint}</p>
               </div>
               {dreamProb != null ? (
                 <div className="text-right pl-4 border-l border-hero-muted">
                   <p className="text-2xs text-hero-muted uppercase tracking-wide font-semibold mb-1">합격 확률</p>
-                  <p key={dreamProb} className="text-3xl font-bold tabular-nums leading-none font-headline animate-count-pulse">{dreamProb}%</p>
+                  <p className="text-3xl font-bold tabular-nums leading-none font-headline">{dreamProb}%</p>
                   <p className="text-2xs text-hero-muted mt-1.5">AI 예측</p>
                 </div>
               ) : hasSpecs ? null : (
