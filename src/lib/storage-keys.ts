@@ -28,6 +28,7 @@ export const STORAGE_KEYS = {
   // 동의·팝업
   ANALYTICS_CONSENT: "prism_analytics_consent",
   INSTALL_DISMISSED: "prism_install_dismissed",
+  LANDING_ONBOARDING_SEEN: "prism_seen_landing_onboarding",
 } as const;
 
 /** sessionStorage 전용 prefix (동적 키) */

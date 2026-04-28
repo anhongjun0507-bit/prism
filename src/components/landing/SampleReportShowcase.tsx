@@ -46,9 +46,10 @@ export function SampleReportShowcase() {
 
   return (
     <section
+      id="sample-showcase"
       ref={sectionRef}
       aria-label="AI 분석 리포트 미리보기"
-      className="w-full mt-14"
+      className="w-full mt-14 scroll-mt-20"
     >
       <div className="text-center mb-5">
         <h2 className="text-lg font-bold text-foreground">

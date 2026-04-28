@@ -109,9 +109,10 @@ export function FAQAccordion() {
 
   return (
     <section
+      id="faq"
       ref={ref}
       aria-label="자주 묻는 질문"
-      className="w-full mt-14 space-y-4"
+      className="w-full mt-14 space-y-4 scroll-mt-20"
     >
       <h2 className="text-center text-base font-bold text-foreground">
         자주 묻는 질문

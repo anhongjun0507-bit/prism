@@ -79,6 +79,12 @@ export interface PrismEventPayloads {
   ia_funnel_dashboard_exit: { exit_route: string; time_on_dashboard_ms: number };
   ia_migration_nudge_shown: Record<string, never>;
   ia_migration_nudge_dismissed: { source: "insights" | "tools" | "main" };
+  // Landing onboarding slides
+  onboarding_started: { trigger: "first_visit" | "replay" };
+  onboarding_slide_viewed: { slide_index: number };
+  onboarding_completed: Record<string, never>;
+  onboarding_skipped: { at_slide: number };
+  onboarding_dismissed: { at_slide: number };
 }
 
 export type LandingSection =

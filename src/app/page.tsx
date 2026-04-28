@@ -6,6 +6,8 @@ import { LiveStatsBar } from "@/components/landing/LiveStatsBar";
 import { PersonaSection } from "@/components/landing/PersonaSection";
 import { FAQAccordion } from "@/components/landing/FAQAccordion";
 import { PrismLogo } from "@/components/brand/PrismLogo";
+import { OnboardingSlides } from "@/components/landing/OnboardingSlides";
+import { AsideHighlights } from "@/components/landing/AsideHighlights";
 
 export const metadata: Metadata = {
   title: "PRISM - 한국 국제학교 학생을 위한 AI 미국 입시 매니저",
@@ -67,6 +69,8 @@ export default function LandingPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      {/* 첫 진입 시 1회 노출되는 4-슬라이드 온보딩 (localStorage 게이팅, 우측 aside의 "더 알아보기"로 재호출). */}
+      <OnboardingSlides />
       {/* Floating prismatic orbs — background decoration */}
       <div
         className="brand-orb brand-orb-primary -top-24 -left-24 w-72 h-72 opacity-30 dark:opacity-20"
@@ -239,6 +243,8 @@ export default function LandingPage() {
             </p>
             <AuthSection />
           </div>
+          {/* 1920px 우측 aside 빈 공간 보강 — 모바일/태블릿은 hidden lg:block 부모가 차단해 중복 없음. */}
+          <AsideHighlights />
         </aside>
       </div>
     </div>
