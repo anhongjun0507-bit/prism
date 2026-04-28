@@ -81,9 +81,11 @@ export default function LandingPage() {
         aria-hidden="true"
       />
 
-      <div className="relative w-full max-w-[380px] md:max-w-2xl lg:max-w-3xl flex flex-col items-center py-12 px-6 lg:py-16">
+      <div className="relative w-full max-w-[380px] lg:max-w-6xl mx-auto py-12 lg:py-16 px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-12 lg:items-start">
+        {/* ═══ Left column on lg+: hero + content ═══ */}
+        <div className="flex flex-col items-center lg:items-start lg:text-left min-w-0">
         {/* ═══ SEO-friendly Hero Section (Server-rendered) ═══ */}
-        <header className="flex flex-col items-center text-center mb-10 lg:max-w-xl">
+        <header className="flex flex-col items-center lg:items-start text-center lg:text-left mb-10 w-full">
           {/* Prism Logo — solid terracotta with subtle primary glow halo. */}
           <div className="animate-welcome-logo mb-7 relative" style={{ animationDelay: "0.1s" }}>
             <div
@@ -165,8 +167,8 @@ export default function LandingPage() {
           </p>
         </section>
 
-        {/* ═══ Client-side Auth UI ═══ */}
-        <div className="w-full lg:max-w-md lg:mx-auto">
+        {/* ═══ Client-side Auth UI — mobile/tablet inline. lg+ 에서는 우측 sticky 칼럼이 대신함 ═══ */}
+        <div className="w-full lg:hidden">
           <AuthSection />
         </div>
 
@@ -223,6 +225,21 @@ export default function LandingPage() {
 
         {/* ═══ FAQ — answers critical conversion blockers ═══ */}
         <FAQAccordion />
+        </div>
+
+        {/* ═══ Right column on lg+: Auth, sticky so always visible ═══ */}
+        <aside
+          aria-label="로그인"
+          className="hidden lg:block lg:sticky lg:top-12 lg:self-start w-full"
+        >
+          <div className="rounded-3xl bg-card/70 dark:bg-card/40 backdrop-blur-md border border-border/60 shadow-xl shadow-primary/5 p-6">
+            <p className="text-sm font-semibold text-foreground mb-1">3초 안에 시작</p>
+            <p className="text-xs text-muted-foreground mb-5">
+              GPA·SAT만 있으면 1,001개 대학 합격 확률이 열려요.
+            </p>
+            <AuthSection />
+          </div>
+        </aside>
       </div>
     </div>
   );
