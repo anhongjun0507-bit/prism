@@ -24,6 +24,8 @@ export interface School {
   toefl: number; tp: string; reqs: string[]; prompts: string[];
   mr: Record<string,number>; tuition?: number; size?: number;
   loc?: string; setting?: string; est?: boolean;
+  /** 폐교/타교 통합 — true면 매치·검색에서 제외 (레거시 saved schools 호환 위해 데이터는 보존). */
+  closed?: boolean; closedNote?: string; mergedInto?: string;
   scorecard?: Scorecard; qs?: QSRanking;
   // Computed
   prob?: number; lo?: number; hi?: number; cat?: string;
@@ -230,8 +232,11 @@ export function matchSchools(sp: Specs, aps: AP[] = [], ecs: EC[] = []): School[
     : ((sp.ecTier || 1) - 1) * EC.AVG_TIER_MULT;
   const ecMax = Math.min(ecScore, EC.SCORE_CAP);
 
-  // 학업 데이터 없는 학교 (SAT 0~0 + GPA 0) 제외
-  const validSchools = (SCHOOLS as School[]).filter(u => !(u.sat[0] === 0 && u.sat[1] === 0 && u.gpa === 0));
+  // 학업 데이터 없는 학교 (SAT 0~0 + GPA 0) 제외 + 폐교/통합 학교 제외
+  const validSchools = (SCHOOLS as School[]).filter(u => {
+    if (u.closed) return false;
+    return !(u.sat[0] === 0 && u.sat[1] === 0 && u.gpa === 0);
+  });
 
   return validSchools.map(u => {
     // ── 1. 합격률 baseline (학교의 공식 acceptance rate) ────────

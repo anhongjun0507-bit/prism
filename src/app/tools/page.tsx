@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
+import { usePageDwell } from "@/hooks/use-page-dwell";
 import Link from "next/link";
 import {
   Wand2, Sparkles, Zap, Calendar, Users, Scale, Compass,
@@ -107,7 +108,7 @@ function ToolsPageInner() {
     duration: 250,
     easing: "cubic-bezier(0.22, 1, 0.36, 1)",
   });
-  const mountedAtRef = useRef<number>(0);
+  const getDwell = usePageDwell();
 
   const recommendedId = useMemo(() => pickRecommendedTool(profile), [profile]);
   const recommendReason =
@@ -119,7 +120,6 @@ function ToolsPageInner() {
 
   useEffect(() => {
     trackPrismEvent("tools_page_viewed", { plan: currentPlan });
-    mountedAtRef.current = Date.now();
   }, [currentPlan]);
 
   return (
@@ -162,10 +162,7 @@ function ToolsPageInner() {
                 key={id}
                 href={href}
                 onClick={() => {
-                  const dwell_time_ms = mountedAtRef.current
-                    ? Date.now() - mountedAtRef.current
-                    : 0;
-                  trackPrismEvent("tools_card_clicked", { tool_id: id, dwell_time_ms });
+                  trackPrismEvent("tools_card_clicked", { tool_id: id, dwell_time_ms: getDwell() });
                   trackPrismEvent("tools_to_external_route", { tool_id: id, target_route: href });
                 }}
                 className="block animate-stagger"

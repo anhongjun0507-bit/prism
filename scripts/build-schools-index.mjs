@@ -20,7 +20,11 @@ const outputPath = join(root, "src/data/schools-index.json");
 
 const schools = JSON.parse(readFileSync(inputPath, "utf-8"));
 
-const index = schools.map((s) => ({
+// 폐교/통합 학교는 인덱스에서 제외 (검색·picker에 노출 안 함)
+const active = schools.filter((s) => !s.closed);
+const skipped = schools.length - active.length;
+
+const index = active.map((s) => ({
   n: s.n,
   d: s.d,
   c: s.c,
@@ -45,7 +49,7 @@ writeFileSync(outputPath, JSON.stringify(index));
 
 const inputBytes = readFileSync(inputPath).length;
 const outputBytes = readFileSync(outputPath).length;
-console.log(`✓ ${schools.length} schools indexed`);
+console.log(`✓ ${active.length} active schools indexed (${skipped} closed/merged skipped)`);
 console.log(`  input:  ${(inputBytes / 1024).toFixed(0)} KB (full)`);
 console.log(`  output: ${(outputBytes / 1024).toFixed(0)} KB (index)`);
 console.log(`  ratio:  ${((outputBytes / inputBytes) * 100).toFixed(1)}%`);

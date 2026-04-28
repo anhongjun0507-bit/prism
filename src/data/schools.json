@@ -16612,7 +16612,10 @@
       "sat_math_75": 550,
       "sat_reading_25": 528,
       "sat_reading_75": 583
-    }
+    },
+    "closed": true,
+    "closedNote": "Georgia Southern 통합 (2018)",
+    "mergedInto": "Georgia Southern"
   },
   {
     "n": "Art Center",
@@ -18485,7 +18488,9 @@
       "Psych": 100,
       "English": 100
     },
-    "est": true
+    "est": true,
+    "closed": true,
+    "closedNote": "폐교 (2024)"
   },
   {
     "n": "Black Hills State",
@@ -18609,7 +18614,10 @@
       "sat_math_75": null,
       "sat_reading_25": null,
       "sat_reading_75": null
-    }
+    },
+    "closed": true,
+    "closedNote": "Montclair State 통합 (2023)",
+    "mergedInto": "Montclair State"
   },
   {
     "n": "Bloomsburg U",
@@ -21389,7 +21397,9 @@
       "Psych": 100,
       "English": 100
     },
-    "est": true
+    "est": true,
+    "closed": true,
+    "closedNote": "폐교 (2023)"
   },
   {
     "n": "CCA",
@@ -31733,7 +31743,9 @@
       "Psych": 100,
       "English": 100
     },
-    "est": true
+    "est": true,
+    "closed": true,
+    "closedNote": "폐교 (2023)"
   },
   {
     "n": "Hood College",
@@ -37081,7 +37093,10 @@
       "Psych": 100,
       "English": 100
     },
-    "est": true
+    "est": true,
+    "closed": true,
+    "closedNote": "Emerson 통합 (2020)",
+    "mergedInto": "Emerson"
   },
   {
     "n": "Mars Hill U",
@@ -43565,7 +43580,10 @@
       "Psych": 100,
       "English": 100
     },
-    "est": true
+    "est": true,
+    "closed": true,
+    "closedNote": "Boston College 통합 (2020)",
+    "mergedInto": "Boston College"
   },
   {
     "n": "Pittsburg State",

@@ -40,6 +40,7 @@ import { SchoolLogo } from "@/components/SchoolLogo";
 import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useVisualViewportSpaceBelow } from "@/hooks/use-visual-viewport";
+import { usePageDwell } from "@/hooks/use-page-dwell";
 import dynamic from "next/dynamic";
 // SchoolModal: Tabs + 4 tab 컴포넌트 + ProbabilityReveal까지 포함해 ~25KB.
 // 카드 탭 전까진 안 쓰이므로 dynamic import.
@@ -171,13 +172,12 @@ function DashboardPageInner() {
   const isAdmissionSeason = currentMonth >= 3 && currentMonth <= 5;
 
   // ── IA analytics: 첫 방문 nudge + scroll depth + exit time + section→action funnel ──
-  const mountedAtRef = useRef<number>(0);
+  const getDwell = usePageDwell();
   const maxScrollPercentRef = useRef(0);
   const actionClicksRef = useRef(0);
   const exitRouteRef = useRef<string>("unmount");
 
   useEffect(() => {
-    mountedAtRef.current = Date.now();
     if (shouldShowMigrationNudge()) {
       trackPrismEvent("ia_migration_nudge_shown", {});
       showToast({
@@ -210,13 +210,12 @@ function DashboardPageInner() {
       if (max > 0) {
         trackPrismEvent("dashboard_scroll_depth", { max_percent: max });
       }
-      const elapsed = Date.now() - mountedAtRef.current;
       trackPrismEvent("ia_funnel_dashboard_exit", {
         exit_route: exitRouteRef.current,
-        time_on_dashboard_ms: elapsed,
+        time_on_dashboard_ms: getDwell(),
       });
     };
-  }, []);
+  }, [getDwell]);
 
   const trackSectionClick = useCallback(
     (sectionId: SectionId, position: number, targetRoute: string) => {
@@ -241,8 +240,19 @@ function DashboardPageInner() {
         <Link href="/profile" aria-label="프로필 설정" className="shrink-0">
           <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm overflow-hidden hover:ring-2 hover:ring-primary/30 transition-all">
             {(profile?.photoURL || user?.photoURL) ? (
+              // next/image 미사용: photoURL은 임의 외부 도메인(Firebase Storage·Google·OAuth provider)이라
+              // remotePatterns로 enumerate 불가. 36px 아바타는 최적화 payoff도 작음.
+              // 대신 lazy + async decoding으로 main thread 블로킹 최소화.
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={profile?.photoURL || user?.photoURL || ""} alt={`${profile?.name || "내"} 프로필 사진`} className="w-full h-full object-cover" />
+              <img
+                src={profile?.photoURL || user?.photoURL || ""}
+                alt={`${profile?.name || "내"} 프로필 사진`}
+                className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
+                width={44}
+                height={44}
+              />
             ) : initials}
           </div>
         </Link>
@@ -280,20 +290,35 @@ function DashboardPageInner() {
             className="pl-10 h-11 rounded-xl bg-muted/50 dark:bg-card/60 border-none text-sm focus-visible:ring-primary/20"
           />
         </div>
-        {searchResults.length > 0 && (
+        {searchQuery.trim().length > 0 && (
           <div
             className="absolute top-[52px] left-gutter right-gutter bg-card rounded-xl shadow-lg border z-50 overflow-y-auto overscroll-contain"
             style={searchDropdownMaxH ? { maxHeight: `${searchDropdownMaxH}px` } : undefined}
+            role="listbox"
+            aria-label="검색 결과"
           >
-            {searchResults.map(s => (
-              <Link key={s.n} href="/analysis" onClick={() => setSearchQuery("")} className="flex items-center gap-3 p-3 hover:bg-accent/50 transition-colors">
-                <SchoolLogo domain={s.d} color={s.c} name={s.n} size="sm" />
-                <div>
-                  <p className="text-sm font-medium">{s.n}</p>
-                  <p className="text-xs text-muted-foreground">{s.rk > 0 ? `#${s.rk}` : "Unranked"} · {s.loc}</p>
-                </div>
-              </Link>
-            ))}
+            {searchResults.length > 0 ? (
+              searchResults.map(s => (
+                <Link key={s.n} href="/analysis" onClick={() => setSearchQuery("")} className="flex items-center gap-3 p-3 hover:bg-accent/50 transition-colors">
+                  <SchoolLogo domain={s.d} color={s.c} name={s.n} size="sm" />
+                  <div>
+                    <p className="text-sm font-medium">{s.n}</p>
+                    <p className="text-xs text-muted-foreground">{s.rk > 0 ? `#${s.rk}` : "Unranked"} · {s.loc}</p>
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <div
+                className="px-4 py-6 text-center"
+                role="status"
+              >
+                <Search className="w-6 h-6 mx-auto mb-2 text-muted-foreground/60" aria-hidden="true" />
+                <p className="text-sm font-medium">검색 결과가 없어요</p>
+                <p className="text-xs text-muted-foreground mt-1 leading-snug">
+                  학교명 일부만 입력해도 찾을 수 있어요. 예: "Harvard", "UC", "NYU"
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

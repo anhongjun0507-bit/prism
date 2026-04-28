@@ -52,6 +52,15 @@ export function getFaviconUrl(domain: string): string {
   return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
 }
 
+/**
+ * Google favicons API는 미존재 도메인에도 200 + 16x16 generic globe를 반환.
+ * → onError 발화 안 하므로 naturalWidth로 사후 검증.
+ *
+ * 임계값 32px: Google generic globe는 16x16 또는 32x32, 정상 favicon은 보통 64+.
+ * DDG는 64x64 이상 반환 (없으면 404 → onError 발화).
+ */
+const MIN_LOGO_WIDTH_PX = 33;
+
 const sizeMap = {
   sm: "w-8 h-8 rounded-lg",
   md: "w-11 h-11 rounded-xl",
@@ -117,7 +126,19 @@ function SchoolLogoBase({
         loading="lazy"
         unoptimized
         aria-hidden="true"
-        onLoad={() => {
+        onLoad={(e) => {
+          // Google API의 generic globe 검출: naturalWidth ≤ 32 → 실패로 간주.
+          // (Armstrong State 등 미존재/리다이렉트 도메인 대응)
+          const img = e.currentTarget as HTMLImageElement;
+          if (img.naturalWidth > 0 && img.naturalWidth < MIN_LOGO_WIDTH_PX) {
+            if (!useFavicon) {
+              setUseFavicon(true);
+            } else {
+              setCachedSource(domain, "none");
+              setImgError(true);
+            }
+            return;
+          }
           if (!cached) setCachedSource(domain, useFavicon ? "favicon" : "ddg");
         }}
         onError={() => {

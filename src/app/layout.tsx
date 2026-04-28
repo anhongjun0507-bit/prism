@@ -56,9 +56,13 @@ export const metadata: Metadata = {
   },
   manifest: '/manifest.json',
   // SVG favicon takes precedence in modern browsers; app/favicon.ico stays as legacy fallback via Next.js convention.
+  // apple touch icon: iOS Safari 12+ supports SVG icons for "Add to Home Screen".
   icons: {
     icon: [
       { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    apple: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
     ],
   },
   alternates: {

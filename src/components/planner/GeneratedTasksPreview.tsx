@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
 import { TaskCategoryBadge } from "./TaskCategoryBadge";
 import { Sparkles, RefreshCw, Loader2, Clock, AlertTriangle } from "lucide-react";
+import { PrismLoader } from "@/components/PrismLoader";
 import { cn } from "@/lib/utils";
 import type { TaskCategory } from "@/lib/task-categories";
 
@@ -136,7 +137,7 @@ export function GeneratedTasksPreview({
 
           {isLoading && (
             <div className="py-12 flex flex-col items-center justify-center text-center gap-3">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" aria-hidden="true" />
+              <PrismLoader size={48} />
               <p className="text-sm font-medium">AI가 다음 주 계획을 만들고 있어요</p>
               <p className="text-xs text-muted-foreground">최대 45초가 걸릴 수 있어요</p>
             </div>
