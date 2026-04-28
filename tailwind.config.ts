@@ -69,6 +69,13 @@ export default {
           DEFAULT: 'hsl(var(--accent))',
           foreground: 'hsl(var(--accent-foreground))',
         },
+        // Phase 5: 학생 친화 vivid violet — gamification, secondary CTA, achievement.
+        // primary terracotta와 hue 분리 (265 vs 19) → 충돌 없이 보조 강조 톤으로 사용.
+        'accent-vivid': {
+          DEFAULT: 'hsl(var(--accent-vivid))',
+          foreground: 'hsl(var(--accent-vivid-foreground))',
+          soft: 'hsl(var(--accent-vivid-soft))',
+        },
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',

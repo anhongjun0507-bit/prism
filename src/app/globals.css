@@ -162,6 +162,15 @@ html {
     --logo-beam-1: 15 79% 45%;
     --logo-beam-2: 19 79% 34%;
     --logo-beam-3: 25 75% 50%;
+
+    /* ─── Accent vivid (Phase 5) — 학생 친화 secondary accent ───
+       Discord blurple / Linear violet 계열. terracotta primary와 hue 분리되어 충돌 X.
+       사용처: 게이미피케이션 배지, 보조 CTA, 학생 친화 강조 (스트릭, 업적, hover lift glow).
+       대비: hsl(265 75% 50%) on white = 6.4:1 (AA Large/Normal 모두 통과).
+       prismatic 그라디언트의 violet stop과 동일 계열 — 시각적 일관성 유지. */
+    --accent-vivid: 265 75% 50%;
+    --accent-vivid-foreground: 0 0% 100%;
+    --accent-vivid-soft: 265 80% 96%;
   }
 
   .dark {
@@ -209,6 +218,12 @@ html {
     --logo-beam-1: 15 79% 55%;
     --logo-beam-2: 19 79% 50%;
     --logo-beam-3: 25 75% 65%;
+
+    /* Accent vivid (Phase 5) — dark mode: 명도 ↑ 채도 유지로 near-black 배경에서 잘 보이게.
+       대비: hsl(265 85% 65%) on hsl(30 10% 7%) = 6.1:1 (AA Normal 통과). */
+    --accent-vivid: 265 85% 65%;
+    --accent-vivid-foreground: 0 0% 100%;
+    --accent-vivid-soft: 265 50% 18%;
   }
 }
 
@@ -312,6 +327,28 @@ html {
 .brand-orb-amber { background: hsl(38, 92%, 52%); }
 .dark .brand-orb { opacity: 0.25; }
 
+/* Phase 5: orb mesh — radial gradient로 단색 blur보다 더 자연스러운 빛 번짐.
+   기존 .brand-orb-* 단색은 가장자리가 너무 균일해 "디스크"처럼 보임.
+   .brand-orb-mesh + variant 조합 시 내부→외부 그라디언트로 진짜 "빛 구름" 느낌. */
+.brand-orb-mesh.brand-orb-primary {
+  background: radial-gradient(circle at 30% 30%,
+    hsl(var(--primary)) 0%,
+    hsl(var(--primary) / 0.6) 40%,
+    hsl(var(--primary) / 0) 70%);
+}
+.brand-orb-mesh.brand-orb-violet {
+  background: radial-gradient(circle at 30% 30%,
+    hsl(265, 84%, 70%) 0%,
+    hsl(265, 84%, 65% / 0.6) 40%,
+    hsl(265, 84%, 65% / 0) 70%);
+}
+.brand-orb-mesh.brand-orb-amber {
+  background: radial-gradient(circle at 30% 30%,
+    hsl(38, 92%, 60%) 0%,
+    hsl(38, 92%, 52% / 0.6) 40%,
+    hsl(38, 92%, 52% / 0) 70%);
+}
+
 /* Focus glow — 입력창/버튼 focus-visible 시 brand-tinted halo.
    기본 outline은 globals @layer base에 정의됨; 이 클래스는 추가 글로우. */
 .focus-glow:focus-visible {
@@ -337,6 +374,72 @@ html {
       0 6px 16px -4px hsl(var(--foreground) / 0.08),
       0 2px 4px -2px hsl(var(--foreground) / 0.06);
   }
+}
+
+/* Card tinted (Phase 5) — accent-vivid soft 배경 + violet border. 게이미피케이션·achievement·
+   학생 친화 secondary surface. neutral card과 구분되어 보상/장려 카드임을 시각적으로 hint.
+   사용처: 스트릭 카드, 업적 unlocked, 학생 가이드 팁. */
+.card-tinted {
+  background: hsl(var(--accent-vivid-soft));
+  border: 1px solid hsl(var(--accent-vivid) / 0.20);
+}
+.dark .card-tinted {
+  background: hsl(var(--accent-vivid-soft));
+  border-color: hsl(var(--accent-vivid) / 0.30);
+}
+
+/* Card emphasis (Phase 5) — primary tint + 좌측 accent bar. 행동 유도 강조 카드.
+   inline ::before로 좌측 4px primary bar — "주목할 것" hint.
+   사용처: 추천 도구 카드, primary CTA card, "지금 가장 도움 될" 추천. */
+.card-emphasis {
+  position: relative;
+  background: hsl(var(--primary) / 0.04);
+  border: 1px solid hsl(var(--primary) / 0.20);
+}
+.card-emphasis::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  background: linear-gradient(180deg, hsl(var(--primary)), hsl(var(--accent-vivid)));
+  border-radius: 0 2px 2px 0;
+}
+.dark .card-emphasis {
+  background: hsl(var(--primary) / 0.10);
+  border-color: hsl(var(--primary) / 0.35);
+}
+
+/* Tap press (Phase 5) — 모바일 터치 피드백. native app 같은 즉각적 scale.
+   hover-card는 hover 위주 (PC), tap-press는 tap 즉시 (mobile)에 최적화.
+   하단의 generic a/button :active scale(0.97)보다 더 명시적인 카드용 press. */
+.tap-press {
+  transition: transform 0.12s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+.tap-press:active {
+  transform: scale(0.96);
+}
+
+/* Hover glow (Phase 5) — accent-vivid halo on hover. card-tinted/achievement 카드용.
+   hover-card는 primary tint, hover-glow는 accent-vivid tint — secondary 강조. */
+.hover-glow {
+  transition: box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (hover: hover) {
+  .hover-glow:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 4px 16px -4px hsl(var(--accent-vivid) / 0.30),
+      0 0 0 1px hsl(var(--accent-vivid) / 0.20);
+  }
+}
+.dark .hover-glow:hover {
+  box-shadow:
+    0 6px 20px -4px hsl(var(--accent-vivid) / 0.45),
+    0 0 0 1px hsl(var(--accent-vivid) / 0.30);
 }
 
 /* Hover card — 클릭 가능 surface 카드 전용. translateY + brand-tinted glow + border tint.

@@ -133,12 +133,13 @@ function ToolsPageInner() {
       <main className="px-gutter-sm md:px-gutter space-y-4 lg:max-w-content-wide lg:mx-auto">
         <MigrationNudgeBanner source="tools" />
 
-        {/* Intro card — 첫 방문자에게 도구 hub의 역할을 명시 */}
+        {/* Intro card — 첫 방문자에게 도구 hub의 역할을 명시.
+            Phase 5: card-emphasis 토큰 적용 (좌측 primary→accent-vivid 그라디언트 bar). */}
         {recommendReason && (
           <Card
             role="region"
             aria-label="추천 도구"
-            className="p-4 rounded-2xl border border-primary/20 bg-primary/5 flex items-start gap-3"
+            className="card-emphasis p-4 pl-5 rounded-2xl flex items-start gap-3"
           >
             <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
               <Compass className="w-[18px] h-[18px] text-primary" aria-hidden="true" />
