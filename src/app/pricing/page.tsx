@@ -103,7 +103,7 @@ export default function PricingPage() {
     <div className="min-h-screen bg-background pb-nav">
       <PageHeader title="요금제 선택" />
 
-      <div className="px-gutter space-y-5 lg:max-w-3xl lg:mx-auto">
+      <div className="px-gutter space-y-5 lg:max-w-content-wide lg:mx-auto">
         {/* Hero */}
         <div className="text-center pt-2 space-y-2">
           <h2 className="font-headline font-bold text-2xl leading-tight">
@@ -148,7 +148,8 @@ export default function PricingPage() {
           </SegmentedControlItem>
         </SegmentedControl>
 
-        {/* Plan cards */}
+        {/* Plan cards — PC에서 3열 비교 (md+). Pro 카드는 lg에서 살짝 위로 올려 강조. */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 md:items-stretch">
         {planOrder.map((planId) => {
           const plan = PLANS[planId];
           const isCurrent = currentPlan === plan.id;
@@ -167,9 +168,9 @@ export default function PricingPage() {
             <Card
               key={plan.id}
               variant={isRecommended ? "elevated" : "default"}
-              className={`relative p-6 border-2 transition-all hover-lift ${
+              className={`relative p-6 border-2 transition-all hover-lift flex flex-col ${
                 isRecommended
-                  ? "border-primary shadow-glow-lg"
+                  ? "border-primary shadow-glow-lg md:-translate-y-2"
                   : isElite
                   ? "border-amber-300 dark:border-amber-700 shadow-sm"
                   : "border-transparent shadow-sm"
@@ -216,8 +217,8 @@ export default function PricingPage() {
                 )}
               </div>
 
-              {/* Highlights */}
-              <ul className="space-y-2 mb-5">
+              {/* Highlights — flex-1로 카드 높이 균일 (3열에서 CTA가 같은 높이에 정렬). */}
+              <ul className="space-y-2 mb-5 flex-1">
                 {plan.highlights.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm">
                     <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" aria-hidden="true" />
@@ -271,6 +272,7 @@ export default function PricingPage() {
             </Card>
           );
         })}
+        </div>
 
         {/* Why this price */}
         <Card className="p-5 border-none shadow-sm space-y-4 bg-muted/30">

@@ -132,6 +132,21 @@ export default {
         'gutter': '1.5rem',     // 24 — px-6 대체
         'gutter-lg': '2rem',    // 32
       },
+      // Page-level max-width tokens — PC 본문 폭의 의도를 명시.
+      // body는 lg:pl-64(256px)로 사이드바 예약 → 1920에서 본문 가용 1664px.
+      // Korean body text는 영어보다 좁은 readable line(45~55자)이 자연스러워
+      // 폭은 콘텐츠 밀도와 readability의 trade-off. 결정 트리는 docs/MAX_WIDTH_TOKENS.md 참조.
+      //
+      //   content-narrow  768  — 단일 폼·긴 본문         (profile, terms, sample-report)
+      //   content        1024  — 표준 카드/리스트         (chat, planner, single-column dashboard)
+      //   content-wide   1280  — 그리드/다중 카드          (dashboard, insights, pricing, tools, essays)
+      //   content-full   1536  — 2-column 레이아웃         (admissions detail, spec-analysis, compare, parent-report, what-if)
+      maxWidth: {
+        'content-narrow': '48rem',
+        'content':        '64rem',
+        'content-wide':   '80rem',
+        'content-full':   '96rem',
+      },
       // Border radius scale — strictly monotonic, shadcn-idiomatic.
       //
       // sm  →  8px  (--radius - 4)  — 미세 (체크박스, dropdown item)

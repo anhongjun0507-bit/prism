@@ -230,7 +230,7 @@ function DashboardPageInner() {
   return (
     <div className="min-h-screen bg-background pb-nav">
       {/* ── Clean header: avatar · name · plan · icons ── */}
-      <header className="px-gutter pt-safe pb-4 flex items-center gap-3 lg:max-w-3xl lg:mx-auto">
+      <header className="px-gutter pt-safe pb-4 flex items-center gap-3 lg:max-w-content-wide lg:mx-auto">
         <Link href="/profile" aria-label="프로필 설정" className="shrink-0">
           <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm overflow-hidden hover:ring-2 hover:ring-primary/30 transition-all">
             {(profile?.photoURL || user?.photoURL) ? (
@@ -263,7 +263,7 @@ function DashboardPageInner() {
       </header>
 
       {/* ── Search ── */}
-      <div className="px-gutter pb-5 relative lg:max-w-3xl lg:mx-auto">
+      <div className="px-gutter pb-5 relative lg:max-w-content-wide lg:mx-auto">
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <Input
@@ -289,7 +289,7 @@ function DashboardPageInner() {
       </div>
 
       {/* ── Main content ── */}
-      <main className="px-gutter space-y-5 lg:max-w-3xl lg:mx-auto">
+      <main className="px-gutter space-y-5 lg:max-w-content-wide lg:mx-auto">
         {/* Hero — 목표 대학 · D-day · 합격 확률 */}
         <Card className="p-6 rounded-2xl border-none shadow-lg overflow-hidden relative hero-navy-gradient text-hero">
           <div className="absolute inset-0 bg-hero-overlay pointer-events-none" style={{ background: "radial-gradient(ellipse at top right, hsl(var(--hero-overlay) / 0.12), transparent 60%)" }} aria-hidden="true" />
@@ -397,8 +397,10 @@ function DashboardPageInner() {
               </Link>
             )}
           </div>
+          {/* PC 2열 그리드 — 모바일 1열 유지. EmptyState는 col-span-2로 풀폭. */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
           {matchLoading && hasSpecs ? (
-            Array.from({ length: 3 }).map((_, i) => (
+            Array.from({ length: 4 }).map((_, i) => (
               <Card key={i} className="p-3.5 rounded-2xl border border-border/60 bg-card shadow-sm flex items-center gap-3">
                 <Skeleton className="w-10 h-10 rounded-full shrink-0" />
                 <div className="flex-1 min-w-0 space-y-2">
@@ -409,7 +411,7 @@ function DashboardPageInner() {
               </Card>
             ))
           ) : savedSchoolResults.length === 0 ? (
-            <Card variant="elevated" className="overflow-hidden">
+            <Card variant="elevated" className="overflow-hidden lg:col-span-2">
               <EmptyState
                 illustration="school"
                 title="아직 저장한 대학교가 없어요"
@@ -475,6 +477,7 @@ function DashboardPageInner() {
               );
             })
           )}
+          </div>
         </div>
         )}
 

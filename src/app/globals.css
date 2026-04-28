@@ -330,6 +330,39 @@ body {
   }
 }
 
+/* Hover card — 클릭 가능 surface 카드 전용. translateY + brand-tinted glow + border tint.
+   hover-lift가 generic motion이라면, hover-card는 카드의 affordance 강화 (border가 살짝
+   primary로 물들어 "누를 수 있는 패널"임을 더 명확히 hint).
+   사용처: 학교 카드, 페이지 entry CTA 카드, 가격 플랜 카드, sample list item. */
+.hover-card {
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+@media (hover: hover) {
+  .hover-card:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 8px 20px -6px hsl(var(--primary) / 0.18),
+      0 3px 6px -3px hsl(var(--primary) / 0.10);
+    border-color: hsl(var(--primary) / 0.35);
+  }
+}
+.hover-card:active {
+  transform: translateY(0) scale(0.985);
+  transition-duration: 0.1s;
+}
+
+/* Focus ring (primary tint) — 명시적 focus-visible 링. 글로벌 *:focus-visible과 별개로,
+   내부에서 ring outline을 끄거나 스타일을 덮어쓰는 컴포넌트(Tabs, SegmentedControl 등)에
+   재적용할 수 있도록 분리된 클래스. */
+.focus-ring-primary:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px hsl(var(--primary) / 0.18);
+}
+
 /* Stagger entry — CSS variable로 delay 조절. inline style로 --i 설정.
    사용: <div className="animate-stagger" style={{"--i": index}} /> */
 .animate-stagger {
