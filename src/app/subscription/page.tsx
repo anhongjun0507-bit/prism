@@ -105,7 +105,7 @@ function SubscriptionPageInner() {
     <div className="min-h-screen bg-background pb-nav">
       <PageHeader title="구독 관리" />
 
-      <div className="px-gutter space-y-6">
+      <div className="px-gutter space-y-6 lg:max-w-3xl lg:mx-auto">
         {/* Current Plan */}
         <Card className="bg-primary text-white border-none p-6 relative overflow-hidden animate-fade-up prism-strip">
           <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-white/10 rounded-full blur-[60px]" />

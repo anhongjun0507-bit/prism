@@ -697,7 +697,7 @@ function EssayReviewPageInner() {
         backHref="/essays"
       />
 
-      <div className="px-gutter space-y-4">
+      <div className="px-gutter space-y-4 lg:max-w-4xl lg:mx-auto">
         {/* Phase indicator — 3-step breadcrumb */}
         <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground" aria-label="진행 단계">
           <span className={phase === "input" ? "text-primary font-semibold" : ""}>1. 입력</span>

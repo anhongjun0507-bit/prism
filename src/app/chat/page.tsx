@@ -612,7 +612,7 @@ function ChatPageInner() {
       />
 
       {/* ── Messages area ── */}
-      <div className="flex-1 overflow-y-auto px-6 pt-6 pb-4">
+      <div className="flex-1 overflow-y-auto px-6 pt-6 pb-4 lg:max-w-3xl lg:mx-auto lg:w-full">
         {hasMoreOlder && (
           <div className="mb-4 flex justify-center">
             <Button
@@ -807,7 +807,7 @@ function ChatPageInner() {
       )}
 
       {/* ── Input ── */}
-      <div className="shrink-0 px-4 pt-1 pb-1 bg-background">
+      <div className="shrink-0 px-4 pt-1 pb-1 bg-background lg:max-w-3xl lg:mx-auto lg:w-full">
         <div className={cn(
           "relative flex items-end gap-2 p-2 pl-4 rounded-2xl bg-card shadow-glow-sm ring-1 transition-all",
           "ring-border/60 focus-within:ring-primary/40 focus-within:shadow-glow-md"

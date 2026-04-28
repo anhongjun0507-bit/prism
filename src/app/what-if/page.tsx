@@ -381,7 +381,7 @@ function WhatIfPageInner() {
       />
 
 
-      <div className="max-w-lg mx-auto px-5 py-5">
+      <div className="max-w-lg lg:max-w-3xl mx-auto px-5 py-5">
         {canUseWhatIf ? (
           simulatorContent
         ) : (

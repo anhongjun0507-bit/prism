@@ -165,7 +165,7 @@ export default function OnboardingPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background flex flex-col p-8 pt-12 relative overflow-hidden">
+    <div className="min-h-screen bg-background flex flex-col p-8 pt-12 relative overflow-hidden lg:max-w-2xl lg:mx-auto lg:w-full">
       {/* Floating prismatic orbs background */}
       <div className="brand-orb brand-orb-primary -top-20 -right-16 w-64 h-64 opacity-25" aria-hidden="true" />
       <div className="brand-orb brand-orb-violet -bottom-24 -left-20 w-72 h-72 opacity-20" aria-hidden="true" />

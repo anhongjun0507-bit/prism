@@ -178,7 +178,7 @@ function ProfilePageInner() {
         onBack={() => router.back()}
       />
 
-      <div className="px-gutter space-y-5">
+      <div className="px-gutter space-y-5 lg:max-w-3xl lg:mx-auto">
         {/* Avatar + photo URL */}
         <Card className="p-5 rounded-2xl border border-border/60 bg-card shadow-sm">
           <div className="flex items-center gap-4">

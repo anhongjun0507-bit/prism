@@ -90,9 +90,9 @@ function ToolsPageInner() {
         backHref="/dashboard"
       />
 
-      <main className="px-gutter space-y-4">
+      <main className="px-gutter space-y-4 lg:max-w-4xl lg:mx-auto">
         <MigrationNudgeBanner source="tools" />
-        <div ref={gridRef} className="grid grid-cols-2 gap-3">
+        <div ref={gridRef} className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           {TOOLS.map(({ id, href, label, desc, Icon }) => (
             <Link
               key={id}

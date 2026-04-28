@@ -103,7 +103,7 @@ export default function PricingPage() {
     <div className="min-h-screen bg-background pb-nav">
       <PageHeader title="요금제 선택" />
 
-      <div className="px-gutter space-y-5">
+      <div className="px-gutter space-y-5 lg:max-w-3xl lg:mx-auto">
         {/* Hero */}
         <div className="text-center pt-2 space-y-2">
           <h2 className="font-headline font-bold text-2xl leading-tight">

@@ -140,9 +140,11 @@ export default function RootLayout({
               <AuthGate>
                 {/* Desktop sidebar — lg+에서만 표시. 모바일은 BottomNav로 대체 (각 페이지가 직접 렌더). */}
                 <DesktopSidebar />
-                {/* Content shell — 모바일·태블릿: 중앙정렬 single column.
-                    lg+: body의 pl-64 안에서 다시 mx-auto로 가용 공간에 centering. */}
-                <main id="main-content" className="max-w-md md:max-w-2xl lg:max-w-5xl mx-auto min-h-screen bg-background relative overflow-x-hidden">
+                {/* Content shell —
+                      모바일·태블릿: max-w-md / md:max-w-2xl 중앙 정렬 (기존 mobile-first 디자인 보호).
+                      lg+: cap 해제 — 페이지가 자체 lg:max-w-* 로 콘텐츠 폭을 통제하고,
+                      배경(gradient/blob)은 viewport 전체로 흐른다. */}
+                <main id="main-content" className="max-w-md md:max-w-2xl lg:max-w-none mx-auto min-h-screen bg-background relative overflow-x-hidden">
                   <PageTransition>{children}</PageTransition>
                 </main>
                 <ConditionalFooter />

@@ -339,7 +339,7 @@ function ParentReportPageInner() {
         action={!hasAccess && <Badge variant="secondary" className="text-xs">Pro</Badge>}
       />
 
-      <div className="px-gutter">
+      <div className="px-gutter lg:max-w-4xl lg:mx-auto">
         {hasAccess ? (
           matchLoading && hasSpecs && matchResults.length === 0 ? (
             reportSkeleton

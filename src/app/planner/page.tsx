@@ -426,7 +426,7 @@ function PlannerPageInner() {
         }
       />
       {!profileComplete && (
-        <div className="px-gutter pt-1 pb-3">
+        <div className="px-gutter pt-1 pb-3 lg:max-w-3xl lg:mx-auto">
           <div className="rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-950/20 p-3 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2">
             <Sparkles className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />
             <span className="flex-1">
@@ -443,7 +443,7 @@ function PlannerPageInner() {
         </div>
       )}
 
-      <div className="px-gutter space-y-6">
+      <div className="px-gutter space-y-6 lg:max-w-3xl lg:mx-auto">
         {/* Urgent deadlines banner */}
         {urgent.length > 0 && (
           <Card className="p-4 bg-red-50 border-red-200 space-y-2">
