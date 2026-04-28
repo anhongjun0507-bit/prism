@@ -19,6 +19,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { Analytics } from "@/components/Analytics";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { DesktopSidebar } from "@/components/DesktopSidebar";
+import { AppShell } from "@/components/AppShell";
 import { StorageQuotaBanner } from "@/components/StorageQuotaBanner";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { ConditionalFooter } from "@/components/ConditionalFooter";
@@ -124,10 +125,12 @@ export default function RootLayout({
           }}
         />
       </head>
-      {/* lg+에서는 사이드바(w-64 fixed) 자리만큼 좌측 reserve.
-          모바일 BottomNav 클리어런스는 각 페이지가 자체 pb-nav로 처리함(safe-area 포함) —
-          body에 전역 pb를 두면 chat 같은 full-height 페이지에서 document 오버플로 발생. */}
-      <body className="font-body antialiased min-h-screen lg:pl-64">
+      {/* 모바일 BottomNav 클리어런스는 각 페이지가 자체 pb-nav로 처리함(safe-area 포함) —
+          body에 전역 pb를 두면 chat 같은 full-height 페이지에서 document 오버플로 발생.
+          lg+ 사이드바 자리 확보(lg:pl-64)는 AppShell이 pathname 기반으로 조건부 적용 —
+          DesktopSidebar가 숨겨지는 라우트(/, /onboarding, /parent-view/*)에서 좌측에
+          빈 256px이 생기지 않도록 한다. */}
+      <body className="font-body antialiased min-h-screen">
         <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[200] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-xl focus:shadow-lg">
           메인 콘텐츠로 건너뛰기
         </a>
@@ -140,14 +143,16 @@ export default function RootLayout({
               <AuthGate>
                 {/* Desktop sidebar — lg+에서만 표시. 모바일은 BottomNav로 대체 (각 페이지가 직접 렌더). */}
                 <DesktopSidebar />
-                {/* Content shell —
-                      모바일·태블릿: max-w-md / md:max-w-2xl 중앙 정렬 (기존 mobile-first 디자인 보호).
-                      lg+: cap 해제 — 페이지가 자체 lg:max-w-* 로 콘텐츠 폭을 통제하고,
-                      배경(gradient/blob)은 viewport 전체로 흐른다. */}
-                <main id="main-content" className="max-w-md md:max-w-2xl lg:max-w-none mx-auto min-h-screen bg-background relative overflow-x-hidden">
-                  <PageTransition>{children}</PageTransition>
-                </main>
-                <ConditionalFooter />
+                <AppShell>
+                  {/* Content shell —
+                        모바일·태블릿: max-w-md / md:max-w-2xl 중앙 정렬 (기존 mobile-first 디자인 보호).
+                        lg+: cap 해제 — 페이지가 자체 lg:max-w-* 로 콘텐츠 폭을 통제하고,
+                        배경(gradient/blob)은 viewport 전체로 흐른다. */}
+                  <main id="main-content" className="max-w-md md:max-w-2xl lg:max-w-none mx-auto min-h-screen bg-background relative overflow-x-hidden">
+                    <PageTransition>{children}</PageTransition>
+                  </main>
+                  <ConditionalFooter />
+                </AppShell>
                 <Toaster />
                 <StorageQuotaBanner />
                 <InstallPrompt />

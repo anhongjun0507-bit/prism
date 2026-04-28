@@ -25,7 +25,10 @@ const navItems = [
 
 export function DesktopSidebar() {
   const pathname = usePathname();
-  const hideNav = pathname === "/" || pathname === "/onboarding";
+  const hideNav =
+    pathname === "/" ||
+    pathname === "/onboarding" ||
+    pathname.startsWith("/parent-view/");
   if (hideNav) return null;
 
   return (
