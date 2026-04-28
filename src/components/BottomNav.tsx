@@ -4,14 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
-  Home, BarChart3, FileText, MessageSquare,
-  MoreHorizontal, User, CreditCard, Activity, Wrench,
+  Home, FileText, MessageSquare,
+  MoreHorizontal, Activity, Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { trackPrismEvent } from "@/lib/analytics/events";
+import { MORE_NAV_ITEMS } from "@/lib/nav-more-items";
 
 const navItems = [
   { id: "home",     label: "홈",      icon: Home,           href: "/dashboard" },
@@ -21,15 +22,9 @@ const navItems = [
   { id: "chat",     label: "AI 상담", icon: MessageSquare,  href: "/chat" },
 ];
 
-// 더보기 sheet에 노출할 라우트 — bottom nav에 없지만 직접 진입 경로가 필요한 페이지.
+// 더보기 sheet에 노출할 라우트 — DesktopSidebar와 단일 소스(nav-more-items).
 // pathname이 이 중 하나면 "더보기" 탭이 active 상태로 표시됨.
-// (스펙 분석·What-If·대학 비교·학부모 리포트·플래너는 /tools hub로 이동)
-const moreItems: { id: string; label: string; description: string; icon: typeof User; href: string }[] = [
-  { id: "profile",      label: "프로필",        description: "내 정보·스펙 관리",         icon: User,       href: "/profile" },
-  { id: "pricing",      label: "요금제",        description: "Free·Pro·Elite 비교",       icon: CreditCard, href: "/pricing" },
-  { id: "subscription", label: "구독 관리",     description: "결제 내역·플랜 변경",        icon: CreditCard, href: "/subscription" },
-  { id: "analysis",     label: "분석 (legacy)", description: "전체 합격 확률 분석 페이지", icon: BarChart3,  href: "/analysis" },
-];
+const moreItems = MORE_NAV_ITEMS;
 
 /**
  * BottomNav 높이 (safe-area 제외).
