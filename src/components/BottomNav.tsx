@@ -61,7 +61,7 @@ export function BottomNav() {
             onClick={() => trackPrismEvent("bottom_nav_clicked", { tab_id: item.id })}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "flex flex-col items-center justify-center gap-0.5 px-1 sm:px-2 min-h-[44px] flex-1 basis-0 min-w-0 rounded-xl transition-colors duration-200 ease-toss relative",
+              "tap-press flex flex-col items-center justify-center gap-0.5 px-1 sm:px-2 min-h-[44px] flex-1 basis-0 min-w-0 rounded-xl transition-colors duration-200 ease-toss relative",
               isActive ? "text-primary bg-primary/8" : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -89,7 +89,7 @@ export function BottomNav() {
         aria-expanded={moreOpen}
         aria-current={onMoreRoute ? "page" : undefined}
         className={cn(
-          "flex flex-col items-center justify-center gap-0.5 px-1 sm:px-2 min-h-[44px] flex-1 basis-0 min-w-0 rounded-xl transition-colors relative",
+          "tap-press flex flex-col items-center justify-center gap-0.5 px-1 sm:px-2 min-h-[44px] flex-1 basis-0 min-w-0 rounded-xl transition-colors relative",
           onMoreRoute ? "text-primary bg-primary/8" : "text-muted-foreground hover:text-foreground"
         )}
       >

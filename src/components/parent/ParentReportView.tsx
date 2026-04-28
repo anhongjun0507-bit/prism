@@ -163,8 +163,10 @@ export function ParentReportView({ data, token }: { data: ParentReportData; toke
           </section>
         )}
 
-        {/* 응원 포인트 */}
-        <section className="bg-primary/5 rounded-2xl border border-primary/20 p-6 space-y-3">
+        {/* 응원 포인트 — Phase 6: card-tinted (accent-vivid violet) + hover-glow.
+            terracotta primary는 신뢰/실용, violet은 감정/응원. 학부모 메시지 컨텍스트에
+            violet이 더 따뜻한 톤. hover-glow는 PC에서 카드를 "들여다보는" 시각 hint. */}
+        <section className="card-tinted hover-glow rounded-2xl p-6 space-y-3">
           <h2 className="font-headline text-xl font-bold text-foreground">학부모님께 한마디</h2>
           <p className="text-foreground/80 leading-relaxed">
             자녀가 미국 대학 입시를 준비하며 한 걸음 한 걸음 나아가고 있어요. 조급해하지 마시고,

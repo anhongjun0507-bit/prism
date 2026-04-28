@@ -71,17 +71,18 @@ export default function LandingPage() {
       />
       {/* 첫 진입 시 1회 노출되는 4-슬라이드 온보딩 (localStorage 게이팅, 우측 aside의 "더 알아보기"로 재호출). */}
       <OnboardingSlides />
-      {/* Floating prismatic orbs — background decoration */}
+      {/* Floating prismatic orbs — Phase 6: mesh radial gradient (Linear/Vercel pattern).
+          단색 blur보다 가장자리가 자연스럽게 페이드되어 "디스크" 느낌 제거. */}
       <div
-        className="brand-orb brand-orb-primary -top-24 -left-24 w-72 h-72 opacity-30 dark:opacity-20"
+        className="brand-orb brand-orb-mesh brand-orb-primary -top-24 -left-24 w-72 h-72 opacity-30 dark:opacity-20"
         aria-hidden="true"
       />
       <div
-        className="brand-orb brand-orb-violet top-1/3 -right-32 w-80 h-80 opacity-25 dark:opacity-15"
+        className="brand-orb brand-orb-mesh brand-orb-violet top-1/3 -right-32 w-80 h-80 opacity-25 dark:opacity-15"
         aria-hidden="true"
       />
       <div
-        className="brand-orb brand-orb-amber -bottom-20 left-1/4 w-72 h-72 opacity-20 dark:opacity-12"
+        className="brand-orb brand-orb-mesh brand-orb-amber -bottom-20 left-1/4 w-72 h-72 opacity-20 dark:opacity-12"
         aria-hidden="true"
       />
 
