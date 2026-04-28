@@ -300,7 +300,7 @@ function SpecAnalysisPageInner() {
       {analysis && !loading && !showEditor && (
         <button
           onClick={() => setShowEditor(true)}
-          className="w-full flex items-center gap-3 p-4 rounded-2xl bg-card shadow-sm border border-border/60 text-left hover:shadow-md active:scale-[0.98] transition-all"
+          className="hover-card w-full flex items-center gap-3 p-4 rounded-2xl bg-card shadow-sm border border-border/60 text-left"
         >
           <div className="flex-1 min-w-0">
             <p className="text-xs text-muted-foreground mb-1">분석 기준</p>

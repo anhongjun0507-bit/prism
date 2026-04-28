@@ -739,7 +739,7 @@ function TaskDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
+      <DialogContent className="sm:max-w-md lg:max-w-content-narrow rounded-2xl">
         <DialogHeader>
           <DialogTitle>{isEdit ? "일정 수정" : "일정 추가"}</DialogTitle>
           <DialogDescription>제목, 카테고리, 마감일을 입력해주세요.</DialogDescription>

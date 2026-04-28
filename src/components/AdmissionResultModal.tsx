@@ -111,7 +111,7 @@ export function AdmissionResultModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent hideClose className="max-w-md p-6 max-h-[85vh] overflow-y-auto space-y-5">
+      <DialogContent hideClose className="max-w-md lg:max-w-content-narrow p-6 max-h-[85vh] overflow-y-auto space-y-5">
         <DialogHeader className="space-y-1">
           <DialogTitle className="font-headline font-bold text-lg">합격 결과 공유</DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">

@@ -448,7 +448,7 @@ function DashboardPageInner() {
               return (
                 <Card
                   key={school.n}
-                  className="p-3.5 rounded-2xl border border-border/60 bg-card shadow-sm flex items-center gap-3 cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 ease-toss"
+                  className="hover-card p-3.5 rounded-2xl border border-border/60 bg-card shadow-sm flex items-center gap-3 cursor-pointer"
                   onClick={() => setSelectedSchool(school)}
                 >
                   <SchoolLogo domain={school.d} color={school.c} name={school.n} rank={school.rk} size="md" />

@@ -147,7 +147,7 @@ export function SchoolModal({ school, open, onClose, specs }: { school: School |
   const CatIcon = CAT_ICON[school.cat || "Reach"];
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent hideClose className="max-w-md p-0 rounded-2xl max-h-[90vh] flex flex-col border-none overflow-hidden">
+      <DialogContent hideClose className="max-w-md lg:max-w-content p-0 rounded-2xl max-h-[90vh] flex flex-col border-none overflow-hidden">
         {/* Hero header — extra bottom padding leaves room for the overlapping card */}
         <div className="shrink-0">
           <CampusPhoto schoolName={school.n} color={school.c} className="p-6 pb-14">
