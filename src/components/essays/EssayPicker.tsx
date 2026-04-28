@@ -39,13 +39,13 @@ export function EssayPicker({
   onCreateFromPrompt,
 }: EssayPickerProps) {
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-dvh bg-background pb-24">
       <PageHeader
         title={selectedSchool || "대학 선택"}
         onBack={onBack}
       />
       {!selectedSchool && (
-        <div className="px-gutter pb-4">
+        <div className="px-gutter-sm md:px-gutter pb-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -58,7 +58,7 @@ export function EssayPicker({
         </div>
       )}
 
-      <div className="px-gutter space-y-2">
+      <div className="px-gutter-sm md:px-gutter space-y-2">
         {!selectedSchool ? (
           <>
             <Card

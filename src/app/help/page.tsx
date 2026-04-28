@@ -237,13 +237,13 @@ export default function HelpPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background pb-nav">
+    <div className="min-h-dvh bg-background pb-nav">
       <PageHeader
         title="도움말·FAQ"
         subtitle="PRISM 사용법과 자주 묻는 질문"
       />
 
-      <main className="px-gutter pb-section-lg space-y-section lg:max-w-content lg:mx-auto">
+      <main className="px-gutter-sm md:px-gutter pb-section-lg space-y-section lg:max-w-content lg:mx-auto">
         {/* Hero — 빠른 안내 */}
         <Card className="p-card-lg rounded-2xl border border-primary/20 bg-primary/5">
           <div className="flex items-start gap-3">

@@ -16,7 +16,7 @@ export const metadata: Metadata = {
  */
 export default function GoodbyePage() {
   return (
-    <main className="min-h-screen bg-background flex flex-col items-center justify-center px-gutter py-16">
+    <main className="min-h-dvh bg-background flex flex-col items-center justify-center px-gutter-sm md:px-gutter py-16">
       <div className="w-full max-w-sm text-center space-y-6">
         <div className="flex justify-center opacity-60">
           <PrismLogo size={64} variant="compact" />

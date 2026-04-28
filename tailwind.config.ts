@@ -117,11 +117,15 @@ export default {
       //   p-card-lg     → 큰 카드/모달 패딩    (24px) — feature card, hero
       //   gap-section   → 섹션 사이 vertical 간격 (24px)
       //   gap-section-lg→ 큰 섹션 분리         (40px)
-      //   px-gutter     → 페이지 좌우 여백     (24px) — 기존 px-6과 일치
-      //   px-gutter-lg  → 데스크톱 페이지 여백 (32px)
+      //   px-gutter-sm  → 모바일(SE급) 좌우 여백 (16px) — iPhone SE 360px width 대응
+      //   px-gutter     → 표준 좌우 여백        (24px) — md+ 일반
+      //   px-gutter-lg  → 데스크톱 페이지 여백  (32px) — lg+
+      //
+      // Responsive 사용 예 (3-tier):
+      //   px-gutter-sm md:px-gutter lg:px-gutter-lg
       //
       // 결정 트리:
-      //   - 페이지 좌우: px-gutter
+      //   - 페이지 좌우: px-gutter-sm md:px-gutter lg:px-gutter-lg
       //   - 카드 안쪽: p-card (작음) / p-card-lg (큼)
       //   - 섹션 간격: space-y-section / gap-section
       spacing: {
@@ -129,8 +133,9 @@ export default {
         'card-lg': '1.5rem',    // 24
         'section': '1.5rem',    // 24
         'section-lg': '2.5rem', // 40
-        'gutter': '1.5rem',     // 24 — px-6 대체
-        'gutter-lg': '2rem',    // 32
+        'gutter-sm': '1rem',    // 16 — 모바일 좁은 폭 (SE 360px) 대응
+        'gutter': '1.5rem',     // 24 — px-6 대체 (md+ 표준)
+        'gutter-lg': '2rem',    // 32 — lg+ 데스크톱
       },
       // Page-level max-width tokens — PC 본문 폭의 의도를 명시.
       // body는 lg:pl-64(256px)로 사이드바 예약 → 1920에서 본문 가용 1664px.

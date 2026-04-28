@@ -130,7 +130,7 @@ function PaymentSuccessContent() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-dvh flex items-center justify-center bg-background">
         <PrismLoader size={48} label="결제를 확인하고 있습니다..." />
       </div>
     );
@@ -138,7 +138,7 @@ function PaymentSuccessContent() {
 
   if (status === "applying") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-6">
+      <div className="min-h-dvh flex items-center justify-center bg-background p-6">
         <Card className="p-8 text-center max-w-sm w-full">
           <PrismLoader size={40} />
           <h2 className="font-headline font-bold text-lg mt-5 mb-1.5">플랜을 적용하고 있어요</h2>
@@ -152,7 +152,7 @@ function PaymentSuccessContent() {
 
   if (status === "error") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-6">
+      <div className="min-h-dvh flex items-center justify-center bg-background p-6">
         <Card className="p-6 text-center max-w-sm w-full">
           <p className="text-4xl mb-4" aria-hidden="true">😥</p>
           <h2 className="font-bold text-lg mb-2">결제 확인 실패</h2>
@@ -201,7 +201,7 @@ function PaymentSuccessContent() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-6">
+    <div className="min-h-dvh flex items-center justify-center bg-background p-6">
       <Card className="p-8 text-center max-w-sm w-full relative overflow-hidden prism-strip-once">
         <div className="w-20 h-20 rounded-full bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center mx-auto mb-5">
           <CheckCircle2 className="w-10 h-10 text-emerald-500" aria-hidden="true" />
@@ -226,7 +226,7 @@ function PaymentSuccessContent() {
 export default function PaymentSuccessPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-dvh flex items-center justify-center bg-background">
         <PrismLoader size={36} />
       </div>
     }>

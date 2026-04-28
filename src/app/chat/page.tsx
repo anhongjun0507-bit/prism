@@ -515,12 +515,42 @@ function ChatPageInner() {
     sendMessage(lastUserMsg.content);
   };
 
-  const suggestions: { category: SuggestedCategory; text: string }[] = [
-    { category: "지원준비", text: `${profile?.dreamSchool || "Harvard"} 지원 준비, 뭐부터?` },
-    { category: "에세이",   text: "Common App 에세이 주제 추천" },
-    { category: "시험",     text: "SAT 점수 올리는 가장 빠른 방법" },
-    { category: "활동",     text: "경쟁력 있는 과외활동 추천" },
-  ];
+  // 학년별 prompt 추천 — 지금 시기에 가장 도움 되는 질문을 frontload.
+  // 9·10학년은 기반 만들기, 11학년은 시험·활동 우선, 12학년은 에세이·지원 마감.
+  const suggestions: { category: SuggestedCategory; text: string }[] = (() => {
+    const school = profile?.dreamSchool || "Harvard";
+    const grade = profile?.grade || "";
+    if (grade.startsWith("9") || grade.startsWith("10")) {
+      return [
+        { category: "활동",     text: "9·10학년에 시작할 만한 활동 추천" },
+        { category: "시험",     text: "SAT 준비, 언제부터 시작할까?" },
+        { category: "지원준비", text: `${school} 가려면 지금 뭘 해야 해?` },
+        { category: "에세이",   text: "에세이 미리 연습할 주제 알려줘" },
+      ];
+    }
+    if (grade.startsWith("11")) {
+      return [
+        { category: "시험",     text: "SAT 점수 올리는 가장 빠른 방법" },
+        { category: "활동",     text: "11학년에 추가하면 좋은 활동" },
+        { category: "지원준비", text: `${school} 합격 가능성 진단해줘` },
+        { category: "에세이",   text: "Common App 에세이 주제 추천" },
+      ];
+    }
+    if (grade.startsWith("12") || grade.startsWith("졸")) {
+      return [
+        { category: "에세이",   text: "Common App 에세이 1차 피드백" },
+        { category: "지원준비", text: `${school} ED·EA 마감 전 체크리스트` },
+        { category: "에세이",   text: "Why Major 에세이 어떻게 써?" },
+        { category: "지원준비", text: "추천서 부탁할 선생님 정하는 법" },
+      ];
+    }
+    return [
+      { category: "지원준비", text: `${school} 지원 준비, 뭐부터?` },
+      { category: "에세이",   text: "Common App 에세이 주제 추천" },
+      { category: "시험",     text: "SAT 점수 올리는 가장 빠른 방법" },
+      { category: "활동",     text: "경쟁력 있는 과외활동 추천" },
+    ];
+  })();
 
   const showSuggestions = !loading && messages.every(m => m.role === "ai");
 

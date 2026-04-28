@@ -60,6 +60,15 @@ body {
   /* 한글-라틴 혼용 시 자동 word-break, 영문 hyphen 방지 */
   word-break: keep-all;
   overflow-wrap: break-word;
+  /* iOS Safari pull-to-refresh + 가로 rubber-band 차단.
+     앱 같은 단일 화면 경험을 위해 root scroll의 chain/refresh를 모두 끔.
+     내부 스크롤 컨테이너는 자체적으로 overflow-auto/scroll로 동작. */
+  overscroll-behavior-y: contain;
+  overscroll-behavior-x: none;
+}
+html {
+  /* iOS Safari가 스크롤 끝에서 페이지 자체를 들썩이는 rubber-band 효과 차단. */
+  overscroll-behavior-y: none;
 }
 /* 숫자에 tabular-nums 기본 (UI 일관성). 콘텐츠 본문은 명시적 lining-nums로 override 가능 */
 .tabular-nums {

@@ -220,7 +220,7 @@ function TokenCard({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 shrink-0"
+          className="h-11 w-11 shrink-0"
           onClick={onRevoke}
           isLoading={busy}
           disabled={busy}

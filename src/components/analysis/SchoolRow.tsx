@@ -30,7 +30,7 @@ export const SchoolRow = ({
   const CatIcon = CAT_ICON[school.cat || "Reach"];
   const fav = isFavorite(school.n);
   return (
-    <div style={style} className="px-gutter pb-2.5">
+    <div style={style} className="px-gutter-sm md:px-gutter pb-2.5">
       <button className="w-full text-left" onClick={() => onSelect(school)} aria-label={`${school.n} 상세 보기`}>
         <Card
           variant="elevated"

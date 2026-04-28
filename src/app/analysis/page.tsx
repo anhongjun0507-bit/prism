@@ -183,7 +183,7 @@ function AnalysisPageInner() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-nav">
+    <div className="min-h-dvh bg-background pb-nav">
       <PageHeader
         title="분석"
         hideBack

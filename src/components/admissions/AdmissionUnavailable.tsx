@@ -30,9 +30,9 @@ export function AdmissionUnavailable({ reason }: { reason: Reason }) {
   const showUpgrade = reason === "unverified";
 
   return (
-    <main className="min-h-screen bg-background pb-nav">
+    <main className="min-h-dvh bg-background pb-nav">
       <PageHeader title="합격 사례" backHref="/analysis" sticky />
-      <div className="max-w-md mx-auto px-gutter py-12">
+      <div className="max-w-md mx-auto px-gutter-sm md:px-gutter py-12">
         <Card className="p-6 rounded-2xl border-none shadow-sm text-center space-y-4">
           <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
             <Icon className="w-7 h-7 text-primary" aria-hidden="true" />

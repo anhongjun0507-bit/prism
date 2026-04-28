@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import Link from "next/link";
@@ -122,14 +123,14 @@ function ToolsPageInner() {
   }, [currentPlan]);
 
   return (
-    <div className="min-h-screen bg-background pb-nav">
+    <div className="min-h-dvh bg-background pb-nav">
       <PageHeader
         title="도구"
         subtitle="합격을 도와줄 6가지 기능"
         backHref="/dashboard"
       />
 
-      <main className="px-gutter space-y-4 lg:max-w-content-wide lg:mx-auto">
+      <main className="px-gutter-sm md:px-gutter space-y-4 lg:max-w-content-wide lg:mx-auto">
         <MigrationNudgeBanner source="tools" />
 
         {/* Intro card — 첫 방문자에게 도구 hub의 역할을 명시 */}
@@ -154,7 +155,7 @@ function ToolsPageInner() {
         )}
 
         <div ref={gridRef} className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-          {TOOLS.map(({ id, href, label, desc, useWhen, Icon }) => {
+          {TOOLS.map(({ id, href, label, desc, useWhen, Icon }, i) => {
             const isRecommended = recommendedId === id;
             return (
               <Link
@@ -167,7 +168,8 @@ function ToolsPageInner() {
                   trackPrismEvent("tools_card_clicked", { tool_id: id, dwell_time_ms });
                   trackPrismEvent("tools_to_external_route", { tool_id: id, target_route: href });
                 }}
-                className="block"
+                className="block animate-stagger"
+                style={{ ["--i" as string]: i } as React.CSSProperties}
                 aria-label={isRecommended ? `${label} (추천)` : undefined}
               >
                 <Card

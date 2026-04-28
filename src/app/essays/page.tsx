@@ -669,7 +669,7 @@ function EssaysPageInner() {
 
   // List View
   return (
-    <div className="min-h-screen bg-background pb-nav">
+    <div className="min-h-dvh bg-background pb-nav">
       <PageHeader
         title="에세이 관리"
         subtitle="대학교별 프롬프트로 에세이를 작성하세요."
@@ -681,7 +681,7 @@ function EssaysPageInner() {
         }
       />
 
-      <div className="px-gutter mb-3 lg:max-w-content-wide lg:mx-auto">
+      <div className="px-gutter-sm md:px-gutter mb-3 lg:max-w-content-wide lg:mx-auto">
         <Link href="/essays/review">
           <Card className="p-4 bg-primary/5 border border-primary/20 flex items-center gap-3 transition-all active:scale-[0.98]">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">

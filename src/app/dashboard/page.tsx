@@ -39,6 +39,7 @@ import {
 import { SchoolLogo } from "@/components/SchoolLogo";
 import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useVisualViewportSpaceBelow } from "@/hooks/use-visual-viewport";
 import dynamic from "next/dynamic";
 // SchoolModal: Tabs + 4 tab 컴포넌트 + ProbabilityReveal까지 포함해 ~25KB.
 // 카드 탭 전까진 안 쓰이므로 dynamic import.
@@ -160,31 +161,9 @@ function DashboardPageInner() {
   }, [searchQuery, schoolsIndex]);
 
   // 모바일 키보드가 검색 드롭다운 하단 결과를 가리는 P0(USER_REPORTED 4) 대응.
-  // visualViewport API로 키보드를 제외한 가시 영역을 측정해 드롭다운 maxHeight를 산출.
-  // fallback: API 미지원 환경(iOS Safari ≤12 등)은 window.innerHeight 사용.
+  // useVisualViewportSpaceBelow: 키보드를 제외한 가시 영역으로 maxHeight 산출.
   const searchInputBoxRef = useRef<HTMLDivElement>(null);
-  const [searchDropdownMaxH, setSearchDropdownMaxH] = useState<number | undefined>();
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const vp = window.visualViewport;
-    const update = () => {
-      const ref = searchInputBoxRef.current;
-      if (!ref) return;
-      const rect = ref.getBoundingClientRect();
-      const visualBottom = vp ? vp.offsetTop + vp.height : window.innerHeight;
-      const available = visualBottom - rect.bottom - 16;
-      setSearchDropdownMaxH(Math.max(120, available));
-    };
-    update();
-    vp?.addEventListener("resize", update);
-    vp?.addEventListener("scroll", update);
-    window.addEventListener("resize", update);
-    return () => {
-      vp?.removeEventListener("resize", update);
-      vp?.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
-    };
-  }, []);
+  const searchDropdownMaxH = useVisualViewportSpaceBelow(searchInputBoxRef);
 
   const [showResultModal, setShowResultModal] = useState(false);
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
@@ -256,9 +235,9 @@ function DashboardPageInner() {
   );
 
   return (
-    <div className="min-h-screen bg-background pb-nav">
+    <div className="min-h-dvh bg-background pb-nav">
       {/* ── Clean header: avatar · name · plan · icons ── */}
-      <header className="px-gutter pt-safe pb-4 flex items-center gap-3 lg:max-w-content-wide lg:mx-auto">
+      <header className="px-gutter-sm md:px-gutter pt-safe pb-4 flex items-center gap-3 lg:max-w-content-wide lg:mx-auto">
         <Link href="/profile" aria-label="프로필 설정" className="shrink-0">
           <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm overflow-hidden hover:ring-2 hover:ring-primary/30 transition-all">
             {(profile?.photoURL || user?.photoURL) ? (
@@ -291,7 +270,7 @@ function DashboardPageInner() {
       </header>
 
       {/* ── Search ── */}
-      <div className="px-gutter pb-5 relative lg:max-w-content-wide lg:mx-auto">
+      <div className="px-gutter-sm md:px-gutter pb-5 relative lg:max-w-content-wide lg:mx-auto">
         <div ref={searchInputBoxRef} className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <Input
@@ -320,7 +299,7 @@ function DashboardPageInner() {
       </div>
 
       {/* ── Main content ── */}
-      <main className="px-gutter space-y-5 lg:max-w-content-wide lg:mx-auto">
+      <main className="px-gutter-sm md:px-gutter space-y-5 lg:max-w-content-wide lg:mx-auto">
         {/* Hero — 목표 대학 · D-day · 합격 확률 */}
         <Card className="p-6 rounded-2xl border-none shadow-lg overflow-hidden relative hero-navy-gradient text-hero">
           <div className="absolute inset-0 bg-hero-overlay pointer-events-none" style={{ background: "radial-gradient(ellipse at top right, hsl(var(--hero-overlay) / 0.12), transparent 60%)" }} aria-hidden="true" />
@@ -496,11 +475,11 @@ function DashboardPageInner() {
                         {school.cat}
                       </Badge>
                     </div>
-                    {hasSpecs && <p className="text-2xs text-muted-foreground mt-1 truncate">{reason}</p>}
+                    {hasSpecs && <p className="text-xs text-muted-foreground mt-1 truncate">{reason}</p>}
                   </div>
                   <button
                     onClick={() => toggleFavorite(school.n)}
-                    className="shrink-0 p-1.5 rounded-full hover:bg-destructive/10 transition-colors"
+                    className="shrink-0 w-11 h-11 -m-1.5 rounded-full hover:bg-destructive/10 transition-colors flex items-center justify-center"
                     aria-label={isFavorite(school.n) ? `${school.n} 즐겨찾기 해제` : `${school.n} 즐겨찾기 추가`}
                     aria-pressed={isFavorite(school.n)}
                   >

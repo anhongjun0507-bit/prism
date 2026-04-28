@@ -394,7 +394,7 @@ function WhatIfPageInner() {
   );
 
   return (
-    <main className="min-h-screen bg-background pb-nav">
+    <main className="min-h-dvh bg-background pb-nav">
       <PageHeader
         title="What-If 시뮬레이터"
         backHref="/analysis"

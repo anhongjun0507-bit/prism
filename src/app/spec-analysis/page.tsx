@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
@@ -22,6 +22,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { PrismLoader } from "@/components/PrismLoader";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PageIntroCard } from "@/components/PageIntroCard";
+import { useVisualViewportSpaceBelow } from "@/hooks/use-visual-viewport";
 import { cn } from "@/lib/utils";
 
 interface AnalysisItem {
@@ -69,6 +70,9 @@ function SpecAnalysisPageInner() {
   // University combobox search
   const [uniSearch, setUniSearch] = useState("");
   const [uniHighlight, setUniHighlight] = useState(-1);
+  // 모바일 키보드가 콤보박스 결과를 가리지 않도록 visualViewport로 maxHeight 제한.
+  const uniBoxRef = useRef<HTMLDivElement>(null);
+  const uniDropdownMaxH = useVisualViewportSpaceBelow(uniBoxRef);
   const filteredUnis = uniSearch.length > 0
     ? UNI_LIST.filter((u) => schoolMatchesQuery({ n: u }, uniSearch)).slice(0, 6)
     : [];
@@ -205,7 +209,7 @@ function SpecAnalysisPageInner() {
         </div>
       </div>
 
-      <div className="space-y-1.5 relative">
+      <div ref={uniBoxRef} className="space-y-1.5 relative">
         <Label className="text-xs text-muted-foreground">목표 대학교</Label>
         <Input
           placeholder="대학교 이름 검색..."
@@ -249,7 +253,12 @@ function SpecAnalysisPageInner() {
           className="h-11 rounded-xl"
         />
         {filteredUnis.length > 0 && !editDreamSchool && (
-          <div role="listbox" aria-label="대학교 검색 결과" className="absolute top-full left-0 right-0 z-10 bg-card rounded-xl shadow-lg border mt-1 max-h-48 overflow-y-auto overscroll-contain">
+          <div
+            role="listbox"
+            aria-label="대학교 검색 결과"
+            style={{ maxHeight: uniDropdownMaxH ? Math.min(uniDropdownMaxH, 240) : undefined }}
+            className="absolute top-full left-0 right-0 z-10 bg-card rounded-xl shadow-lg border mt-1 max-h-60 overflow-y-auto overscroll-contain"
+          >
             {filteredUnis.map((u, idx) => (
               <button
                 key={u}
@@ -493,14 +502,14 @@ function SpecAnalysisPageInner() {
   );
 
   return (
-    <main className="min-h-screen bg-background pb-nav print:pb-0">
+    <main className="min-h-dvh bg-background pb-nav print:pb-0">
       <PageHeader
         title="AI 스펙 분석"
         className="print:hidden"
         action={!hasAccess && <Badge variant="secondary" className="text-xs">Pro</Badge>}
       />
 
-      <div className="px-gutter lg:max-w-content-full lg:mx-auto space-y-5">
+      <div className="px-gutter-sm md:px-gutter lg:max-w-content-full lg:mx-auto space-y-5">
         {hasAccess && (
           <PageIntroCard
             toolId="spec-analysis"

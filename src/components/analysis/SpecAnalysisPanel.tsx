@@ -90,7 +90,7 @@ export function SpecAnalysisPanel({ profile, hasAccess }: SpecAnalysisPanelProps
   // Collapsed state — CTA card
   if (!expanded && !analysis) {
     return (
-      <div className="px-gutter mt-5">
+      <div className="px-gutter-sm md:px-gutter mt-5">
         <Card
           interactive
           className="p-card bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20"
@@ -112,7 +112,7 @@ export function SpecAnalysisPanel({ profile, hasAccess }: SpecAnalysisPanelProps
   }
 
   return (
-    <div className="px-gutter mt-5 space-y-4">
+    <div className="px-gutter-sm md:px-gutter mt-5 space-y-4">
       {/* Section header */}
       <button
         onClick={() => setExpanded(!expanded)}

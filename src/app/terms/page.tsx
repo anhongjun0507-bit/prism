@@ -2,9 +2,9 @@ import { PageHeader } from "@/components/PageHeader";
 
 export default function TermsOfServicePage() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-dvh bg-background text-foreground">
       <PageHeader title="이용약관" subtitle="시행일: 2026년 4월 7일" backHref="/" />
-      <div className="max-w-2xl mx-auto px-gutter pb-section-lg">
+      <div className="max-w-2xl mx-auto px-gutter-sm md:px-gutter pb-section-lg">
         <div className="space-y-section text-sm leading-relaxed text-foreground/90">
           <section>
             <h2 className="text-lg font-semibold mb-3">제1조 (서비스 소개)</h2>

@@ -100,10 +100,10 @@ export default function PricingPage() {
   const planOrder: Plan[] = ["free", "pro", "elite"];
 
   return (
-    <div className="min-h-screen bg-background pb-nav">
+    <div className="min-h-dvh bg-background pb-nav">
       <PageHeader title="요금제 선택" />
 
-      <div className="px-gutter space-y-5 lg:max-w-content-wide lg:mx-auto">
+      <div className="px-gutter-sm md:px-gutter space-y-5 lg:max-w-content-wide lg:mx-auto">
         {/* Hero */}
         <div className="text-center pt-2 space-y-2">
           <h2 className="font-headline font-bold text-2xl leading-tight">

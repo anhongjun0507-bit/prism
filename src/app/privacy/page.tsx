@@ -2,9 +2,9 @@ import { PageHeader } from "@/components/PageHeader";
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-dvh bg-background text-foreground">
       <PageHeader title="개인정보 처리방침" subtitle="시행일: 2026년 4월 7일" backHref="/" />
-      <div className="max-w-2xl mx-auto px-gutter pb-section-lg">
+      <div className="max-w-2xl mx-auto px-gutter-sm md:px-gutter pb-section-lg">
         <div className="space-y-section text-sm leading-relaxed text-foreground/90">
           <p>
             PRISM(이하 &quot;서비스&quot;)은 이용자의 개인정보를 소중히 여기며, 관련

@@ -9,7 +9,7 @@ export function Footer() {
       role="contentinfo"
       className="border-t border-border/60 bg-muted/20 mt-section-lg"
     >
-      <div className="max-w-md md:max-w-2xl lg:max-w-5xl mx-auto px-gutter py-section">
+      <div className="max-w-md md:max-w-2xl lg:max-w-5xl mx-auto px-gutter-sm md:px-gutter py-section">
         {biz.isPlaceholder && process.env.NODE_ENV !== "production" && (
           <div
             role="alert"

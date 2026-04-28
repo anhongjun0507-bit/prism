@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
  *   단, hideBack=true 면 back 자체 숨김 (welcome/onboarding 등 entry 페이지)
  * - title 스타일: 항상 font-headline text-xl font-bold
  * - subtitle: text-sm text-muted-foreground (1줄)
- * - 패딩: px-gutter pt-safe pb-4 (모바일), md:pb-5 (태블릿+)
+ * - 패딩: px-gutter-sm md:px-gutter pt-safe pb-4 (모바일 16, md+ 24), md:pb-5 (태블릿+)
  * - pt-safe: env(safe-area-inset-top) 반영 → Safari 주소창과 타이틀 겹침 방지
  * - sticky 사용 시 border-bottom (chat·analysis 결과 화면 등)
  */
@@ -96,7 +96,7 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "flex items-center gap-2 px-gutter pt-safe pb-4 md:pb-5",
+        "flex items-center gap-2 px-gutter-sm md:px-gutter pt-safe pb-4 md:pb-5",
         sticky && "sticky top-0 z-40 bg-background/95 border-b transition-colors",
         sticky && (scrolled ? "border-border/60" : "border-transparent"),
         className

@@ -82,7 +82,7 @@ export default async function ParentComparisonPage({ params }: PageProps) {
   ];
 
   return (
-    <main className="parent-track min-h-screen bg-background pb-12">
+    <main className="parent-track min-h-dvh bg-background pb-12">
       <ParentNav token={token} active="comparison" />
 
       <header className="px-6 py-8 border-b border-border/60">

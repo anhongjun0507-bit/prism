@@ -57,7 +57,7 @@ export function MigrationNudgeBanner({
         type="button"
         onClick={dismiss}
         aria-label="안내 닫기"
-        className="shrink-0 -m-1 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+        className="shrink-0 -m-2.5 w-11 h-11 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors flex items-center justify-center"
       >
         <X className="w-4 h-4" aria-hidden="true" />
       </button>

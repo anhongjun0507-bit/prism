@@ -8,9 +8,9 @@ export const metadata: Metadata = {
 
 export default function RefundPolicyPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-dvh bg-background text-foreground">
       <PageHeader title="환불정책" subtitle="시행일: 2026년 4월 25일" backHref="/" />
-      <div className="max-w-2xl mx-auto px-gutter pb-section-lg">
+      <div className="max-w-2xl mx-auto px-gutter-sm md:px-gutter pb-section-lg">
         <div className="space-y-section text-sm leading-relaxed text-foreground/90">
           <section>
             <h2 className="text-lg font-semibold mb-3">1. 구독 결제 환불</h2>

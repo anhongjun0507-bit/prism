@@ -124,7 +124,7 @@ export function AnalysisResultView({ specs, onBack, toggleFavorite, isFavorite }
   }, [results]);
 
   return (
-    <div className="min-h-screen bg-background pb-nav">
+    <div className="min-h-dvh bg-background pb-nav">
       <PageHeader
         title="분석 결과"
         subtitle={`${results.length}개 대학교 분석 완료`}
@@ -150,7 +150,7 @@ export function AnalysisResultView({ specs, onBack, toggleFavorite, isFavorite }
           </Button>
         }
       />
-      <div className="px-gutter pt-2 space-y-4">
+      <div className="px-gutter-sm md:px-gutter pt-2 space-y-4">
         <Link href="/spec-analysis">
           <Card className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 flex items-center gap-3 hover:shadow-md active:scale-[0.98] transition-all">
             <div className="w-11 h-11 rounded-xl bg-primary/12 flex items-center justify-center shrink-0">
@@ -242,7 +242,7 @@ export function AnalysisResultView({ specs, onBack, toggleFavorite, isFavorite }
       </div>
 
       {matchLoading && results.length === 0 ? (
-        <div className="px-gutter py-6 space-y-3">
+        <div className="px-gutter-sm md:px-gutter py-6 space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3 p-4 rounded-2xl bg-card shadow-sm">
               <Skeleton className="w-10 h-10 rounded-xl shrink-0" />

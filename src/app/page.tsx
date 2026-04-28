@@ -63,7 +63,7 @@ const jsonLd = {
 
 export default function LandingPage() {
   return (
-    <div className="relative min-h-screen bg-gradient-to-b from-muted/40 to-accent/30 dark:from-background dark:to-background flex flex-col items-center justify-start overflow-x-hidden">
+    <div className="relative min-h-dvh bg-gradient-to-b from-muted/40 to-accent/30 dark:from-background dark:to-background flex flex-col items-center justify-start overflow-x-hidden">
       {/* SEO: 구조화 데이터. Server Component에서 렌더되므로 검색 엔진이 SSR HTML에서 즉시 발견. */}
       <script
         type="application/ld+json"

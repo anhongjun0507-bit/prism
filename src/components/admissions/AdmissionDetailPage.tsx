@@ -160,7 +160,7 @@ export function AdmissionDetailPage({ admission }: { admission: AdmissionDetail 
   );
 
   return (
-    <div className="px-gutter py-4 pb-24 lg:max-w-content-full lg:mx-auto space-y-4">
+    <div className="px-gutter-sm md:px-gutter py-4 pb-24 lg:max-w-content-full lg:mx-auto space-y-4">
       <div className="flex items-center gap-2">
         <Link href="/dashboard" className="p-2 -ml-2 rounded-full hover:bg-muted">
           <ChevronLeft className="w-5 h-5" />

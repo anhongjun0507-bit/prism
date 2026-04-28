@@ -112,7 +112,7 @@ export function GeneratedTasksPreview({
         side="bottom"
         className="max-h-[92dvh] overflow-y-auto rounded-t-2xl p-0 md:max-w-lg md:mx-auto"
       >
-        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-gutter pt-6 pb-4">
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-gutter-sm md:px-gutter pt-6 pb-4">
           <SheetHeader className="space-y-1 text-left">
             <SheetTitle className="flex items-center gap-2 text-lg">
               <Sparkles className="w-5 h-5 text-primary" aria-hidden="true" />
@@ -124,7 +124,7 @@ export function GeneratedTasksPreview({
           </SheetHeader>
         </div>
 
-        <div className="px-gutter py-4 space-y-4">
+        <div className="px-gutter-sm md:px-gutter py-4 space-y-4">
           {tooManyExistingTasks && (
             <Card className="p-3 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
               <p className="text-xs text-amber-700 dark:text-amber-300 flex items-start gap-1.5">
@@ -204,7 +204,7 @@ export function GeneratedTasksPreview({
           )}
         </div>
 
-        <div className="sticky bottom-0 z-10 bg-background/95 backdrop-blur-sm border-t border-border px-gutter py-3 space-y-2">
+        <div className="sticky bottom-0 z-10 bg-background/95 backdrop-blur-sm border-t border-border px-gutter-sm md:px-gutter py-3 space-y-2">
           {showFocusPicker ? (
             <div className="space-y-2">
               <p className="text-xs font-semibold text-muted-foreground">어느 영역에 집중할까요?</p>

@@ -83,7 +83,7 @@ export function SpecAnalysisView({ profile, hasAccess }: SpecAnalysisViewProps) 
   // No access — show blurred preview + upgrade CTA
   if (!hasAccess) {
     return (
-      <div className="px-gutter space-y-5">
+      <div className="px-gutter-sm md:px-gutter space-y-5">
         <div className="relative">
           <div className="pointer-events-none select-none blur-sm opacity-50">
             <Card className="hero-navy-gradient text-white border-none p-6">
@@ -108,7 +108,7 @@ export function SpecAnalysisView({ profile, hasAccess }: SpecAnalysisViewProps) 
   // Initial state — CTA to start analysis
   if (!analysis && !loading && !error) {
     return (
-      <div className="px-gutter">
+      <div className="px-gutter-sm md:px-gutter">
         <Card className="p-8 text-center bg-card border-none shadow-sm">
           <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <Sparkles className="w-10 h-10 text-primary" />
@@ -161,7 +161,7 @@ export function SpecAnalysisView({ profile, hasAccess }: SpecAnalysisViewProps) 
   }
 
   return (
-    <div className="px-gutter space-y-5">
+    <div className="px-gutter-sm md:px-gutter space-y-5">
       {/* Loading */}
       {loading && (
         <Card variant="elevated" className="p-12 text-center">

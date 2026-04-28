@@ -62,7 +62,7 @@ export function DashboardTipCard() {
         type="button"
         onClick={dismiss}
         aria-label="안내 닫기"
-        className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full hover:bg-foreground/5 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+        className="absolute top-1 right-1 w-11 h-11 rounded-full hover:bg-foreground/5 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
       >
         <X className="w-4 h-4" aria-hidden="true" />
       </button>

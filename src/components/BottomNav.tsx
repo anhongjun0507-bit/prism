@@ -50,7 +50,7 @@ export function BottomNav() {
     <>
     <nav
       aria-label="주요 메뉴"
-      className="fixed bottom-0 left-0 right-0 bg-background/95 border-t border-border/50 px-gutter flex justify-between items-center z-50 max-w-md md:max-w-2xl lg:hidden mx-auto pb-safe pt-2"
+      className="fixed bottom-0 left-0 right-0 bg-background/95 border-t border-border/50 px-1 sm:px-2 flex justify-between items-stretch z-50 max-w-md md:max-w-2xl lg:hidden mx-auto pb-safe pt-2"
     >
       {navItems.map((item) => {
         const isActive = pathname === item.href;
@@ -61,18 +61,18 @@ export function BottomNav() {
             onClick={() => trackPrismEvent("bottom_nav_clicked", { tab_id: item.id })}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "flex flex-col items-center justify-center gap-0.5 px-3 min-h-[44px] min-w-[44px] rounded-xl transition-colors duration-200 ease-toss relative",
+              "flex flex-col items-center justify-center gap-0.5 px-1 sm:px-2 min-h-[44px] flex-1 basis-0 min-w-0 rounded-xl transition-colors duration-200 ease-toss relative",
               isActive ? "text-primary bg-primary/8" : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <item.icon className={cn("w-5 h-5", isActive && "stroke-[2.5px]")} aria-hidden="true" />
+            <item.icon className={cn("w-5 h-5 shrink-0", isActive && "stroke-[2.5px]")} aria-hidden="true" />
             {isActive && (
               <>
-                <span className="w-1 h-1 rounded-full bg-primary absolute top-1 right-2 animate-notification-pop" aria-hidden="true" />
+                <span className="w-1 h-1 rounded-full bg-primary absolute top-1 right-1.5 animate-notification-pop" aria-hidden="true" />
                 <span className="sr-only">현재 페이지: </span>
               </>
             )}
-            <span className="text-[13px] leading-tight font-medium">{item.label}</span>
+            <span className="text-[11px] sm:text-xs leading-tight font-medium max-w-full truncate">{item.label}</span>
           </Link>
         );
       })}
@@ -89,13 +89,13 @@ export function BottomNav() {
         aria-expanded={moreOpen}
         aria-current={onMoreRoute ? "page" : undefined}
         className={cn(
-          "flex flex-col items-center justify-center gap-0.5 px-3 min-h-[44px] min-w-[44px] rounded-xl transition-colors relative",
+          "flex flex-col items-center justify-center gap-0.5 px-1 sm:px-2 min-h-[44px] flex-1 basis-0 min-w-0 rounded-xl transition-colors relative",
           onMoreRoute ? "text-primary bg-primary/8" : "text-muted-foreground hover:text-foreground"
         )}
       >
-        <MoreHorizontal className={cn("w-5 h-5", onMoreRoute && "stroke-[2.5px]")} aria-hidden="true" />
-        {onMoreRoute && <span className="w-1 h-1 rounded-full bg-primary absolute top-1 right-2 animate-notification-pop" aria-hidden="true" />}
-        <span className="text-[13px] leading-tight font-medium">더보기</span>
+        <MoreHorizontal className={cn("w-5 h-5 shrink-0", onMoreRoute && "stroke-[2.5px]")} aria-hidden="true" />
+        {onMoreRoute && <span className="w-1 h-1 rounded-full bg-primary absolute top-1 right-1.5 animate-notification-pop" aria-hidden="true" />}
+        <span className="text-[11px] sm:text-xs leading-tight font-medium max-w-full truncate">더보기</span>
       </button>
     </nav>
 

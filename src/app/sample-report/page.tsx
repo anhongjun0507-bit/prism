@@ -27,7 +27,7 @@ export default function SampleReportPage() {
   const d = SAMPLE_REPORT;
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-dvh bg-background">
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-border/60">
         <div
@@ -35,7 +35,7 @@ export default function SampleReportPage() {
           aria-hidden="true"
         />
         <div className="absolute -top-16 -right-10 w-64 h-64 bg-primary/20 rounded-full blur-3xl opacity-60" aria-hidden="true" />
-        <div className="relative px-gutter py-10 md:py-16 max-w-content-narrow mx-auto text-center">
+        <div className="relative px-gutter-sm md:px-gutter py-10 md:py-16 max-w-content-narrow mx-auto text-center">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 text-xs font-bold mb-4">
             학부모 전용 샘플
           </span>
@@ -54,7 +54,7 @@ export default function SampleReportPage() {
       </section>
 
       {/* Preview */}
-      <section className="px-gutter py-10 max-w-content-narrow mx-auto">
+      <section className="px-gutter-sm md:px-gutter py-10 max-w-content-narrow mx-auto">
         <h2 className="font-headline font-bold text-xl mb-1 text-center">이런 리포트를 받게 돼요</h2>
         <p className="text-sm text-muted-foreground text-center mb-6">
           가상의 학생 &quot;{d.studentName}&quot;님(11학년, CS 지망)의 한 주예요
@@ -63,7 +63,7 @@ export default function SampleReportPage() {
       </section>
 
       {/* Price compare */}
-      <section className="px-gutter py-8 bg-muted/30 border-y border-border/60">
+      <section className="px-gutter-sm md:px-gutter py-8 bg-muted/30 border-y border-border/60">
         <div className="max-w-content-narrow mx-auto space-y-3">
           <h2 className="font-headline font-bold text-lg text-center mb-2">
             이 리포트, 다른 곳에서는 얼마일까요
@@ -109,7 +109,7 @@ export default function SampleReportPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="px-gutter py-12 max-w-content-narrow mx-auto text-center space-y-4">
+      <section className="px-gutter-sm md:px-gutter py-12 max-w-content-narrow mx-auto text-center space-y-4">
         <h2 className="font-headline font-bold text-xl">
           내 아이 리포트도 이렇게 받아보세요
         </h2>
@@ -128,7 +128,7 @@ export default function SampleReportPage() {
         </p>
       </section>
 
-      <footer className="px-gutter py-6 border-t border-border/60 text-center">
+      <footer className="px-gutter-sm md:px-gutter py-6 border-t border-border/60 text-center">
         <p className="text-xs text-muted-foreground/60 leading-relaxed">
           본 샘플은 PRISM이 작성한 가상의 리포트입니다. 실제 학생 정보가 아니며,
           최종 입시 결정은 전문가 상담 후 진행하시길 권장합니다.

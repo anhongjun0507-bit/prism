@@ -243,10 +243,10 @@ function ComparePageInner() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-nav">
+    <div className="min-h-dvh bg-background pb-nav">
       <PageHeader title="대학 비교" backHref="/analysis" sticky />
 
-      <div className="max-w-2xl lg:max-w-content-full mx-auto px-gutter py-6 space-y-6">
+      <div className="max-w-2xl lg:max-w-content-full mx-auto px-gutter-sm md:px-gutter py-6 space-y-6">
         <PageIntroCard
           toolId="compare"
           title="대학 비교란?"

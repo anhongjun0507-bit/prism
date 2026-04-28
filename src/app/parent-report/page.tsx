@@ -114,7 +114,7 @@ function ParentReportPageInner() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-dvh bg-background flex items-center justify-center">
         <p className="text-muted-foreground">프로필을 불러오는 중...</p>
       </div>
     );
@@ -359,14 +359,14 @@ function ParentReportPageInner() {
   );
 
   return (
-    <main className="min-h-screen bg-background pb-nav print:pb-0">
+    <main className="min-h-dvh bg-background pb-nav print:pb-0">
       <PageHeader
         title="학부모 리포트"
         className="print:hidden"
         action={!hasAccess && <Badge variant="secondary" className="text-xs">Pro</Badge>}
       />
 
-      <div className="px-gutter lg:max-w-content-full lg:mx-auto">
+      <div className="px-gutter-sm md:px-gutter lg:max-w-content-full lg:mx-auto">
         {hasAccess ? (
           matchLoading && hasSpecs && matchResults.length === 0 ? (
             reportSkeleton

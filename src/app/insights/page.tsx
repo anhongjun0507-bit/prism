@@ -138,14 +138,14 @@ function InsightsPageInner() {
   );
 
   return (
-    <div className="min-h-screen bg-background pb-nav">
+    <div className="min-h-dvh bg-background pb-nav">
       <PageHeader
         title="현황"
         subtitle="합격 라인업·실시간 통계·성장 추이"
         backHref="/dashboard"
       />
 
-      <main className="px-gutter space-y-5 lg:max-w-content-wide lg:mx-auto">
+      <main className="px-gutter-sm md:px-gutter space-y-5 lg:max-w-content-wide lg:mx-auto">
         <MigrationNudgeBanner source="insights" />
         {!hasSpecs ? (
           <Card variant="elevated" className="overflow-hidden">

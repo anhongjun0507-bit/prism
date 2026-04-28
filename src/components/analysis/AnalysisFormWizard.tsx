@@ -32,7 +32,7 @@ export function AnalysisFormWizard({ specs, updateSpec, onSubmit }: Props) {
 
   return (
     <>
-      <div className="px-gutter pb-4 lg:max-w-3xl lg:mx-auto">
+      <div className="px-gutter-sm md:px-gutter pb-4 lg:max-w-3xl lg:mx-auto">
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold text-primary">
@@ -59,7 +59,7 @@ export function AnalysisFormWizard({ specs, updateSpec, onSubmit }: Props) {
         </div>
       </div>
 
-      <div className="px-gutter space-y-5 lg:max-w-3xl lg:mx-auto">
+      <div className="px-gutter-sm md:px-gutter space-y-5 lg:max-w-3xl lg:mx-auto">
         {/* Step 1: 학업 성적 */}
         {formStep === 1 && (
           <div className="space-y-4">

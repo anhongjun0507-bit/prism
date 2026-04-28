@@ -87,7 +87,7 @@ export function EssayEditor({
   onInsertSection,
 }: EssayEditorProps) {
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-dvh bg-background pb-24">
       <PageHeader
         title="에세이 편집"
         onBack={onBack}
@@ -125,7 +125,7 @@ export function EssayEditor({
         }
       />
 
-      <div className="px-gutter space-y-4">
+      <div className="px-gutter-sm md:px-gutter space-y-4">
         {showVersions && activeEssay.versions && activeEssay.versions.length > 0 && (
           <Card className="p-4 bg-card border-none shadow-sm space-y-2">
             <div className="flex items-center justify-between">

@@ -686,7 +686,7 @@ function EssayReviewPageInner() {
   const isLinkedLoading = essayId && !linkedEssay;
 
   return (
-    <div className="min-h-screen bg-background pb-nav">
+    <div className="min-h-dvh bg-background pb-nav">
       <PageHeader
         title="AI 에세이 첨삭"
         subtitle={
@@ -697,7 +697,7 @@ function EssayReviewPageInner() {
         backHref="/essays"
       />
 
-      <div className="px-gutter space-y-4 lg:max-w-content-wide lg:mx-auto">
+      <div className="px-gutter-sm md:px-gutter space-y-4 lg:max-w-content-wide lg:mx-auto">
         {/* Phase indicator — 3-step breadcrumb */}
         <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground" aria-label="진행 단계">
           <span className={phase === "input" ? "text-primary font-semibold" : ""}>1. 입력</span>

@@ -27,7 +27,7 @@ const REASON_MESSAGES: Record<InvalidTokenReason, { title: string; body: string 
 export function InvalidTokenView({ reason }: { reason: InvalidTokenReason }) {
   const msg = REASON_MESSAGES[reason];
   return (
-    <main className="parent-track min-h-screen bg-background flex flex-col items-center justify-center px-6 py-12">
+    <main className="parent-track min-h-dvh bg-background flex flex-col items-center justify-center px-6 py-12">
       <div className="max-w-md w-full text-center space-y-6">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-muted">
           <span className="text-3xl" aria-hidden="true">

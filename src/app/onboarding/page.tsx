@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { fetchWithAuth } from "@/lib/api-client";
 import { CheckCircle2, ChevronRight, ChevronUp, Sparkles } from "lucide-react";
 import { CAT_STYLE } from "@/lib/analysis-helpers";
 import { useToast } from "@/hooks/use-toast";
+import { useVisualViewportSpaceBelow } from "@/hooks/use-visual-viewport";
 import { logError } from "@/lib/log";
 
 const grades = ["9학년", "10학년", "11학년", "12학년", "졸업생/Gap Year", "홈스쿨/기타"];
@@ -46,6 +47,12 @@ export default function OnboardingPage() {
   const [stepDir, setStepDir] = useState<"forward" | "back">("forward");
   const nextStep = () => { setStepDir("forward"); setStep((s) => s + 1); };
   const prevStep = () => { setStepDir("back"); setStep((s) => s - 1); };
+
+  // 모바일 키보드가 콤보박스 드롭다운을 가리는 것 방지 — 키보드 위 가시 영역으로 max-h 제한.
+  const uniBoxRef = useRef<HTMLDivElement>(null);
+  const majorBoxRef = useRef<HTMLDivElement>(null);
+  const uniDropdownMaxH = useVisualViewportSpaceBelow(uniBoxRef);
+  const majorDropdownMaxH = useVisualViewportSpaceBelow(majorBoxRef);
 
   const handleSubmit = async () => {
     if (saving) return; // 더블클릭 가드
@@ -165,7 +172,7 @@ export default function OnboardingPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background flex flex-col p-8 pt-12 relative overflow-hidden lg:max-w-content-narrow lg:mx-auto lg:w-full">
+    <div className="min-h-dvh bg-background flex flex-col p-8 pt-12 relative overflow-hidden lg:max-w-content-narrow lg:mx-auto lg:w-full">
       {/* Floating prismatic orbs background */}
       <div className="brand-orb brand-orb-primary -top-20 -right-16 w-64 h-64 opacity-25" aria-hidden="true" />
       <div className="brand-orb brand-orb-violet -bottom-24 -left-20 w-72 h-72 opacity-20" aria-hidden="true" />
@@ -265,7 +272,7 @@ export default function OnboardingPage() {
           </div>
 
           {/* Dream School */}
-          <div className="space-y-1.5 relative">
+          <div ref={uniBoxRef} className="space-y-1.5 relative">
             <Label className="text-xs text-muted-foreground">
               지망 대학교 <span className="text-red-500" aria-hidden="true">*</span>
             </Label>
@@ -308,7 +315,12 @@ export default function OnboardingPage() {
               autoComplete="off"
             />
             {filteredUnis.length > 0 && !formData.dreamSchool && (
-              <div role="listbox" aria-label="대학교 검색 결과" className="absolute top-full left-0 right-0 z-10 bg-card rounded-xl shadow-lg border mt-1 max-h-48 overflow-y-auto overscroll-contain">
+              <div
+                role="listbox"
+                aria-label="대학교 검색 결과"
+                style={{ maxHeight: uniDropdownMaxH ? Math.min(uniDropdownMaxH, 240) : undefined }}
+                className="absolute top-full left-0 right-0 z-10 bg-card rounded-xl shadow-lg border mt-1 max-h-60 overflow-y-auto overscroll-contain"
+              >
                 {filteredUnis.map((u, idx) => (
                   <button
                     key={u}
@@ -333,7 +345,7 @@ export default function OnboardingPage() {
           </div>
 
           {/* Major */}
-          <div className="space-y-1.5 relative">
+          <div ref={majorBoxRef} className="space-y-1.5 relative">
             <Label className="text-xs text-muted-foreground">
               지망 전공 <span className="text-red-500" aria-hidden="true">*</span>
             </Label>
@@ -376,7 +388,12 @@ export default function OnboardingPage() {
               autoComplete="off"
             />
             {filteredMajors.length > 0 && !formData.major && (
-              <div role="listbox" aria-label="전공 검색 결과" className="absolute top-full left-0 right-0 z-10 bg-card rounded-xl shadow-lg border mt-1 max-h-48 overflow-y-auto overscroll-contain">
+              <div
+                role="listbox"
+                aria-label="전공 검색 결과"
+                style={{ maxHeight: majorDropdownMaxH ? Math.min(majorDropdownMaxH, 240) : undefined }}
+                className="absolute top-full left-0 right-0 z-10 bg-card rounded-xl shadow-lg border mt-1 max-h-60 overflow-y-auto overscroll-contain"
+              >
                 {filteredMajors.map((m, idx) => (
                   <button
                     key={m}

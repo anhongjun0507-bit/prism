@@ -51,7 +51,7 @@ function PaymentFailContent() {
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-6">
+    <div className="min-h-dvh flex items-center justify-center bg-background p-6">
       <Card className="p-6 text-center max-w-sm w-full">
         <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-950/30 flex items-center justify-center mx-auto mb-4">
           <XCircle className="w-10 h-10 text-red-500" aria-hidden="true" />
@@ -107,7 +107,7 @@ export default function PaymentFailPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="min-h-dvh flex items-center justify-center bg-background">
           <PrismLoader size={36} />
         </div>
       }

@@ -24,7 +24,7 @@ export function ParentReportView({ data, token }: { data: ParentReportData; toke
   });
 
   return (
-    <main className="parent-track min-h-screen bg-background pb-12">
+    <main className="parent-track min-h-dvh bg-background pb-12">
       <ParentNav token={token} active="dashboard" />
 
       {/* Header */}

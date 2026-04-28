@@ -171,14 +171,14 @@ function ProfilePageInner() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-nav">
+    <div className="min-h-dvh bg-background pb-nav">
       <PageHeader
         title="프로필 설정"
         subtitle="이름·사진·학년 등 내 정보를 관리해요"
         onBack={() => router.back()}
       />
 
-      <div className="px-gutter space-y-5 lg:max-w-content-narrow lg:mx-auto">
+      <div className="px-gutter-sm md:px-gutter space-y-5 lg:max-w-content-narrow lg:mx-auto">
         {/* Avatar + photo URL */}
         <Card className="p-5 rounded-2xl border border-border/60 bg-card shadow-sm">
           <div className="flex items-center gap-4">
