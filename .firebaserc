@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "prism-app-3ab7d"
-  }
+    "default": "prism-app-3ab7d",
+    "prod": "prism-app-3ab7d"
+  },
+  "targets": {},
+  "etags": {}
 }
