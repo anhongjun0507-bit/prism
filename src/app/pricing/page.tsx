@@ -117,15 +117,36 @@ export default function PricingPage() {
         {/* 임계값 미달이면 자체 숨김. ROI 강한 위치라 카드 위에 노출. */}
         <LiveStatsBar />
 
-        {/* App-only payment notice (일반 유저 대상). 마스터는 Toss 결제 가능하므로 안내 불필요. */}
+        {/* App-only payment notice (일반 유저 대상). 마스터는 Toss 결제 가능하므로 안내 불필요.
+            Why: 한국 앱스토어 정책(인앱결제 강제) + 가족결제·복원 기능. 사용자가 "왜 웹 결제는 없나"
+            의문을 갖지 않도록 사유를 명시. iOS/Android 분기 시 해당 스토어 버튼만 노출해 행동 단축. */}
         {!isMaster && (
-          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-center">
-            <p className="text-sm font-medium text-foreground">
-              구독은 PRISM 모바일 앱(iOS, Android)에서 가능해요.
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              안전한 결제 환경을 위해 앱스토어 결제만 지원합니다.
-            </p>
+          <div className="rounded-2xl border border-primary/30 bg-gradient-to-b from-primary/[0.07] to-primary/[0.03] p-4 sm:p-5 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="shrink-0 w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center">
+                <Smartphone className="w-4.5 h-4.5 text-primary" aria-hidden="true" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-foreground">
+                  구독은 PRISM 앱에서만 결제할 수 있어요
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  Apple·Google의 인앱결제 정책에 따라 모바일 앱(iOS·Android)에서만 결제가 가능해요.
+                  앱 결제는 가족 공유·환불도 스토어에서 직접 처리할 수 있어요.
+                </p>
+              </div>
+            </div>
+            {/* 플랫폼 별 단축 — desktop이면 둘 다 표시, ios/android면 해당 스토어만. */}
+            {platform === "ios" ? (
+              <AppStoreButton size="default" source="cta_button" className="w-full rounded-xl" />
+            ) : platform === "android" ? (
+              <PlayStoreButton size="default" source="cta_button" className="w-full rounded-xl" />
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <AppStoreButton source="cta_button" className="w-full rounded-xl" />
+                <PlayStoreButton source="cta_button" className="w-full rounded-xl" />
+              </div>
+            )}
           </div>
         )}
 
@@ -172,9 +193,9 @@ export default function PricingPage() {
               variant={isRecommended ? "elevated" : "default"}
               className={`relative p-6 border-2 transition-all hover-lift flex flex-col ${
                 isRecommended
-                  ? "border-primary shadow-glow-lg"
+                  ? "border-primary shadow-glow-lg bg-gradient-to-b from-primary/[0.04] to-transparent"
                   : isElite
-                  ? "border-amber-300 dark:border-amber-700 shadow-sm"
+                  ? "border-amber-300 dark:border-amber-700 shadow-sm bg-gradient-to-b from-amber-50/40 to-transparent dark:from-amber-950/10"
                   : "border-transparent shadow-sm"
               }`}
             >
@@ -199,22 +220,27 @@ export default function PricingPage() {
                 )}
               </div>
 
-              {/* Price */}
-              <div className="mb-4">
-                <p className="text-3xl font-bold font-headline">
-                  {priceLabel}
+              {/* Price — 시각 위계: 가격 > 절약 배지 > 부가 설명. line-height 타이트하게. */}
+              <div className="mb-5">
+                <p className="font-bold font-headline tabular-nums leading-none flex items-baseline gap-1">
+                  <span className="text-[2.25rem]">{priceLabel}</span>
                   {periodLabel && (
-                    <span className="text-base font-normal text-muted-foreground">{periodLabel}</span>
+                    <span className="text-sm font-medium text-muted-foreground">{periodLabel}</span>
                   )}
                 </p>
                 {monthlyEquiv && (
-                  <p className="text-xs text-emerald-600 font-semibold mt-1">
+                  <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/20">
                     {monthlyEquiv} · {plan.yearlyDiscount}% 절약
                   </p>
                 )}
                 {isElite && billing === "monthly" && (
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                     컨설팅 1시간 가격으로 한 달 무제한
+                  </p>
+                )}
+                {plan.id === "free" && (
+                  <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                    가입만 하면 즉시 시작 — 카드 등록 없음
                   </p>
                 )}
               </div>
@@ -404,9 +430,14 @@ export default function PricingPage() {
               <PlayStoreButton size="lg" source="bottom_section" className="w-full sm:w-auto" />
             </div>
             {APP_STORE_URLS.ios === "#" && APP_STORE_URLS.android === "#" && (
-              <p className="text-[11px] text-muted-foreground/70">
-                * iOS·Android 앱은 곧 출시됩니다. 지금은 웹에서 사용해보세요.
-              </p>
+              <div className="rounded-xl bg-muted/40 border border-border/60 px-4 py-3 mx-auto max-w-md space-y-1.5">
+                <p className="text-xs font-semibold text-foreground">
+                  앱은 출시 준비 중이에요
+                </p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  지금은 웹에서 무료 기능을 모두 사용할 수 있어요. 출시 시 가입하신 이메일로 안내드릴게요.
+                </p>
+              </div>
             )}
           </section>
         )}

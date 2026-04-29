@@ -10,6 +10,7 @@ import { trackPrismEvent } from "@/lib/analytics/events";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SkeletonWrapper } from "@/components/ui/skeleton-wrapper";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import type { ParentViewTokenLike } from "@/lib/parent/types";
 
 type IssueResponse = ParentViewTokenLike;
@@ -24,6 +25,7 @@ export function ParentShareSection() {
   const [loading, setLoading] = useState(true);
   const [issuing, setIssuing] = useState(false);
   const [revoking, setRevoking] = useState<string | null>(null);
+  const [confirmRevoke, setConfirmRevoke] = useState<string | null>(null);
   const { toast } = useToast();
   const showApiError = useApiErrorToast();
   const [tokensRef] = useAutoAnimate<HTMLUListElement>({
@@ -159,7 +161,7 @@ export function ParentShareSection() {
                 busy={revoking === t.token}
                 onCopy={() => handleCopy(t.token)}
                 onShare={() => handleShare(t)}
-                onRevoke={() => handleRevoke(t.token)}
+                onRevoke={() => setConfirmRevoke(t.token)}
               />
             ))}
           </ul>
@@ -187,6 +189,23 @@ export function ParentShareSection() {
         💡 발급된 링크는 <strong>7일</strong> 동안 유효하고, 최대 <strong>100번</strong>까지
         조회할 수 있어요. 필요할 때 언제든 취소할 수 있어요.
       </p>
+
+      <ConfirmDialog
+        open={confirmRevoke !== null}
+        onOpenChange={(open) => !open && setConfirmRevoke(null)}
+        title="이 링크를 취소할까요?"
+        description="취소하면 학부모님이 더 이상 리포트를 볼 수 없어요. 이 작업은 되돌릴 수 없어요."
+        confirmLabel="취소하기"
+        cancelLabel="유지"
+        destructive
+        onConfirm={() => {
+          if (confirmRevoke) {
+            const t = confirmRevoke;
+            setConfirmRevoke(null);
+            void handleRevoke(t);
+          }
+        }}
+      />
     </Card>
   );
 }
@@ -205,15 +224,17 @@ function TokenCard({
   onRevoke: () => void;
 }) {
   const expiresIn = formatRemaining(t.expiresAt);
+  const msLeft = new Date(t.expiresAt).getTime() - Date.now();
+  const expiringSoon = msLeft > 0 && msLeft < 24 * 60 * 60 * 1000;
   return (
-    <li className="bg-muted/30 rounded-xl p-3 space-y-3">
+    <li className={`rounded-xl p-3 space-y-3 ${expiringSoon ? "bg-amber-50/60 dark:bg-amber-950/15 ring-1 ring-amber-300/40 dark:ring-amber-700/40" : "bg-muted/30"}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <p className="text-xs font-mono text-muted-foreground truncate">
             /parent-view/{t.token.slice(0, 8)}…
           </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            조회 {t.viewCount} / {t.viewLimit}회 · {expiresIn} 남음
+          <p className={`text-xs mt-1 ${expiringSoon ? "text-amber-700 dark:text-amber-400 font-medium" : "text-muted-foreground"}`}>
+            조회 {t.viewCount} / {t.viewLimit}회 · {expiresIn} 남음{expiringSoon ? " — 곧 만료" : ""}
           </p>
         </div>
         <Button

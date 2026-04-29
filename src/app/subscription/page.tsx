@@ -9,13 +9,14 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
-import { Check, Crown, ArrowUpRight, Download, Upload, Sun, Moon } from "lucide-react";
+import { Check, Crown, ArrowUpRight, Download, Upload, Sun, Moon, ShieldAlert } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { isHapticEnabled, setHapticEnabled, haptic } from "@/hooks/use-haptic";
 import { isChimeEnabled, setChimeEnabled, chime } from "@/lib/chime";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
 import { fetchWithAuth } from "@/lib/api-client";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const DATA_KEYS = ["prism_essays", "prism_planner", "prism_snapshots"];
 
@@ -32,6 +33,7 @@ function SubscriptionPageInner() {
   const [hapticOn, setHapticOn] = useState(() => isHapticEnabled());
   const [chimeOn, setChimeOn] = useState(() => isChimeEnabled());
   const [cancelling, setCancelling] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const currentPlan = normalizePlan(profile?.plan);
   const plan = PLANS[currentPlan];
   const monthlyPriceLabel = plan.monthlyPrice === 0
@@ -39,7 +41,7 @@ function SubscriptionPageInner() {
     : `₩${plan.monthlyPrice.toLocaleString()}/월`;
 
   const handleCancel = async () => {
-    if (!confirm("정말 구독을 해지하시겠어요? 남은 기간 동안은 계속 이용 가능합니다.")) return;
+    setCancelDialogOpen(false);
     setCancelling(true);
     try {
       // Firestore 규칙상 plan 필드는 클라가 쓸 수 없음 → Admin SDK 서버 엔드포인트 경유.
@@ -120,6 +122,27 @@ function SubscriptionPageInner() {
           </div>
         </Card>
 
+        {/* 결제 안내 — 유료 플랜만 */}
+        {currentPlan !== "free" && (
+          <Card className="bg-amber-50/40 dark:bg-amber-950/10 border-none ring-1 ring-amber-300/30 dark:ring-amber-700/30 p-4 flex items-start gap-3">
+            <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />
+            <div className="text-xs leading-relaxed text-foreground/85 space-y-1">
+              <p className="font-semibold text-foreground">결제·환불은 결제 수단별로 처리돼요</p>
+              <p className="text-muted-foreground">
+                앱스토어 결제는 해당 스토어에서, 카드·카카오페이 결제는{" "}
+                <button
+                  type="button"
+                  onClick={() => router.push("/refund")}
+                  className="underline decoration-dotted underline-offset-2 hover:text-foreground"
+                >
+                  환불 신청 양식
+                </button>
+                으로 접수해주세요.
+              </p>
+            </div>
+          </Card>
+        )}
+
         {/* Features */}
         <Card className="bg-card border-none shadow-sm p-5">
           <h3 className="font-bold text-sm mb-4">포함된 기능</h3>
@@ -155,7 +178,7 @@ function SubscriptionPageInner() {
               </Button>
               <Button
                 variant="outline"
-                onClick={handleCancel}
+                onClick={() => setCancelDialogOpen(true)}
                 disabled={cancelling}
                 size="xl"
                 className="w-full rounded-xl text-red-500 border-red-200 hover:bg-red-50"
@@ -260,6 +283,17 @@ function SubscriptionPageInner() {
         </Card>
       </div>
       <BottomNav />
+
+      <ConfirmDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        title="구독을 해지하시겠어요?"
+        description="남은 기간 동안은 계속 이용할 수 있어요. 다음 결제일에 자동 갱신만 멈춰요."
+        confirmLabel="해지하기"
+        cancelLabel="유지하기"
+        onConfirm={handleCancel}
+        destructive
+      />
     </div>
   );
 }

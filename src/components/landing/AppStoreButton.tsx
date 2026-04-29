@@ -35,18 +35,18 @@ function ComingSoonButton({
   return (
     <Button
       type="button"
-      variant="default"
+      variant="outline"
       size={size}
-      className={className}
+      className={`relative cursor-default opacity-90 ${className ?? ""}`}
       disabled
       aria-disabled="true"
-      aria-label={`${label} — 곧 출시`}
-      title="곧 출시"
+      aria-label={`${label} — 출시 준비 중`}
+      title="출시 준비 중"
     >
-      <Icon className="w-5 h-5" aria-hidden="true" />
-      {label}
-      <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-full px-1.5 py-0.5 bg-white/20">
-        곧 출시
+      <Icon className="w-5 h-5 opacity-70" aria-hidden="true" />
+      <span className="opacity-80">{label}</span>
+      <span className="ml-1.5 text-[10px] font-bold tracking-wider rounded-full px-2 py-0.5 bg-foreground/10 text-foreground/70">
+        준비 중
       </span>
     </Button>
   );

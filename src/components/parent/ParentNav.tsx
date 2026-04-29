@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LayoutDashboard, CalendarDays, BarChart3, BookOpen, type LucideIcon } from "lucide-react";
 import { PrismLogo } from "@/components/brand/PrismLogo";
 import { cn } from "@/lib/utils";
 
@@ -7,14 +8,15 @@ import { cn } from "@/lib/utils";
  *
  * .parent-track 컨텍스트 안에 들어가므로 글자/줄 간격은 자연 스케일.
  * 시니어 친화 — 큰 터치 영역(44px+), 명시적 텍스트 라벨, 아이콘 only 금지.
+ * 아이콘은 텍스트 옆에 보조 시그널로만 — 작은 화면에서도 텍스트는 절대 숨기지 않음.
  */
 export type ParentNavKey = "dashboard" | "timeline" | "comparison" | "glossary";
 
-const TABS: Array<{ key: ParentNavKey; label: string; subPath: string }> = [
-  { key: "dashboard", label: "대시보드", subPath: "" },
-  { key: "timeline", label: "일정", subPath: "/timeline" },
-  { key: "comparison", label: "비교", subPath: "/comparison" },
-  { key: "glossary", label: "용어", subPath: "/glossary" },
+const TABS: Array<{ key: ParentNavKey; label: string; subPath: string; icon: LucideIcon }> = [
+  { key: "dashboard", label: "대시보드", subPath: "", icon: LayoutDashboard },
+  { key: "timeline", label: "일정", subPath: "/timeline", icon: CalendarDays },
+  { key: "comparison", label: "비교", subPath: "/comparison", icon: BarChart3 },
+  { key: "glossary", label: "용어", subPath: "/glossary", icon: BookOpen },
 ];
 
 export function ParentNav({ token, active }: { token: string; active: ParentNavKey }) {
@@ -37,18 +39,20 @@ export function ParentNav({ token, active }: { token: string; active: ParentNavK
           <ul className="flex gap-2 overflow-x-auto -mx-1 px-1">
             {TABS.map((tab) => {
               const isActive = tab.key === active;
+              const Icon = tab.icon;
               return (
                 <li key={tab.key} className="shrink-0">
                   <Link
                     href={`/parent-view/${token}${tab.subPath}`}
                     aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      "inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl text-base font-semibold transition-colors",
+                      "inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl text-base font-semibold transition-colors",
                       isActive
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-primary text-primary-foreground shadow-sm"
                         : "bg-muted/50 text-foreground/80 hover:bg-muted",
                     )}
                   >
+                    <Icon className="w-4 h-4" aria-hidden="true" />
                     {tab.label}
                   </Link>
                 </li>
