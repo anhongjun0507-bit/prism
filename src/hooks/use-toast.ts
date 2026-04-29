@@ -8,8 +8,13 @@ import type {
   ToastProps,
 } from "@/components/ui/toast"
 
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+// Toast 동시 표시 한도 — 같은 액션에서 여러 알림이 쌓이는 경우(예: 학부모 토큰 발급 +
+// 카피 안내 동시 발사)를 위해 3개까지 허용. 그래도 너무 많으면 oldest가 잘림.
+const TOAST_LIMIT = 3
+// 닫힘(open=false) 후 DOM에서 완전히 제거되기까지의 grace — exit 모션이 끝날 정도면 충분.
+// 원본 shadcn 예제는 1_000_000ms (오타 추정) 였음 → 16분 동안 unmount되지 않아 메모리·a11y
+// 트리에 stale toast가 남아있는 회귀 원인이었어서 500ms로 정정.
+const TOAST_REMOVE_DELAY = 500
 
 type ToasterToast = ToastProps & {
   id: string

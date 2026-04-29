@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { CheckCircle2, Copy, Check, Mail } from "lucide-react";
+import { CheckCircle2, Copy, Check, Mail, Sparkles, FileText, Receipt } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PrismLoader } from "@/components/PrismLoader";
 import { PLANS, type Plan } from "@/lib/plans";
@@ -200,24 +200,91 @@ function PaymentSuccessContent() {
     );
   }
 
+  const planDef = plan ? PLANS[plan] : null;
+  const orderId = searchParams.get("orderId");
+  const amountParam = searchParams.get("amount");
+  const amountKrw = amountParam ? Number(amountParam) : null;
+
   return (
     <div className="min-h-dvh flex items-center justify-center bg-background p-6">
-      <Card className="p-8 text-center max-w-sm w-full relative overflow-hidden prism-strip-once">
-        <div className="w-20 h-20 rounded-full bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center mx-auto mb-5">
-          <CheckCircle2 className="w-10 h-10 text-emerald-500" aria-hidden="true" />
+      <Card className="p-7 max-w-sm w-full relative overflow-hidden prism-strip-once space-y-5">
+        {/* Hero — 성공 emerald + 축하 카피 */}
+        <div className="text-center space-y-3">
+          <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center mx-auto ring-4 ring-emerald-100/60 dark:ring-emerald-900/30">
+            <CheckCircle2 className="w-9 h-9 text-emerald-500" aria-hidden="true" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="font-headline font-bold text-2xl text-balance break-keep-all">환영합니다!</h2>
+            <p className="text-sm text-muted-foreground text-balance break-keep-all">
+              {planDef
+                ? `${planDef.displayName} 플랜이 활성화됐어요.`
+                : "플랜이 활성화됐어요."}
+            </p>
+          </div>
         </div>
-        <h2 className="font-headline font-bold text-2xl mb-2">환영합니다!</h2>
-        <p className="text-sm text-muted-foreground mb-1">
-          {plan && PLANS[plan]
-            ? `${PLANS[plan].displayName} 플랜이 활성화되었습니다.`
-            : "플랜이 활성화되었습니다."}
+
+        {/* 결제 영수증 정보 */}
+        {(amountKrw || orderId) && (
+          <div className="rounded-xl bg-muted/40 px-4 py-3 text-xs space-y-1.5">
+            {amountKrw !== null && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground inline-flex items-center gap-1.5">
+                  <Receipt className="w-3.5 h-3.5" aria-hidden="true" /> 결제 금액
+                </span>
+                <span className="font-semibold tabular-nums">₩{amountKrw.toLocaleString()}</span>
+              </div>
+            )}
+            {orderId && (
+              <div className="flex items-start justify-between gap-3">
+                <span className="text-muted-foreground shrink-0">주문 번호</span>
+                <span className="font-mono text-[11px] text-foreground/80 break-all text-right">{orderId}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 다음 단계 — 새 구독자가 가장 먼저 할 수 있는 것 */}
+        {planDef && (
+          <div className="rounded-xl bg-primary/5 ring-1 ring-primary/15 p-4 space-y-2">
+            <p className="text-xs font-bold text-primary inline-flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" aria-hidden="true" /> 이제 할 수 있는 것
+            </p>
+            <ul className="text-xs text-foreground/80 leading-relaxed space-y-1">
+              {planDef.highlights.slice(0, 3).map((h) => (
+                <li key={h} className="flex items-start gap-2">
+                  <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" aria-hidden="true" />
+                  <span>{h}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Button size="xl" onClick={() => router.push("/dashboard")} className="w-full font-bold">
+            대시보드로 이동
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push("/subscription")}
+            className="w-full text-xs gap-1.5"
+          >
+            <FileText className="w-3.5 h-3.5" aria-hidden="true" /> 구독 정보 보기
+          </Button>
+        </div>
+
+        <p className="text-[11px] text-muted-foreground/70 text-center leading-relaxed">
+          영수증은 가입 이메일로 발송돼요. 환불은{" "}
+          <button
+            type="button"
+            onClick={() => router.push("/refund")}
+            className="underline decoration-dotted underline-offset-2 hover:text-foreground"
+          >
+            환불 정책
+          </button>
+          을 확인해주세요.
         </p>
-        <p className="text-xs text-primary font-medium mb-6">
-          이제 모든 AI 기능을 자유롭게 이용하세요
-        </p>
-        <Button size="xl" onClick={() => router.push("/dashboard")} className="w-full font-bold">
-          대시보드로 이동
-        </Button>
       </Card>
     </div>
   );
