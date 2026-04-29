@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { PageHeader } from "@/components/PageHeader";
+
+export const metadata: Metadata = {
+  title: "개인정보 처리방침",
+  description: "PRISM 개인정보 수집·이용·보관 안내 — Firebase 보안 규칙, SSL 암호화, 계정 삭제 시 영구 삭제 정책.",
+  alternates: { canonical: "https://prismedu.kr/privacy" },
+};
 
 export default function PrivacyPolicyPage() {
   return (

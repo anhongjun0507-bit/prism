@@ -8,6 +8,7 @@ import { FAQAccordion } from "@/components/landing/FAQAccordion";
 import { PrismLogo } from "@/components/brand/PrismLogo";
 import { OnboardingSlides } from "@/components/landing/OnboardingSlides";
 import { AsideHighlights } from "@/components/landing/AsideHighlights";
+import { LANDING_FAQS } from "@/lib/landing-faq";
 
 export const metadata: Metadata = {
   title: "PRISM - 한국 국제학교 학생을 위한 AI 미국 입시 매니저",
@@ -33,10 +34,11 @@ export const metadata: Metadata = {
   },
 };
 
-// JSON-LD 구조화 데이터 — Google 리치 결과(사이트네임/사이트링크 검색박스).
-// Organization + WebSite 두 개의 최상위 entity를 @graph로 묶어 단일 script로 노출.
+// JSON-LD 구조화 데이터 — Google 리치 결과(사이트네임/사이트링크 검색박스 + FAQ rich result).
+// Organization + WebSite + FAQPage 세 entity를 @graph로 묶어 단일 script로 노출.
 // SoftwareApplication을 추가하지 않은 이유: 가격/리뷰가 schema에 강제되는데,
 // pricing이 plan별로 다르고 review aggregator가 없어 invalid markup이 됨.
+// FAQPage는 LANDING_FAQS와 단일 소스 — UI(FAQAccordion)와 검색 결과가 항상 정합.
 const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
@@ -57,6 +59,18 @@ const jsonLd = {
       description: "AI가 분석하는 1,001개 미국 대학 합격 확률.",
       publisher: { "@id": "https://prismedu.kr/#organization" },
       inLanguage: "ko-KR",
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://prismedu.kr/#faq",
+      mainEntity: LANDING_FAQS.map((f) => ({
+        "@type": "Question",
+        name: f.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: f.plainAnswer,
+        },
+      })),
     },
   ],
 };

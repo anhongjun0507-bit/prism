@@ -1,11 +1,16 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
  * EmptyState — 콘텐츠가 없을 때 매력적으로 비어 있게 한다.
  * 각 illustration은 inline SVG (외부 의존 없음, 다크모드/색 토큰 자동 대응).
+ *
+ * helpHref: 빈 상태에서 "어떻게 시작하지?"가 막막한 사용자에게 도움말로
+ * 가는 작은 affordance. 기본 라벨은 "도움이 필요하신가요?", helpLabel로 override.
  */
 
 interface EmptyStateProps {
@@ -13,6 +18,8 @@ interface EmptyStateProps {
   title: string;
   description?: React.ReactNode;
   action?: React.ReactNode;
+  helpHref?: string;
+  helpLabel?: string;
   className?: string;
 }
 
@@ -21,6 +28,8 @@ export function EmptyState({
   title,
   description,
   action,
+  helpHref,
+  helpLabel,
   className,
 }: EmptyStateProps) {
   return (
@@ -43,6 +52,15 @@ export function EmptyState({
         </p>
       )}
       {action}
+      {helpHref && (
+        <Link
+          href={helpHref}
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mt-4"
+        >
+          <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />
+          {helpLabel || "도움이 필요하신가요?"}
+        </Link>
+      )}
     </div>
   );
 }

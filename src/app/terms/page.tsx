@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { PageHeader } from "@/components/PageHeader";
+
+export const metadata: Metadata = {
+  title: "이용약관",
+  description: "PRISM 서비스 이용약관 — 서비스 소개, 면책 조항, 이용자 책임, 분쟁 해결 안내.",
+  alternates: { canonical: "https://prismedu.kr/terms" },
+};
 
 export default function TermsOfServicePage() {
   return (
