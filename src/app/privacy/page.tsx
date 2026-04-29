@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/PageHeader";
+import { SUPPORT_EMAIL } from "@/lib/business-info";
 
 export const metadata: Metadata = {
   title: "개인정보 처리방침",
@@ -56,7 +57,7 @@ export default function PrivacyPolicyPage() {
               <li>
                 <strong>개인정보 삭제 방법</strong>: 서비스 내 <code>프로필 &gt;
                 계정 관리 &gt; 계정 삭제</code> 경로에서 직접 탈퇴 가능합니다.
-                또는 support@prismedu.kr로 요청하실 수 있습니다.
+                또는 {SUPPORT_EMAIL}로 요청하실 수 있습니다.
               </li>
               <li>
                 관련 법령에 의해 보존이 필요한 경우, 해당 기간 동안 별도
@@ -132,7 +133,7 @@ export default function PrivacyPolicyPage() {
             <p className="mt-2">
               <strong>개인정보 삭제 방법</strong>: 서비스 내 <code>프로필 &gt;
               계정 관리 &gt; 계정 삭제</code> 경로에서 직접 탈퇴 가능합니다.
-              또는 support@prismedu.kr로 요청하실 수 있습니다.
+              또는 {SUPPORT_EMAIL}로 요청하실 수 있습니다.
             </p>
           </section>
 
@@ -144,10 +145,10 @@ export default function PrivacyPolicyPage() {
             <p className="mt-2">
               이메일:{" "}
               <a
-                href="mailto:support@prismedu.kr"
+                href={`mailto:${SUPPORT_EMAIL}`}
                 className="text-primary underline"
               >
-                support@prismedu.kr
+                {SUPPORT_EMAIL}
               </a>
             </p>
           </section>

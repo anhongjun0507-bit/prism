@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/PageHeader";
+import { SUPPORT_EMAIL } from "@/lib/business-info";
 
 export const metadata: Metadata = {
   title: "이용약관",
@@ -74,7 +75,7 @@ export default function TermsOfServicePage() {
                 경우, 해당 기간만큼 추가 환불 또는 이용 기간 연장이 적용됩니다.
               </li>
               <li>
-                환불 요청은 support@prismedu.kr로 접수할 수 있으며, 영업일 기준
+                환불 요청은 {SUPPORT_EMAIL}로 접수할 수 있으며, 영업일 기준
                 7일 이내에 처리됩니다.
               </li>
             </ul>
@@ -119,7 +120,7 @@ export default function TermsOfServicePage() {
                 상태로 보관됩니다.
               </li>
               <li>
-                직접 탈퇴가 어려운 경우 support@prismedu.kr로 요청하실 수 있으며,
+                직접 탈퇴가 어려운 경우 {SUPPORT_EMAIL}로 요청하실 수 있으며,
                 본인 확인 후 처리됩니다.
               </li>
             </ul>

@@ -22,6 +22,7 @@ import crypto from "crypto";
 import { requireAuth } from "@/lib/api-auth";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
+import { SUPPORT_EMAIL } from "@/lib/business-info";
 import type { Firestore, CollectionReference, Query, DocumentData } from "firebase-admin/firestore";
 
 const BATCH_SIZE = 500;
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest) {
   const sessionEmail = (session.email || "").trim().toLowerCase();
   if (!sessionEmail) {
     return NextResponse.json(
-      { error: "이메일이 확인되지 않는 계정은 이 경로로 삭제할 수 없어요. support@prismedu.kr로 문의해주세요." },
+      { error: `이메일이 확인되지 않는 계정은 이 경로로 삭제할 수 없어요. ${SUPPORT_EMAIL}로 문의해주세요.` },
       { status: 400 }
     );
   }
@@ -177,7 +178,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         ok: false,
-        error: "계정 삭제 중 문제가 발생했어요. support@prismedu.kr로 문의해주세요.",
+        error: `계정 삭제 중 문제가 발생했어요. ${SUPPORT_EMAIL}로 문의해주세요.`,
         deleted,
         errors,
       },

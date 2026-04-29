@@ -22,6 +22,7 @@ import Link from "next/link";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { logError } from "@/lib/log";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
+import { SUPPORT_EMAIL } from "@/lib/business-info";
 import { db } from "@/lib/firebase";
 import { collection, getCountFromServer } from "firebase/firestore";
 import { trackPrismEvent } from "@/lib/analytics/events";
@@ -160,7 +161,7 @@ function ProfilePageInner() {
       const description =
         e instanceof ApiError
           ? e.message
-          : "support@prismedu.kr로 문의해주세요.";
+          : `${SUPPORT_EMAIL}로 문의해주세요.`;
       toast({
         title: "삭제에 실패했어요",
         description,
