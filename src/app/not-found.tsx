@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { Compass, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SUPPORT_EMAIL } from "@/lib/business-info";
+
+export const metadata = {
+  title: "페이지를 찾을 수 없어요",
+  robots: { index: false, follow: false },
+};
 
 export default function NotFound() {
   return (
@@ -35,6 +41,10 @@ export default function NotFound() {
             </Button>
           </Link>
         </div>
+
+        <p className="text-xs text-muted-foreground/70">
+          링크가 깨진 것 같다면 {SUPPORT_EMAIL} 으로 알려주세요.
+        </p>
       </div>
     </div>
   );

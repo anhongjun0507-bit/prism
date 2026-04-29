@@ -21,8 +21,10 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      // Backdrop blur로 모달 뒤가 부드럽게 흐려짐 → 모달 prominence 강화
-      "fixed inset-0 z-50 bg-background/60 backdrop-blur-md",
+      // Backdrop blur로 모달 뒤가 부드럽게 흐려짐 → 모달 prominence 강화.
+      // 라이트: 어두운 foreground/40 (warm cream 배경 위에서 컨트라스트 확보).
+      // 다크: 같은 톤이면 너무 어두워서 background/70로 부드럽게.
+      "fixed inset-0 z-50 bg-foreground/40 dark:bg-background/70 backdrop-blur-md",
       "data-[state=open]:animate-in data-[state=closed]:animate-out",
       "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       "data-[state=open]:duration-200 motion-reduce:!duration-0 motion-reduce:!animate-none",
