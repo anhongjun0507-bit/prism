@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
+import { SUPPORT_EMAIL } from "@/lib/business-info";
 
 /**
  * /help — 도움말·FAQ 허브.
@@ -338,7 +339,7 @@ export default function HelpPage() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <a
-              href="mailto:support@prism-edu.com"
+              href={`mailto:${SUPPORT_EMAIL}`}
               className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl"
             >
               <Card className="p-4 rounded-2xl border border-border/60 hover:border-primary/40 transition-colors h-full flex items-start gap-3">
@@ -348,7 +349,7 @@ export default function HelpPage() {
                 <div>
                   <p className="font-semibold text-sm">이메일 문의</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    support@prism-edu.com
+                    {SUPPORT_EMAIL}
                   </p>
                   <p className="text-2xs text-muted-foreground/70 mt-1.5 leading-snug">
                     영업일 기준 1–2일 이내 답변

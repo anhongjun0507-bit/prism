@@ -10,8 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PrismLoader } from "@/components/PrismLoader";
 import { PLANS, type Plan } from "@/lib/plans";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
-
-const SUPPORT_EMAIL = "support@prism-app.com";
+import { SUPPORT_EMAIL } from "@/lib/business-info";
 
 function PaymentSuccessContent() {
   const searchParams = useSearchParams();
@@ -141,7 +140,7 @@ function PaymentSuccessContent() {
       <div className="min-h-dvh flex items-center justify-center bg-background p-6">
         <Card className="p-8 text-center max-w-sm w-full">
           <PrismLoader size={40} />
-          <h2 className="font-headline font-bold text-lg mt-5 mb-1.5">플랜을 적용하고 있어요</h2>
+          <h1 className="font-headline font-bold text-lg mt-5 mb-1.5">플랜을 적용하고 있어요</h1>
           <p className="text-sm text-muted-foreground">
             결제가 승인되었어요. 잠시 후 자동으로 반영됩니다.
           </p>
@@ -155,7 +154,7 @@ function PaymentSuccessContent() {
       <div className="min-h-dvh flex items-center justify-center bg-background p-6">
         <Card className="p-6 text-center max-w-sm w-full">
           <p className="text-4xl mb-4" aria-hidden="true">😥</p>
-          <h2 className="font-bold text-lg mb-2">결제 확인 실패</h2>
+          <h1 className="font-bold text-lg mb-2">결제 확인 실패</h1>
           <p className="text-sm text-muted-foreground mb-4">
             {errorMessage || "결제 확인 중 문제가 발생했습니다."}
           </p>
@@ -214,7 +213,7 @@ function PaymentSuccessContent() {
             <CheckCircle2 className="w-9 h-9 text-emerald-500" aria-hidden="true" />
           </div>
           <div className="space-y-1">
-            <h2 className="font-headline font-bold text-2xl text-balance break-keep-all">환영합니다!</h2>
+            <h1 className="font-headline font-bold text-2xl text-balance break-keep-all">환영합니다!</h1>
             <p className="text-sm text-muted-foreground text-balance break-keep-all">
               {planDef
                 ? `${planDef.displayName} 플랜이 활성화됐어요.`

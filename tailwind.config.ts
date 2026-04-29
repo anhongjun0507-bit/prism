@@ -90,6 +90,13 @@ export default {
           foreground: 'hsl(var(--warning-foreground))',
           soft: 'hsl(var(--warning-soft))',
         },
+        // Phase 11: info — 정보성 안내 (참고/팁/링크). success/warning 어디에도 속하지 않는
+        // 중립적 강조. Toss 안내 카드, Stripe doc callout과 같은 패턴.
+        info: {
+          DEFAULT: 'hsl(var(--info))',
+          foreground: 'hsl(var(--info-foreground))',
+          soft: 'hsl(var(--info-soft))',
+        },
         hero: {
           DEFAULT: 'hsl(var(--hero-text))',
           muted: 'hsl(var(--hero-text-muted) / 0.75)',

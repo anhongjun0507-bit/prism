@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { XCircle, Mail } from "lucide-react";
 import { PrismLoader } from "@/components/PrismLoader";
-
-const SUPPORT_EMAIL = "support@prismedu.kr";
+import { SUPPORT_EMAIL } from "@/lib/business-info";
 
 /**
  * 결제 실패/취소 시 Toss가 redirect하는 페이지.
@@ -56,7 +55,7 @@ function PaymentFailContent() {
         <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-950/30 flex items-center justify-center mx-auto mb-4">
           <XCircle className="w-10 h-10 text-red-500" aria-hidden="true" />
         </div>
-        <h2 className="font-headline font-bold text-xl mb-2">결제가 완료되지 않았어요</h2>
+        <h1 className="font-headline font-bold text-xl mb-2">결제가 완료되지 않았어요</h1>
         <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
           {friendlyMessage}
         </p>

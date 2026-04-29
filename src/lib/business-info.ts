@@ -2,6 +2,19 @@
  * 전자상거래법상 통신판매업자 표시 의무 정보.
  * 환경변수 미설정 시 placeholder 반환 — 출시 전 반드시 채워야 함.
  */
+
+/**
+ * 모든 사용자 대면 고객지원 이메일의 single source.
+ * 환경변수(NEXT_PUBLIC_BIZ_EMAIL)가 채워지면 그 값이 사용되며, 미설정 시 placeholder.
+ *
+ * 직접 import 사용 가능 — 컴포넌트가 getBusinessInfo() 전체 객체를 가져올 필요 없음:
+ *   import { SUPPORT_EMAIL } from "@/lib/business-info";
+ *
+ * 과거 prism-app.com / prism-edu.com 등 여러 주소가 산재했었음 — Phase 11에서 통일.
+ */
+export const SUPPORT_EMAIL: string =
+  process.env.NEXT_PUBLIC_BIZ_EMAIL || "support@prismedu.kr";
+
 export interface BusinessInfo {
   name: string;
   representative: string;

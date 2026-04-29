@@ -5,6 +5,7 @@ import Link from "next/link";
 import * as Sentry from "@sentry/nextjs";
 import { AlertTriangle, RotateCw, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SUPPORT_EMAIL } from "@/lib/business-info";
 
 export default function Error({
   error,
@@ -59,7 +60,7 @@ export default function Error({
         </div>
 
         <p className="text-xs text-muted-foreground/70">
-          문제가 계속되면 support@prism-app.com 으로 알려주세요.
+          문제가 계속되면 {SUPPORT_EMAIL} 으로 알려주세요.
         </p>
       </div>
     </div>

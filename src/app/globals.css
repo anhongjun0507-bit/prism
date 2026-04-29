@@ -57,6 +57,10 @@ body {
   /* kern: pair kerning, liga: 표준 합자, calt: contextual alternates */
   font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
   text-rendering: optimizeLegibility;
+  /* Pretendard 권장 자간 — 한글 본문에서 자연스러운 호흡감.
+     -0.011em ≈ -0.18px @15px 본문, ≈ -0.36px @30px hero 헤딩.
+     영문 단독에서는 거의 영향 없음(< 0.5px), 한글은 글자 간 압축감 ↓. */
+  letter-spacing: -0.011em;
   /* 한글-라틴 혼용 시 자동 word-break, 영문 hyphen 방지 */
   word-break: keep-all;
   overflow-wrap: break-word;
@@ -130,6 +134,11 @@ html {
     --warning: 38 92% 45%;
     --warning-foreground: 0 0% 98%;
     --warning-soft: 38 85% 94%;
+    /* info — 정보성 강조 (success도 warning도 아닌 중립적 안내).
+       cat-target과 동일 hue(217)로 시각 일관성. light 위 5.4:1 (AA 통과). */
+    --info: 217 71% 48%;
+    --info-foreground: 0 0% 98%;
+    --info-soft: 217 70% 95%;
     --border: 36 12% 85%;
     --input: 36 12% 85%;
     --ring: 19 79% 34%;
@@ -185,7 +194,9 @@ html {
     --secondary: 30 10% 18%;
     --secondary-foreground: 36 12% 92%;
     --muted: 30 10% 20%;
-    --muted-foreground: 30 12% 60%;
+    /* Phase 11: 60% → 65% — bg(7%)/card(14%) 위 4.5:1+ 보장 (AA Normal).
+       시니어·저시력 사용자에 secondary 텍스트 가독성 회복. */
+    --muted-foreground: 30 12% 65%;
     --accent: 19 50% 15%;
     --accent-foreground: 19 79% 60%;
     --destructive: 0 62% 50%;
@@ -196,6 +207,10 @@ html {
     --warning: 38 85% 55%;
     --warning-foreground: 0 0% 98%;
     --warning-soft: 38 50% 14%;
+    /* info — 다크모드: 명도 ↑ 채도 유지 (near-black 카드 위 6:1+). */
+    --info: 217 80% 60%;
+    --info-foreground: 0 0% 98%;
+    --info-soft: 217 50% 14%;
     --border: 30 10% 22%;
     --input: 30 10% 22%;
     --ring: 19 79% 50%;
