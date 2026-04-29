@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
@@ -169,6 +169,11 @@ function EssayReviewPageInner() {
   // Draft state (autosave + restore banner)
   const [draftPrompt, setDraftPrompt] = useState<{ school: string; prompt: string; content: string; savedAt: number } | null>(null);
   const [draftDirty, setDraftDirty] = useState(false);
+  // Save indicator: "idle" | "saving" | "saved" — UI feedback for autosave state
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  // Latest input snapshot — read synchronously in beforeunload to flush pending saves.
+  // State setters are batched/async, so we can't trust setDraftDirty + flush in handler.
+  const latestDraftRef = useRef<{ school: string; prompt: string; content: string }>({ school: "", prompt: "", content: "" });
 
   // Phase: input → loading → result.
   // `loading` boolean은 in-flight 시그널(autosave/beforeunload)로 유지하되, UI 분기는
@@ -271,20 +276,31 @@ function EssayReviewPageInner() {
 
   }, [essayId]);
 
-  // Autosave draft (500ms debounce) — only in new-essay mode, before review completion.
+  // Autosave draft (300ms debounce) — only in new-essay mode, before review completion.
+  // beforeunload flush relies on latestDraftRef, kept in sync here.
   useEffect(() => {
+    latestDraftRef.current = { school: university, prompt, content: essay };
     if (essayId) return;
     if (result) return;
     if (!university && !prompt && !essay) return;
     setDraftDirty(true);
+    setSaveState("saving");
     const timer = setTimeout(() => {
       writeJSON(DRAFT_KEY, {
         school: university, prompt, content: essay, savedAt: Date.now(),
       });
       setDraftDirty(false);
-    }, 500);
+      setSaveState("saved");
+    }, 300);
     return () => clearTimeout(timer);
   }, [university, prompt, essay, essayId, result]);
+
+  // "저장됨" indicator를 2초 후 idle로 — 입력이 멈춘 뒤 시각 노이즈 제거
+  useEffect(() => {
+    if (saveState !== "saved") return;
+    const t = setTimeout(() => setSaveState("idle"), 2000);
+    return () => clearTimeout(t);
+  }, [saveState]);
 
   // loading 경과 시간 — 30초 초과 시 "조금만 더 기다려주세요" 카피 전환용
   useEffect(() => {
@@ -294,18 +310,28 @@ function EssayReviewPageInner() {
     return () => clearInterval(t);
   }, [loading]);
 
-  // Warn before unload when work is unsaved.
-  // Fires during loading (API in-flight) or when content is dirty (debounce hasn't fired).
+  // Warn before unload when work is unsaved + flush pending debounced save synchronously.
+  // beforeunload fires during loading (API in-flight) or when content is dirty.
   useEffect(() => {
     const shouldWarn = loading || (draftDirty && !result && (university.trim() || prompt.trim() || essay.trim()));
     if (!shouldWarn) return;
     const handler = (e: BeforeUnloadEvent) => {
+      // Flush any pending debounced draft save before navigation cancels the timer.
+      // Read from ref (synchronous source of truth) — state may be stale.
+      if (!essayId && !result) {
+        const d = latestDraftRef.current;
+        if (d.school || d.prompt || d.content) {
+          try {
+            writeJSON(DRAFT_KEY, { ...d, savedAt: Date.now() });
+          } catch {}
+        }
+      }
       e.preventDefault();
       e.returnValue = "";
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
-  }, [loading, draftDirty, result, university, prompt, essay]);
+  }, [loading, draftDirty, result, university, prompt, essay, essayId]);
 
   const handleLoadDraft = () => {
     if (!draftPrompt) return;
@@ -592,10 +618,22 @@ function EssayReviewPageInner() {
     } catch (parseErr) {
       logError("[review] SSE parse/persist failed:", parseErr);
       setParseError(true);
+      // Backup raw markdown to localStorage so refresh/세션만료에도 복구 가능.
+      // 같은 essay 내용이라면 timestamp만 다른 다중 백업 — 사용자가 명시 삭제할 때까지 유지.
+      try {
+        const rawKey = `prism_review_raw_${Date.now()}`;
+        writeJSON(rawKey, {
+          content: accumulated,
+          essay,
+          prompt,
+          university,
+          savedAt: Date.now(),
+        });
+      } catch {}
       toast({
         title: "분석은 완료됐지만 저장에 실패했어요",
         description:
-          "결과는 화면에서 볼 수 있지만 목록에는 저장되지 않았어요. 다시 시도해주세요.",
+          "결과는 화면에서 볼 수 있지만 목록에는 저장되지 않았어요. 다운로드하거나 복사해 보관해주세요.",
         variant: "destructive",
       });
     } finally {
@@ -865,11 +903,32 @@ function EssayReviewPageInner() {
 
         {/* Auto-save notice — only in new-essay mode */}
         {!essayId && !result && (
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-primary/5 border border-primary/15 text-xs">
-            <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
-            <span className="text-muted-foreground">
-              첨삭 후 이 에세이와 리뷰가 <strong className="text-foreground">'내 에세이'</strong>에 자동 저장돼요.
-            </span>
+          <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-primary/5 border border-primary/15 text-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span className="text-muted-foreground truncate">
+                첨삭 후 이 에세이와 리뷰가 <strong className="text-foreground">'내 에세이'</strong>에 자동 저장돼요.
+              </span>
+            </div>
+            {/* Live save indicator — 작성 중에 즉시 피드백, 페이지 이탈해도 안전 */}
+            {(university || prompt || essay) && (
+              <span
+                className="shrink-0 flex items-center gap-1 text-[11px] tabular-nums"
+                aria-live="polite"
+              >
+                {saveState === "saving" ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+                    <span className="text-muted-foreground">저장 중</span>
+                  </>
+                ) : saveState === "saved" ? (
+                  <>
+                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                    <span className="text-emerald-600 dark:text-emerald-400">저장됨</span>
+                  </>
+                ) : null}
+              </span>
+            )}
           </div>
         )}
 
@@ -968,6 +1027,9 @@ function EssayReviewPageInner() {
                 <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">
                   결과를 잃지 않도록 복구할 수 있어요
                 </p>
+                <p className="text-[11px] text-amber-700/90 dark:text-amber-300/80 leading-relaxed">
+                  분석 원본은 자동 백업됐어요. 다운로드하거나 복사해두면 안전해요.
+                </p>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <Button
                     size="sm"
@@ -977,6 +1039,48 @@ function EssayReviewPageInner() {
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     다시 시도
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      try {
+                        const fileName = `essay-review-${(university || "untitled").replace(/[^\w가-힣-]+/g, "_")}-${new Date().toISOString().slice(0, 10)}.md`;
+                        const header = [
+                          `# AI 에세이 첨삭 (자동 복구본)`,
+                          ``,
+                          university ? `- 대학교: ${university}` : null,
+                          prompt ? `- 프롬프트: ${prompt}` : null,
+                          `- 생성: ${new Date().toLocaleString("ko-KR")}`,
+                          ``,
+                          `---`,
+                          ``,
+                        ].filter(Boolean).join("\n");
+                        const blob = new Blob([header + streamedContent], { type: "text/markdown;charset=utf-8" });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = fileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                        trackPrismEvent("essay_review_parse_error_downloaded", {
+                          length: streamedContent.length,
+                        });
+                      } catch (e) {
+                        logError("[review] download failed:", e);
+                        toast({
+                          title: "다운로드 실패",
+                          description: "내용 복사로 대신 시도해주세요.",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    className="flex-1 rounded-xl gap-1.5"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    .md 다운로드
                   </Button>
                   <Button
                     size="sm"
@@ -1272,9 +1376,21 @@ function EssayReviewPageInner() {
                   참고용
                 </Badge>
               </div>
-              <p className="text-xs text-muted-foreground">
-                핵심 경험은 유지한 채 10점 수준으로 다시 쓴 예시예요. 그대로 복사하지 말고 '이런 방향으로 고치면 된다'는 감각을 얻는 용도로만 사용하세요.
-              </p>
+              {/* 표절 방지 강조 callout — Common App·대학별 academic integrity 정책 위반 위험.
+                  단순 안내문이 아닌 시각적으로 분리된 경고로 강화 (FULL_UX_AUDIT F3). */}
+              <div className="rounded-2xl border-2 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-4 space-y-2">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                      이 예문을 그대로 복사하면 부정행위(plagiarism)로 처리될 수 있어요
+                    </p>
+                    <p className="text-xs text-amber-800 dark:text-amber-300/90 leading-relaxed">
+                      Common App과 미국 대학교는 AI 생성 에세이를 자동 검출하고, 적발 시 합격 취소·입학 자격 박탈 사유가 돼요. 이 예문은 <strong>'이런 방향으로 다시 쓰면 된다'</strong>는 감각만 참고하고, 본인의 경험·표현으로 새로 작성하세요.
+                    </p>
+                  </div>
+                </div>
+              </div>
               <Card className="p-5 bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800 rounded-2xl shadow-sm">
                 <p className="text-sm leading-relaxed whitespace-pre-line">{result.perfectExample}</p>
               </Card>

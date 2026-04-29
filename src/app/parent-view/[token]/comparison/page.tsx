@@ -63,7 +63,7 @@ function diffLabel(student: number, avgVal: number, type: "higher_better" | "low
 export default async function ParentComparisonPage({ params }: PageProps) {
   const { token } = await params;
   const result = await validateParentToken(token);
-  if ("reason" in result) return <InvalidTokenView reason={result.reason} />;
+  if ("reason" in result) return <InvalidTokenView reason={result.reason} meta={result.meta} />;
 
   const report = await buildParentReportData(result.ok.studentUid, result.ok.plan);
   if (!report) return <InvalidTokenView reason="student_not_found" />;

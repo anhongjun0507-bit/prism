@@ -7,7 +7,8 @@ import { streamWithAuth, consumeSSE } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Send, Sparkles, Loader2, Bot, User, RotateCcw, GraduationCap, PenLine, TrendingUp, Trophy, ArrowRight, BookOpen, FileText, UserCircle2 } from "lucide-react";
+import { Send, Sparkles, Loader2, Bot, User, RotateCcw, GraduationCap, PenLine, TrendingUp, Trophy, ArrowRight, BookOpen, FileText, UserCircle2, Copy, Check } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -167,12 +168,18 @@ function ChatPageInner() {
   const CHAT_KEY = "prism_chat_history";
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  // streaming: true while SSE deltas are still arriving (after first token, before stream end).
+  // loading은 첫 토큰 전까지 typing dots용, streaming은 후속 caret/스크롤 잠금용으로 분리.
+  const [streaming, setStreaming] = useState(false);
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [hasMoreOlder, setHasMoreOlder] = useState(false);
+  // 메시지 복사 피드백 — Set<msgIndex> 형태로 다중 메시지 동시 복사 표시 가능.
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const oldestCursorRef = useRef<QueryDocumentSnapshot<unknown> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   // Hydration: Firestore 서브컬렉션(users/{uid}/chat) → localStorage → greeting.
   // 서브컬렉션으로 이관(L003): 메시지당 도큐먼트 1개, createdAt desc로 최신 50개만 초기 로드.
@@ -344,6 +351,7 @@ function ChatPageInner() {
 
   const sendMessage = async (userMessage: string) => {
     setLoading(true);
+    setStreaming(false);
 
     try {
       const cleanHistory = messages.filter((m) => !m.error);
@@ -375,6 +383,7 @@ function ChatPageInner() {
           if (!aiInserted) {
             aiInserted = true;
             setLoading(false);
+            setStreaming(true);
             setMessages(prev => [
               ...prev,
               {
@@ -490,6 +499,7 @@ function ChatPageInner() {
       }]);
     } finally {
       setLoading(false);
+      setStreaming(false);
     }
   };
 
@@ -669,11 +679,16 @@ function ChatPageInner() {
           {messages.map((m, i) => {
             const isNew = i >= messages.length - 2;
             const isAi = m.role === "ai";
+            const isLast = i === messages.length - 1;
+            // 스트리밍 caret: 마지막 AI 메시지 + 현재 streaming 중일 때만.
+            const showCaret = isAi && isLast && streaming && !m.error;
+            // copy 버튼은 첫 greeting과 에러 메시지에는 표시하지 않음 (의미 없음).
+            const showCopy = isAi && i > 0 && !m.error && !showCaret;
             return (
               <div
                 key={i}
                 className={cn(
-                  "flex gap-2.5",
+                  "group flex gap-2.5",
                   isAi ? "flex-row" : "flex-row-reverse",
                   isNew && (isAi ? "animate-msg-ai" : "animate-msg-user")
                 )}
@@ -704,7 +719,50 @@ function ChatPageInner() {
                     )}
                   >
                     {isAi && i === 0 ? highlightProfile(m.content) : m.content}
+                    {showCaret && (
+                      <span
+                        aria-hidden="true"
+                        className="inline-block w-1.5 h-4 bg-primary/80 ml-0.5 align-middle animate-pulse"
+                      />
+                    )}
                   </div>
+                  {showCopy && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(m.content);
+                          setCopiedIdx(i);
+                          setTimeout(() => setCopiedIdx(c => (c === i ? null : c)), 1500);
+                        } catch {
+                          toast({
+                            title: "복사 실패",
+                            description: "직접 선택 후 복사해주세요.",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                      aria-label="이 답변 복사"
+                      className={cn(
+                        "inline-flex items-center gap-1 text-2xs text-muted-foreground hover:text-foreground transition-opacity",
+                        "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+                        "min-h-[28px] px-1.5 -ml-1 rounded-md",
+                        copiedIdx === i && "opacity-100 text-emerald-600 dark:text-emerald-400"
+                      )}
+                    >
+                      {copiedIdx === i ? (
+                        <>
+                          <Check className="w-3 h-3" aria-hidden="true" />
+                          복사됨
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" aria-hidden="true" />
+                          복사
+                        </>
+                      )}
+                    </button>
+                  )}
                   {isAi && Array.isArray(m.sources) && m.sources.length > 0 && (
                     <div className="pt-1.5 pb-0.5">
                       <p className="text-2xs font-semibold text-muted-foreground/80 mb-1 flex items-center gap-1">

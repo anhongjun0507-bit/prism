@@ -15,13 +15,41 @@ import { ParentNav } from "@/components/parent/ParentNav";
  * sensitive 필드(이메일·결제·채팅 등)는 prop 타입(`ParentReportData`)이
  * 차단 — 다른 필드는 컴파일 에러로 들어올 수 없다.
  */
-export function ParentReportView({ data, token }: { data: ParentReportData; token: string }) {
+interface ParentReportTokenInfo {
+  expiresAtISO: string;
+  viewCount: number;
+  viewLimit: number;
+}
+
+export function ParentReportView({
+  data,
+  token,
+  tokenInfo,
+}: {
+  data: ParentReportData;
+  token: string;
+  tokenInfo?: ParentReportTokenInfo;
+}) {
   const { studentName, plan, scores, admissionSummary, recommendedSchools, weeklyActivity } = data;
   const todayLabel = new Date().toLocaleDateString("ko-KR", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+
+  // 만료까지 남은 일수 — 학부모가 "언제까지 볼 수 있는지" 직관적 파악
+  let expiryLabel: string | null = null;
+  let expiresFormatted: string | null = null;
+  if (tokenInfo?.expiresAtISO) {
+    const expMs = new Date(tokenInfo.expiresAtISO).getTime();
+    const daysLeft = Math.max(0, Math.ceil((expMs - Date.now()) / 86400000));
+    expiryLabel = daysLeft <= 1 ? "오늘까지" : `${daysLeft}일 후 만료`;
+    expiresFormatted = new Date(tokenInfo.expiresAtISO).toLocaleDateString("ko-KR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  }
 
   return (
     <main className="parent-track min-h-dvh bg-background pb-12">
@@ -248,10 +276,28 @@ export function ParentReportView({ data, token }: { data: ParentReportData; toke
         </section>
 
         {/* 푸터 */}
-        <footer className="pt-6 border-t border-border/60 text-center space-y-2">
+        <footer className="pt-6 border-t border-border/60 text-center space-y-3">
           <p className="text-sm text-muted-foreground">
-            이 페이지는 {studentName}님이 공유한 view-only 페이지예요. 발급 후 7일 동안 유효해요.
+            이 페이지는 {studentName}님이 공유한 view-only 페이지예요.
           </p>
+          {tokenInfo && (
+            <div className="inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              {expiryLabel && (
+                <span>
+                  <span className="text-foreground/70">유효기간</span>{" "}
+                  <strong className="text-foreground tabular-nums">{expiryLabel}</strong>
+                  {expiresFormatted && ` · ${expiresFormatted}`}
+                </span>
+              )}
+              <span aria-hidden="true" className="opacity-40">·</span>
+              <span>
+                <span className="text-foreground/70">조회</span>{" "}
+                <strong className="text-foreground tabular-nums">
+                  {tokenInfo.viewCount} / {tokenInfo.viewLimit}회
+                </strong>
+              </span>
+            </div>
+          )}
           <p className="text-xs text-muted-foreground/70">
             본 리포트는 PRISM이 자동 생성한 참고 자료입니다. 최종 입시 결정은 전문가 상담을 권장해요.
           </p>

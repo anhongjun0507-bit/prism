@@ -98,7 +98,7 @@ const TERMS: Term[] = [
 export default async function ParentGlossaryPage({ params }: PageProps) {
   const { token } = await params;
   const result = await validateParentToken(token);
-  if ("reason" in result) return <InvalidTokenView reason={result.reason} />;
+  if ("reason" in result) return <InvalidTokenView reason={result.reason} meta={result.meta} />;
   bumpParentTokenView(token);
 
   return (

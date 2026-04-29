@@ -46,6 +46,7 @@ export interface PrismEventPayloads {
   };
   essay_review_streaming_error: { reason: string };
   essay_review_parse_error_copied: { length: number };
+  essay_review_parse_error_downloaded: { length: number };
   admission_detail_viewed: { plan: Plan; matchId: string };
   planner_generated: { plan: Plan; taskCount: number };
   sample_pdf_downloaded: Record<string, never>;

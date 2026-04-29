@@ -19,11 +19,23 @@ export interface ValidParentToken {
   studentUid: string;
   plan: "pro" | "elite";
   studentName?: string;
+  /** ISO — 학부모 페이지에서 "X일 X시간 후 만료" 표시 */
+  expiresAtISO: string;
+  viewCount: number;
+  viewLimit: number;
+}
+
+/** 토큰 검증 실패 시점에도 클라이언트가 만료일·viewLimit 등을 보여줄 수 있도록 메타 동봉. */
+export interface InvalidTokenMeta {
+  /** ISO — expired/view_limit_exceeded 분기에서 의미 있는 값 */
+  expiresAtISO?: string;
+  viewLimit?: number;
+  viewCount?: number;
 }
 
 export async function validateParentToken(
   token: string,
-): Promise<{ reason: InvalidTokenReason } | { ok: ValidParentToken }> {
+): Promise<{ reason: InvalidTokenReason; meta?: InvalidTokenMeta } | { ok: ValidParentToken }> {
   if (!token) return { reason: "not_found" };
 
   const db = getAdminDb();
@@ -35,19 +47,26 @@ export async function validateParentToken(
   if (data.revoked === true) return { reason: "revoked" };
 
   const expiresAt = data.expiresAt as Timestamp | undefined;
-  if (!expiresAt || expiresAt.toMillis() < Date.now()) {
-    return { reason: "expired" };
-  }
-
+  const expiresAtISO = expiresAt ? new Date(expiresAt.toMillis()).toISOString() : undefined;
   const viewCount = (data.viewCount as number) ?? 0;
   const viewLimit = (data.viewLimit as number) ?? 100;
-  if (viewCount >= viewLimit) return { reason: "view_limit_exceeded" };
+
+  if (!expiresAt || expiresAt.toMillis() < Date.now()) {
+    return { reason: "expired", meta: { expiresAtISO, viewLimit, viewCount } };
+  }
+
+  if (viewCount >= viewLimit) {
+    return { reason: "view_limit_exceeded", meta: { expiresAtISO, viewLimit, viewCount } };
+  }
 
   return {
     ok: {
       studentUid: data.studentUid as string,
       plan: ((data.plan as "pro" | "elite") || "pro"),
       studentName: (data.studentName as string) || undefined,
+      expiresAtISO: expiresAtISO!,
+      viewCount,
+      viewLimit,
     },
   };
 }
