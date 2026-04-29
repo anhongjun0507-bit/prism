@@ -19,6 +19,21 @@ export class ApiError extends Error {
   }
 }
 
+/** 세션 만료(refresh 후에도 401) 시 한 번만 dispatch — 여러 동시 요청에서 토스트 중복 방지.
+ *
+ * 페이지 리스너(SessionExpiryWatcher)가 토스트 + 부드러운 redirect를 담당.
+ * window 단위 throttle: 최근 5초 내 dispatch 됐으면 skip. */
+let lastSessionExpiredDispatch = 0;
+function dispatchSessionExpired() {
+  if (typeof window === "undefined") return;
+  const now = Date.now();
+  if (now - lastSessionExpiredDispatch < 5000) return;
+  lastSessionExpiredDispatch = now;
+  try {
+    window.dispatchEvent(new CustomEvent("prism:session-expired"));
+  } catch { /* IE polyfill 부재 등 — 무시 */ }
+}
+
 /** Firebase ID 토큰을 자동 첨부하는 fetch.
  *
  * - 로그인 상태가 아니면 ApiError(401)
@@ -60,6 +75,7 @@ export async function fetchWithAuth<T = unknown>(
       const fresh = await user.getIdToken(/* forceRefresh */ true);
       res = await fetch(url, { ...init, headers: buildHeaders(fresh) });
     } catch {
+      dispatchSessionExpired();
       throw new ApiError(401, "TOKEN_FAILED", "세션이 만료되었어요. 다시 로그인해주세요.");
     }
   }
@@ -72,6 +88,8 @@ export async function fetchWithAuth<T = unknown>(
   if (!res.ok) {
     const errBody = (data && typeof data === "object" ? data : {}) as { error?: string; code?: string };
     const message = errBody.error || `요청 실패 (${res.status})`;
+    // 재시도 후에도 401이면 진짜 만료 — 사용자에게 알림.
+    if (res.status === 401) dispatchSessionExpired();
     throw new ApiError(res.status, errBody.code, message, data);
   }
   return data as T;
@@ -115,6 +133,7 @@ export async function streamWithAuth(
       const fresh = await user.getIdToken(true);
       res = await fetch(url, { ...init, headers: buildHeaders(fresh) });
     } catch {
+      dispatchSessionExpired();
       throw new ApiError(401, "TOKEN_FAILED", "세션이 만료되었어요. 다시 로그인해주세요.");
     }
   }
@@ -125,6 +144,7 @@ export async function streamWithAuth(
     let data: unknown = null;
     try { data = text ? JSON.parse(text) : null; } catch { /* non-JSON */ }
     const errBody = (data && typeof data === "object" ? data : {}) as { error?: string; code?: string };
+    if (res.status === 401) dispatchSessionExpired();
     throw new ApiError(res.status, errBody.code, errBody.error || `요청 실패 (${res.status})`, data);
   }
   return res;

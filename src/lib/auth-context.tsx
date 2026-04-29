@@ -374,11 +374,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         STORAGE_KEYS.ESSAY_REVIEW_DRAFT,
         STORAGE_KEYS.SPEC_ANALYSIS_CACHE,
         STORAGE_KEYS.ANALYSIS_SORT,
+        STORAGE_KEYS.DASHBOARD_TOUR_SEEN,
         "prism_saved_specs", // legacy key
+        "prism_spec_analysis_inline", // SpecAnalysisPanel cache
       ];
       for (const key of userDataKeys) {
         localStorage.removeItem(key);
       }
+    } catch {}
+    // sessionStorage prism_* / 분석 캐시 일괄 제거 — 다른 계정 로그인 후 prev user
+    // spec_analysis·school detail·reveal seen 흔적이 남지 않게 한다.
+    // UI 프리퍼런스(테마 등)는 localStorage에만 있으므로 sessionStorage는 전부 비워도 안전.
+    try {
+      const ssKeys: string[] = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const k = sessionStorage.key(i);
+        if (!k) continue;
+        if (k.startsWith("prism_") || k.startsWith("logo_cache_") || k.startsWith("campus_cache_")) {
+          ssKeys.push(k);
+        }
+      }
+      for (const k of ssKeys) sessionStorage.removeItem(k);
     } catch {}
     // /api/match 캐시도 함께 제거 — 다른 계정 로그인 시 잔류 결과 노출 방지.
     try {

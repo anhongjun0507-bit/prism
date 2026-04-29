@@ -110,17 +110,18 @@ export default function LandingPage() {
             PRISM
           </h1>
 
+          {/* Hero 가치 제안 — 5초 안에 "내 스펙으로 어떤 대학" 이해.
+              text-balance로 폰트별 wrap 최적화 + 강제 <br /> 제거해 작은 화면(360px)에서
+              자연 줄바꿈, 큰 화면(lg+)에서는 한 줄. break-keep-all로 한국어 단어 단위 wrap. */}
           <p
-            className="animate-welcome-item mt-3 text-lg text-foreground font-semibold leading-snug"
+            className="animate-welcome-item mt-3 text-lg lg:text-xl text-foreground font-semibold leading-snug text-balance break-keep-all max-w-[18ch] lg:max-w-none"
             style={{ animationDelay: "0.3s" }}
           >
-            내 스펙으로 갈 수 있는 대학,
-            <br />
-            3초면 알 수 있어요
+            내 스펙으로 갈 수 있는 대학, 3초면 알 수 있어요
           </p>
 
           <p
-            className="animate-welcome-item mt-2 text-sm text-muted-foreground leading-relaxed"
+            className="animate-welcome-item mt-2 text-sm text-muted-foreground leading-relaxed break-keep-all"
             style={{ animationDelay: "0.4s" }}
           >
             1,001개 미국 대학 합격 확률 AI 분석
@@ -185,7 +186,7 @@ export default function LandingPage() {
           <h2 className="text-center text-base font-bold text-foreground">
             3단계로 시작해요
           </h2>
-          <ol className="space-y-3 md:space-y-0 md:grid md:grid-cols-3 md:gap-4">
+          <ol className="space-y-3 md:space-y-0 md:grid md:grid-cols-3 md:gap-3 lg:gap-5">
             {[
               {
                 step: "1",

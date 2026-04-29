@@ -23,6 +23,7 @@ import { AppShell } from "@/components/AppShell";
 import { StorageQuotaBanner } from "@/components/StorageQuotaBanner";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { ConditionalFooter } from "@/components/ConditionalFooter";
+import { SessionExpiryWatcher } from "@/components/SessionExpiryWatcher";
 import { I18nProvider } from "@/lib/i18n";
 
 export const metadata: Metadata = {
@@ -158,6 +159,7 @@ export default function RootLayout({
                   <ConditionalFooter />
                 </AppShell>
                 <Toaster />
+                <SessionExpiryWatcher />
                 <StorageQuotaBanner />
                 <InstallPrompt />
               </AuthGate>

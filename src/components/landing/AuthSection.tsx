@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, ArrowLeft, Info } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
 type AuthView = "main" | "email-login" | "email-signup" | "reset-password";
+
+// 비교적 관대한 RFC 5321 sub-set — 한글 이메일·로컬파트 dot 등을 허용하면서 명백한 오타만 차단.
+// HTML5 type=email은 사용자가 form submit해야 알림이 뜸 → onBlur 시점 즉시 안내가 더 친절.
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 function authErrorCode(err: unknown): string | undefined {
   if (err && typeof err === "object" && "code" in err) {
@@ -32,19 +36,36 @@ export function AuthSection() {
   const [showPassword, setShowPassword] = useState(false);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [error, setError] = useState("");
+  const [emailHint, setEmailHint] = useState("");
   const [resetSent, setResetSent] = useState(false);
+
+  // env 누락 = 카카오 로그인 임시 비활성. 이전엔 silent disabled로 사용자가 이유를 몰랐음.
+  const kakaoConfigured = useMemo(() => !!process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID, []);
 
   useEffect(() => {
     if (loading || !user) return;
     // 신규 가입자: Firestore 프로필이 아직 없어도 /onboarding으로 진행.
-    // 기존 계정: profile이 null이면 Firestore 구독 일시 실패일 수 있으므로 redirect 보류.
-    // 기준은 Firebase Auth 계정 생성 시각 — 30초 이내면 신규로 간주.
+    // 기존 계정: profile이 null이면 Firestore 구독 일시 실패일 수 있으므로 일단 보류,
+    // 단 5초 내에도 profile이 안 오면 "스냅샷 정체" 가능성이 있으므로 onboarded 가정으로 진행.
+    // (서버 규칙 위반/네트워크 지연 시에도 사용자가 무한 spinner에 갇히지 않게 fallback.)
     const creationTime = user.metadata.creationTime
       ? new Date(user.metadata.creationTime).getTime()
       : 0;
-    const isNewAccount = creationTime > 0 && Date.now() - creationTime < 30_000;
-    if (!profile && !isNewAccount) return;
-    router.replace(profile?.onboarded ? "/dashboard" : "/onboarding");
+    // 30초 → 60초로 확대: 카카오 OAuth 왕복(팝업·네트워크 느림) + Firestore 첫 쓰기 race.
+    const isNewAccount = creationTime > 0 && Date.now() - creationTime < 60_000;
+    if (profile) {
+      router.replace(profile.onboarded ? "/dashboard" : "/onboarding");
+      return;
+    }
+    if (isNewAccount) {
+      router.replace("/onboarding");
+      return;
+    }
+    // 기존 계정인데 profile snapshot이 늦으면 5s 안전망 — 그동안 사용자에게도 보이는 spinner 유지.
+    const fallback = setTimeout(() => {
+      router.replace("/dashboard");
+    }, 5000);
+    return () => clearTimeout(fallback);
   }, [user, profile, loading, router]);
 
   const handleGoogle = async () => {
@@ -59,6 +80,10 @@ export function AuthSection() {
   };
 
   const handleKakao = async () => {
+    if (!kakaoConfigured) {
+      setError("카카오 로그인은 곧 지원될 예정이에요. Google 또는 Apple로 시작해주세요.");
+      return;
+    }
     setAuthLoading("kakao");
     setError("");
     try {
@@ -82,18 +107,27 @@ export function AuthSection() {
     }
   };
 
+  const validateEmailFormat = (value: string): string => {
+    if (!value) return "";
+    if (!EMAIL_REGEX.test(value.trim())) return "이메일 형식이 올바르지 않아요. 예: name@email.com";
+    return "";
+  };
+
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) { setError("이메일과 비밀번호를 입력해주세요."); return; }
+    const formatErr = validateEmailFormat(email);
+    if (formatErr) { setError(formatErr); return; }
     setAuthLoading("email");
     setError("");
     try {
       await loginWithEmail(email, password);
     } catch (err: unknown) {
       const code = authErrorCode(err);
-      if (code === "auth/user-not-found") setError("등록되지 않은 이메일입니다.");
-      else if (code === "auth/wrong-password" || code === "auth/invalid-credential") setError("비밀번호가 올바르지 않습니다.");
-      else if (code === "auth/too-many-requests") setError("로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.");
+      if (code === "auth/user-not-found") setError("등록되지 않은 이메일이에요. 회원가입을 먼저 진행해주세요.");
+      else if (code === "auth/wrong-password" || code === "auth/invalid-credential") setError("이메일 또는 비밀번호가 올바르지 않아요.");
+      else if (code === "auth/too-many-requests") setError("로그인 시도가 너무 많아요. 잠시 후 다시 시도하거나 비밀번호 찾기를 이용해주세요.");
+      else if (code === "auth/network-request-failed") setError("네트워크 연결을 확인해주세요.");
       else setError("로그인이 안 됐어요. 다시 시도해주세요.");
       setAuthLoading(null);
     }
@@ -104,6 +138,8 @@ export function AuthSection() {
     if (!ageConfirmed) { setError("만 14세 이상 확인이 필요합니다."); return; }
     if (!name.trim()) { setError("이름을 입력해주세요."); return; }
     if (!email) { setError("이메일을 입력해주세요."); return; }
+    const formatErr = validateEmailFormat(email);
+    if (formatErr) { setError(formatErr); return; }
     if (password.length < 6) { setError("비밀번호는 6자 이상이어야 합니다."); return; }
     setAuthLoading("email");
     setError("");
@@ -111,9 +147,10 @@ export function AuthSection() {
       await signUpWithEmail(email, password, name.trim());
     } catch (err: unknown) {
       const code = authErrorCode(err);
-      if (code === "auth/email-already-in-use") setError("이미 사용 중인 이메일입니다.");
-      else if (code === "auth/invalid-email") setError("올바른 이메일 형식이 아닙니다.");
-      else if (code === "auth/weak-password") setError("비밀번호가 너무 약합니다.");
+      if (code === "auth/email-already-in-use") setError("이미 사용 중인 이메일이에요. 로그인을 시도해주세요.");
+      else if (code === "auth/invalid-email") setError("이메일 형식이 올바르지 않아요.");
+      else if (code === "auth/weak-password") setError("비밀번호가 너무 약해요. 6자 이상 + 숫자/문자 조합을 권장해요.");
+      else if (code === "auth/network-request-failed") setError("네트워크 연결을 확인해주세요.");
       else setError("회원가입이 안 됐어요. 다시 시도해주세요.");
       setAuthLoading(null);
     }
@@ -122,13 +159,18 @@ export function AuthSection() {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) { setError("이메일을 입력해주세요."); return; }
+    const formatErr = validateEmailFormat(email);
+    if (formatErr) { setError(formatErr); return; }
     setAuthLoading("email");
     setError("");
     try {
       await resetPassword(email);
       setResetSent(true);
-    } catch {
-      setError("재설정 이메일을 보내지 못했어요. 잠시 후 다시 시도해주세요.");
+    } catch (err: unknown) {
+      const code = authErrorCode(err);
+      // Firebase는 보안상 user-not-found도 success를 반환하는 경우가 있어 일반 메시지로 통일.
+      if (code === "auth/network-request-failed") setError("네트워크 연결을 확인해주세요.");
+      else setError("재설정 이메일을 보내지 못했어요. 잠시 후 다시 시도해주세요.");
     }
     setAuthLoading(null);
   };
@@ -149,10 +191,13 @@ export function AuthSection() {
     <div className="w-full space-y-2.5">
       {view === "main" && (
         <div className="animate-welcome-item" style={{ animationDelay: "0.55s" }}>
-          {/* Primary: Kakao */}
+          {/* Primary: Kakao
+              env가 없으면 disabled 대신 onClick에서 안내 — silent fail 회피.
+              버튼 자체는 활성 상태처럼 보이되, "준비 중" 메시지로 사용자가 다른 옵션으로 자연 이동. */}
           <button
             onClick={handleKakao}
-            disabled={!!authLoading || !process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID}
+            disabled={!!authLoading}
+            aria-label={kakaoConfigured ? "카카오로 시작하기" : "카카오 로그인 준비 중 — 다른 방법으로 시작해주세요"}
             className="w-full h-12 rounded-xl bg-[#FEE500] text-[#191919] font-bold text-base flex items-center justify-center gap-3 hover:brightness-[0.97] hover:shadow-lg hover:shadow-yellow-500/25 active:scale-[0.98] transition-colors disabled:opacity-50 shadow-md shadow-yellow-500/15"
           >
             {authLoading === "kakao" ? <Spinner /> : (
@@ -210,7 +255,7 @@ export function AuthSection() {
           </button>
 
           {error && (
-            <p className="text-sm text-destructive text-center pt-3">{error}</p>
+            <p className="text-sm text-destructive text-center pt-3" role="alert">{error}</p>
           )}
 
           <p className="text-muted-foreground text-xs text-center pt-6 leading-relaxed">
@@ -233,10 +278,19 @@ export function AuthSection() {
             type="email"
             placeholder="이메일"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => { setEmail(e.target.value); if (emailHint) setEmailHint(""); }}
+            onBlur={(e) => setEmailHint(validateEmailFormat(e.target.value))}
             className={inputClass}
             autoComplete="email"
+            inputMode="email"
+            aria-invalid={!!emailHint}
+            aria-describedby={emailHint ? "email-hint" : undefined}
           />
+          {emailHint && (
+            <p id="email-hint" className="text-[12px] text-amber-600 dark:text-amber-400 -mt-1.5 px-1">
+              {emailHint}
+            </p>
+          )}
           <div className="relative">
             <Input
               type={showPassword ? "text" : "password"}
@@ -249,13 +303,14 @@ export function AuthSection() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-2 -m-2 min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
               {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
             </button>
           </div>
 
-          {error && <p className="text-destructive text-sm">{error}</p>}
+          {error && <p className="text-destructive text-sm" role="alert">{error}</p>}
 
           <button
             type="submit"
@@ -288,22 +343,46 @@ export function AuthSection() {
 
           <Input type="text" placeholder="이름" value={name}
             onChange={(e) => setName(e.target.value)} className={inputClass} autoComplete="name" />
-          <Input type="email" placeholder="이메일" value={email}
-            onChange={(e) => setEmail(e.target.value)} className={inputClass} autoComplete="email" />
+          <Input
+            type="email"
+            placeholder="이메일"
+            value={email}
+            onChange={(e) => { setEmail(e.target.value); if (emailHint) setEmailHint(""); }}
+            onBlur={(e) => setEmailHint(validateEmailFormat(e.target.value))}
+            className={inputClass}
+            autoComplete="email"
+            inputMode="email"
+            aria-invalid={!!emailHint}
+            aria-describedby={emailHint ? "signup-email-hint" : undefined}
+          />
+          {emailHint && (
+            <p id="signup-email-hint" className="text-[12px] text-amber-600 dark:text-amber-400 -mt-1.5 px-1">
+              {emailHint}
+            </p>
+          )}
           <div className="relative">
             <Input
               type={showPassword ? "text" : "password"}
-              placeholder="비밀번호 (6자 이상)"
+              placeholder="비밀번호"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className={`${inputClass} pr-11`}
               autoComplete="new-password"
+              aria-describedby="password-rules"
             />
-            <button type="button" onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-2 -m-2 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            >
               {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
             </button>
           </div>
+          <p id="password-rules" className="text-[12px] text-muted-foreground flex items-center gap-1.5 -mt-1.5 px-1">
+            <Info className="w-3 h-3 shrink-0" aria-hidden="true" />
+            6자 이상, 영문·숫자 조합을 권장해요.
+          </p>
 
           <label className="flex items-start gap-3 cursor-pointer pt-2">
             <input type="checkbox" checked={ageConfirmed} onChange={(e) => setAgeConfirmed(e.target.checked)}
@@ -315,7 +394,7 @@ export function AuthSection() {
             </span>
           </label>
 
-          {error && <p className="text-destructive text-sm">{error}</p>}
+          {error && <p className="text-destructive text-sm" role="alert">{error}</p>}
 
           <button type="submit" disabled={!!authLoading || !ageConfirmed}
             className="w-full h-12 rounded-xl bg-primary text-white font-semibold text-base flex items-center justify-center gap-1.5 hover:bg-primary/90 active:scale-[0.98] transition-colors disabled:opacity-50 mt-1">
@@ -337,22 +416,50 @@ export function AuthSection() {
             <ArrowLeft className="w-4 h-4" /> 뒤로
           </button>
           <h2 className="text-2xl font-bold text-foreground">비밀번호 찾기</h2>
-          <p className="text-sm text-muted-foreground pb-1">가입한 이메일을 입력하면 재설정 링크를 보내드립니다.</p>
+          <p className="text-sm text-muted-foreground pb-1">가입한 이메일을 입력하면 재설정 링크를 보내드려요. 메일이 안 보이면 스팸함도 확인해주세요.</p>
 
           {resetSent ? (
-            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-xl p-5 text-center">
-              <p className="text-base text-blue-600 dark:text-blue-400 font-semibold">이메일을 보냈습니다</p>
-              <p className="text-sm text-muted-foreground mt-1.5">받은편지함을 확인해주세요.</p>
+            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-xl p-5">
+              <p className="text-base text-blue-600 dark:text-blue-400 font-semibold text-center">이메일을 보냈어요</p>
+              <p className="text-sm text-muted-foreground mt-1.5 text-center">
+                <strong className="text-foreground">{email}</strong>으로 재설정 링크를 발송했어요.<br />
+                받은편지함과 스팸함을 확인해주세요.
+              </p>
+              <button
+                type="button"
+                onClick={() => { setView("email-login"); setError(""); setResetSent(false); }}
+                className="mt-4 w-full text-sm text-primary font-medium hover:underline"
+              >
+                로그인으로 돌아가기
+              </button>
             </div>
           ) : (
             <>
-              <Input type="email" placeholder="이메일" value={email}
-                onChange={(e) => setEmail(e.target.value)} className={inputClass} autoComplete="email" />
-              {error && <p className="text-destructive text-sm">{error}</p>}
+              <Input
+                type="email"
+                placeholder="이메일"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); if (emailHint) setEmailHint(""); }}
+                onBlur={(e) => setEmailHint(validateEmailFormat(e.target.value))}
+                className={inputClass}
+                autoComplete="email"
+                inputMode="email"
+                aria-invalid={!!emailHint}
+                aria-describedby={emailHint ? "reset-email-hint" : undefined}
+              />
+              {emailHint && (
+                <p id="reset-email-hint" className="text-[12px] text-amber-600 dark:text-amber-400 -mt-1.5 px-1">
+                  {emailHint}
+                </p>
+              )}
+              {error && <p className="text-destructive text-sm" role="alert">{error}</p>}
               <button type="submit" disabled={!!authLoading}
                 className="w-full h-12 rounded-xl bg-primary text-white font-semibold text-base hover:bg-primary/90 active:scale-[0.98] transition-colors disabled:opacity-40">
                 {authLoading === "email" ? <Spinner /> : "재설정 링크 보내기"}
               </button>
+              <p className="text-[12px] text-muted-foreground text-center pt-1">
+                보안상 등록 여부와 관계없이 동일한 안내가 표시될 수 있어요.
+              </p>
             </>
           )}
         </form>

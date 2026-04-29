@@ -117,9 +117,12 @@ export function FAQAccordion() {
       <h2 className="text-center text-base font-bold text-foreground">
         자주 묻는 질문
       </h2>
+      {/* 첫 항목 pre-open — "AI 정확도"는 conversion blocker로 가장 빈도 높음.
+          유저가 어차피 가장 자주 클릭하는 질문을 미리 펼쳐두면 즉답에 가까운 UX. */}
       <Accordion
         type="single"
         collapsible
+        defaultValue="ai_accuracy"
         className="w-full"
         onValueChange={handleValueChange}
       >
