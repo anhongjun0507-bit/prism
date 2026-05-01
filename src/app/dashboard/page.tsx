@@ -10,7 +10,7 @@ import {
   Sparkles, ChevronRight,
   LogOut, Crown, Settings, Heart, Search,
 } from "lucide-react";
-import { CAT_STYLE } from "@/lib/analysis-helpers";
+import { CAT_STYLE, CAT_ORDER } from "@/lib/analysis-helpers";
 import { TodayFocusCard } from "@/components/dashboard/TodayFocusCard";
 import { DashboardTipCard } from "@/components/dashboard/DashboardTipCard";
 import { LiveStatsBar } from "@/components/landing/LiveStatsBar";
@@ -154,6 +154,16 @@ function DashboardPageInner() {
     if (!profile?.dreamSchool) return null;
     return allMatchResults.find(s => s.n === profile.dreamSchool)?.prob ?? null;
   }, [allMatchResults, profile?.dreamSchool]);
+
+  // 데스크톱 hero 중앙: 즐겨찾기 학교의 cat 분포 카운트
+  const lineupCounts = useMemo(() => {
+    const counts: Record<string, number> = { Reach: 0, "Hard Target": 0, Target: 0, Safety: 0 };
+    for (const s of savedSchoolResults) {
+      if (s.cat && counts[s.cat] !== undefined) counts[s.cat]++;
+    }
+    return counts;
+  }, [savedSchoolResults]);
+  const showLineupDist = hasSpecs && savedSchoolResults.length > 0;
 
   const [searchQuery, setSearchQuery] = useState("");
   const searchResults = useMemo(() => {
@@ -342,6 +352,29 @@ function DashboardPageInner() {
                 <p className="text-3xl font-bold tabular-nums leading-none font-headline">{dday.primary}</p>
                 <p className="text-2xs text-hero-muted mt-1.5">{dday.hint}</p>
               </div>
+              {showLineupDist && (
+                <div className="hidden md:flex md:flex-col md:flex-1 md:px-4 md:border-l md:border-hero-muted">
+                  <p className="text-2xs text-hero-muted uppercase tracking-wide font-semibold mb-2">
+                    라인업 분포 · {savedSchoolResults.length}개교
+                  </p>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                    {CAT_ORDER.map((cat) => (
+                      <div key={cat} className="flex items-center gap-1.5 min-w-0">
+                        <span
+                          className={`w-2 h-2 rounded-full ${CAT_STYLE[cat].dot} shrink-0`}
+                          aria-hidden="true"
+                        />
+                        <span className="text-2xs text-hero-muted truncate">
+                          {cat === "Hard Target" ? "Hard" : cat}
+                        </span>
+                        <span className="ml-auto text-sm font-bold tabular-nums leading-none">
+                          {lineupCounts[cat]}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {dreamProb != null ? (
                 <div className="text-right pl-4 border-l border-hero-muted">
                   <p className="text-2xs text-hero-muted uppercase tracking-wide font-semibold mb-1">합격 확률</p>
