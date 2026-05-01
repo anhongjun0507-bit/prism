@@ -375,6 +375,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         STORAGE_KEYS.SPEC_ANALYSIS_CACHE,
         STORAGE_KEYS.ANALYSIS_SORT,
         STORAGE_KEYS.DASHBOARD_TOUR_SEEN,
+        STORAGE_KEYS.WHAT_IF_FOCUS,
         "prism_saved_specs", // legacy key
         "prism_spec_analysis_inline", // SpecAnalysisPanel cache
       ];

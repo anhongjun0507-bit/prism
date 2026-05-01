@@ -77,9 +77,17 @@ function SpecAnalysisPageInner() {
     ? UNI_LIST.filter((u) => schoolMatchesQuery({ n: u }, uniSearch)).slice(0, 6)
     : [];
 
-  // Hydrate from profile
+  // Hydrate from profile — 1회만 실행.
+  // runAnalysis가 Firestore의 specAnalysis 필드를 갱신하면 auth-context의 onSnapshot이 새로운
+  // profile 객체 참조를 만들어 effect를 재발화시킨다. ref로 가드하지 않으면 사용자가 editor에서
+  // 수정한 값을 매번 profile 원본으로 덮어쓰는 버그 발생 (분석 결과는 정상 계산되지만 editor 표시만
+  // 이전 값으로 회귀). 이 페이지의 edit 상태는 명시적으로 "이 분석에만 적용" — profile 변경에
+  // 동기화될 이유가 없다.
+  const hydratedRef = useRef(false);
   useEffect(() => {
+    if (hydratedRef.current) return;
     if (!profile) return;
+    hydratedRef.current = true;
     setEditGpa(profile.gpa || "");
     setEditSat(profile.sat || "");
     setEditToefl(profile.toefl || "");

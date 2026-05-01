@@ -143,10 +143,16 @@ export function AnalysisFormWizard({ specs, updateSpec, onSubmit }: Props) {
                   <p><strong>보통:</strong> 클럽 활동, 봉사활동</p>
                   <p><strong>기본:</strong> 최소한의 활동</p>
                 </div>
-                <TierSelector label="수상 실적" options={[
+                <TierSelector label="수상 실적 (가장 높은 수상 1개 기준)" options={[
                   { value: 0, label: "없음" }, { value: 1, label: "교내" },
                   { value: 2, label: "지역" }, { value: 3, label: "전국" }, { value: 4, label: "국제" },
                 ]} selected={specs.awardTier} onSelect={(v) => updateSpec("awardTier", v)} />
+                <div className="bg-accent/30 rounded-xl p-4 text-xs text-muted-foreground space-y-1">
+                  <p><strong>교내:</strong> 학교 내 시상</p>
+                  <p><strong>지역:</strong> 시·도 단위 대회 입상</p>
+                  <p><strong>전국:</strong> 전국 단위 대회 입상</p>
+                  <p><strong>국제:</strong> 국제 대회·올림피아드 입상</p>
+                </div>
               </div>
             </Card>
 

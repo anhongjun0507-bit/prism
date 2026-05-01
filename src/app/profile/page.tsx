@@ -16,7 +16,6 @@ import { useToast } from "@/hooks/use-toast";
 import { MAJOR_LIST } from "@/lib/constants";
 import { Camera, Loader2, LogOut, Crown, Moon, Globe, Trash2 } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
-import { useI18n } from "@/lib/i18n";
 import { Switch } from "@/components/ui/switch";
 import Link from "next/link";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -46,7 +45,6 @@ function ProfilePageInner() {
   const { user, profile, saveProfile, logout } = useAuth();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
-  const { locale, setLocale } = useI18n();
 
   const [name, setName] = useState("");
   const [photoURL, setPhotoURL] = useState("");
@@ -318,21 +316,7 @@ function ProfilePageInner() {
               <Globe className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm">언어 / Language</span>
             </div>
-            <div className="flex items-center gap-1 rounded-xl border border-border p-0.5">
-              {(["ko", "en"] as const).map((l) => (
-                <button
-                  key={l}
-                  type="button"
-                  onClick={() => setLocale(l)}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
-                    locale === l ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-                  }`}
-                  aria-pressed={locale === l}
-                >
-                  {l === "ko" ? "한국어" : "English"}
-                </button>
-              ))}
-            </div>
+            <span className="text-xs text-muted-foreground">한국어 (영어 지원 준비 중)</span>
           </div>
 
         </Card>

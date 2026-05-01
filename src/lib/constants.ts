@@ -2,19 +2,24 @@ export const AP_LIST = ["AP Calculus AB","AP Calculus BC","AP Statistics","AP Ph
 
 export const UNI_LIST = ["Harvard","MIT","Stanford","Yale","Princeton","UPenn","Caltech","Duke","Johns Hopkins","Northwestern","Cornell","Columbia","UChicago","Rice","Vanderbilt","WashU","Carnegie Mellon","Georgetown","UCLA","UC Berkeley","NYU","UMich","USC","Tufts","Georgia Tech","UIUC","UT Austin","UW Madison","Northeastern","Virginia Tech","Penn State","Purdue","Ohio State","Arizona State","Brown","Dartmouth","Notre Dame","Emory","Wake Forest","UNC Chapel Hill","UVA","Boston University","Boston College","Brandeis","Case Western","Tulane","University of Rochester","Lehigh","RPI","University of Maryland","Rutgers","UConn","University of Pittsburgh","University of Iowa","CU Boulder","University of Oregon","University of Washington","Oregon State","Washington State","Michigan State","Indiana University","Syracuse","GWU","American University","Fordham","Villanova","Santa Clara","Loyola Marymount","Pepperdine","SMU","TCU","Baylor","Texas A&M","University of Georgia","Clemson","Auburn","University of Alabama","University of Tennessee","University of South Carolina","University of Kentucky","University of Arkansas","Ole Miss","University of Nebraska","University of Kansas","Iowa State","Colorado State","University of Vermont","University of Delaware","Drexel","Temple","Stevens Tech","RIT","WPI","Stony Brook","Binghamton","University of Miami","Florida State","UCF","FIU","University of Florida","Embry-Riddle","Georgia State","NC State","Appalachian State","BYU","University of Utah","Gonzaga","Loyola Chicago","DePaul","Marquette","Creighton","University of Denver","University of Tulsa","Chapman","Elon","JMU","George Mason","Babson","Bentley","Pomona","Williams","Amherst","Swarthmore","Bowdoin","Middlebury","Wellesley","Barnard","Smith","Colby","Bates","Hamilton","Wesleyan","Grinnell","Oberlin","Macalester","Carleton","Colorado College","Reed","Kenyon","Denison","University of Richmond","Bucknell","Colgate","Lafayette","Davidson","W&L","Harvey Mudd","Claremont McKenna","Parsons","Pratt","RISD","SVA","SCAD","Art Center","West Point","Naval Academy","UC San Diego","UC Santa Barbara","UC Davis","UC Irvine","UC Santa Cruz","UC Riverside","William & Mary","San Jose State","Cal Poly SLO","San Diego State","Colorado School of Mines","Rose-Hulman","Cooper Union","Olin College","Franklin & Marshall","Gettysburg","Dickinson","Skidmore","Connecticut College","Trinity College","Furman","Rhodes","Sewanee","Centre","Whitman","Lewis & Clark","Willamette","University of San Francisco","University of San Diego","University of the Pacific","Loyola Maryland","Fairfield","Marist","Quinnipiac","Sacred Heart","Hofstra","Adelphi","Pace","SUNY Albany","SUNY Buffalo","CUNY Baruch","CUNY Hunter","New School","Berklee","Juilliard","NYU Tisch","Savannah College of Art","Full Sail","Ringling","CalArts","School of the Art Institute of Chicago"];
 
+// 사용자가 본인 전공을 빠르게 찾을 수 있도록 알파벳 순으로 정렬.
+// 예외: "Other (직접 입력)"은 실제 전공이 아닌 fallback 입력 옵션이므로 항상 마지막.
 export const MAJOR_LIST = [
-  "Computer Science","Data Science","AI / Machine Learning",
-  "Business","Economics","Finance","Marketing","Accounting",
-  "Biology","Chemistry","Physics","Mathematics","Statistics",
-  "Engineering","Mechanical Eng","Electrical Eng","Chemical Eng","Civil Eng","Aerospace Eng","Biomedical Eng","Industrial Eng",
-  "Pre-Med","Pre-Law","Nursing","Public Health",
-  "Psychology","Sociology","Political Science","International Relations",
-  "Neuroscience","Cognitive Science","Linguistics",
-  "English","History","Philosophy","Art History",
-  "Architecture","Fine Arts","Film","Music","Theater",
-  "Communications","Journalism",
-  "Environmental Science","Earth Science",
-  "Education",
+  "Accounting", "Aerospace Eng", "AI / Machine Learning", "Architecture", "Art History",
+  "Biology", "Biomedical Eng", "Business",
+  "Chemical Eng", "Chemistry", "Civil Eng", "Cognitive Science", "Communications", "Computer Science",
+  "Data Science",
+  "Earth Science", "Economics", "Education", "Electrical Eng", "Engineering", "English", "Environmental Science",
+  "Film", "Finance", "Fine Arts",
+  "History",
+  "Industrial Eng", "International Relations",
+  "Journalism",
+  "Linguistics",
+  "Marketing", "Mathematics", "Mechanical Eng", "Music",
+  "Neuroscience", "Nursing",
+  "Philosophy", "Physics", "Political Science", "Pre-Law", "Pre-Med", "Psychology", "Public Health",
+  "Sociology", "Statistics",
+  "Theater",
   "Undecided",
   "Other (직접 입력)",
 ];

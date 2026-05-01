@@ -455,52 +455,8 @@ function PlannerPageInner() {
           ]}
         />
 
-        {/* Urgent deadlines banner */}
-        {urgent.length > 0 && (
-          <Card className="p-4 bg-red-50 border-red-200 space-y-2">
-            <p className="text-xs font-bold text-red-700">다가오는 마감 ({urgent.length}개)</p>
-            {urgent.slice(0, 3).map(t => {
-              const dday = getDDay(t.dueDate);
-              return (
-                <div key={t.id} className="flex items-center justify-between">
-                  <p className="text-sm text-red-900 font-medium truncate flex-1">{t.title}</p>
-                  <Badge className="bg-red-100 text-red-700 border-none text-xs shrink-0 ml-2">
-                    {dday === 0 ? "D-Day" : `D-${dday}`}
-                  </Badge>
-                </div>
-              );
-            })}
-          </Card>
-        )}
-
-        {/* Progress Card — 진행률에 따라 톤 조절 */}
-        <Card className={cn(
-          "p-4 border shadow-sm flex items-center justify-between gap-3",
-          progress >= 50
-            ? "bg-primary text-white border-none"
-            : "bg-card border-border"
-        )}>
-          <div className="space-y-0.5 flex-1 min-w-0">
-            <p className={cn("text-xs font-medium", progress >= 50 ? "text-white/70" : "text-muted-foreground")}>전체 진행률</p>
-            <div className="flex items-baseline gap-1.5">
-              <p key={progress} className="text-2xl font-bold font-headline">{progress}%</p>
-              <p className={cn("text-xs", progress >= 50 ? "text-white/80" : "text-muted-foreground")}>{completedCount}/{tasks.length} 완료</p>
-            </div>
-            {/* Mini progress bar */}
-            <div className={cn("h-1.5 rounded-full overflow-hidden mt-1", progress >= 50 ? "bg-white/20" : "bg-muted")}>
-              <div className={cn("h-full rounded-full transition-all", progress >= 50 ? "bg-white/70" : "bg-primary")} style={{ width: `${progress}%` }} />
-            </div>
-          </div>
-          <div className={cn(
-            "w-12 h-12 rounded-full flex items-center justify-center shrink-0",
-            progress >= 50 ? "bg-white/15" : "bg-primary/10"
-          )}>
-            <CheckCircle2 className={cn("w-6 h-6", progress >= 50 ? "text-white" : "text-primary")} />
-          </div>
-        </Card>
-
         {/* Empty state — AI 자동 생성을 메인 CTA로 */}
-        {tasks.length === 0 && (
+        {tasks.length === 0 ? (
           <Card variant="elevated">
             <EmptyState
               illustration="task"
@@ -523,10 +479,57 @@ function PlannerPageInner() {
               }
             />
           </Card>
-        )}
+        ) : (
+        <div className="lg:grid lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:gap-6 lg:items-start space-y-6 lg:space-y-0">
+        {/* Sidebar — Progress + Urgent (sticky on lg) */}
+        <aside className="space-y-4 lg:sticky lg:top-4">
+          {/* Progress Card — 진행률에 따라 톤 조절 */}
+          <Card className={cn(
+            "p-4 border shadow-sm flex items-center justify-between gap-3",
+            progress >= 50
+              ? "bg-primary text-white border-none"
+              : "bg-card border-border"
+          )}>
+            <div className="space-y-0.5 flex-1 min-w-0">
+              <p className={cn("text-xs font-medium", progress >= 50 ? "text-white/70" : "text-muted-foreground")}>전체 진행률</p>
+              <div className="flex items-baseline gap-1.5">
+                <p key={progress} className="text-2xl font-bold font-headline">{progress}%</p>
+                <p className={cn("text-xs", progress >= 50 ? "text-white/80" : "text-muted-foreground")}>{completedCount}/{tasks.length} 완료</p>
+              </div>
+              {/* Mini progress bar */}
+              <div className={cn("h-1.5 rounded-full overflow-hidden mt-1", progress >= 50 ? "bg-white/20" : "bg-muted")}>
+                <div className={cn("h-full rounded-full transition-all", progress >= 50 ? "bg-white/70" : "bg-primary")} style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+            <div className={cn(
+              "w-12 h-12 rounded-full flex items-center justify-center shrink-0",
+              progress >= 50 ? "bg-white/15" : "bg-primary/10"
+            )}>
+              <CheckCircle2 className={cn("w-6 h-6", progress >= 50 ? "text-white" : "text-primary")} />
+            </div>
+          </Card>
 
-        {/* Pending + Completed — 2-column on lg */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-6 lg:items-start space-y-6 lg:space-y-0">
+          {/* Urgent deadlines banner */}
+          {urgent.length > 0 && (
+            <Card className="p-4 bg-red-50 border-red-200 space-y-2">
+              <p className="text-xs font-bold text-red-700">다가오는 마감 ({urgent.length}개)</p>
+              {urgent.slice(0, 3).map(t => {
+                const dday = getDDay(t.dueDate);
+                return (
+                  <div key={t.id} className="flex items-center justify-between">
+                    <p className="text-sm text-red-900 font-medium truncate flex-1">{t.title}</p>
+                    <Badge className="bg-red-100 text-red-700 border-none text-xs shrink-0 ml-2">
+                      {dday === 0 ? "D-Day" : `D-${dday}`}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </Card>
+          )}
+        </aside>
+
+        {/* Main — Pending + Completed timeline */}
+        <div className="space-y-6 min-w-0">
         {/* Timeline — Pending */}
         {incomplete.length > 0 && (
           <div className="space-y-4 relative">
@@ -649,6 +652,8 @@ function PlannerPageInner() {
           </div>
         )}
         </div>
+        </div>
+        )}
       </div>
 
       {/* Add / Edit Dialog */}

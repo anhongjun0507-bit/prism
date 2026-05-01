@@ -19,6 +19,7 @@ export const STORAGE_KEYS = {
   ANALYSIS_SORT: "prism_analysis_sort",
   ESSAY_REVIEW_DRAFT: "prism_review_draft",
   SPEC_ANALYSIS_CACHE: "prism_spec_analysis",
+  WHAT_IF_FOCUS: "prism_what_if_focus",
 
   // UI 프리퍼런스
   THEME: "prism_theme",
