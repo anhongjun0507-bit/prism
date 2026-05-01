@@ -353,21 +353,21 @@ function DashboardPageInner() {
                 <p className="text-2xs text-hero-muted mt-1.5">{dday.hint}</p>
               </div>
               {showLineupDist && (
-                <div className="hidden md:flex md:flex-col md:flex-1 md:px-4 md:border-l md:border-hero-muted">
-                  <p className="text-2xs text-hero-muted uppercase tracking-wide font-semibold mb-2">
-                    라인업 분포 · {savedSchoolResults.length}개교
+                <div className="hidden md:flex md:flex-col md:flex-1 md:px-5 md:border-l md:border-hero-muted">
+                  <p className="text-2xs text-hero-muted uppercase tracking-wide font-semibold mb-3">
+                    지원 라인업 · {savedSchoolResults.length}곳
                   </p>
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                  <div className="grid grid-cols-2 gap-x-5 gap-y-2.5">
                     {CAT_ORDER.map((cat) => (
-                      <div key={cat} className="flex items-center gap-1.5 min-w-0">
+                      <div key={cat} className="flex items-center gap-2 min-w-0">
                         <span
                           className={`w-2 h-2 rounded-full ${CAT_STYLE[cat].dot} shrink-0`}
                           aria-hidden="true"
                         />
-                        <span className="text-2xs text-hero-muted truncate">
+                        <span className="text-xs text-hero-muted truncate">
                           {cat === "Hard Target" ? "Hard" : cat}
                         </span>
-                        <span className="ml-auto text-sm font-bold tabular-nums leading-none">
+                        <span className="ml-auto text-lg font-bold tabular-nums leading-none font-headline">
                           {lineupCounts[cat]}
                         </span>
                       </div>
