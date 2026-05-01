@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import dynamic from "next/dynamic";
-import { TrendingUp, ChevronRight } from "lucide-react";
+import { TrendingUp, ChevronRight, Info } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
 import { BottomNav } from "@/components/BottomNav";
@@ -112,12 +112,31 @@ function InsightsPageInner() {
   const isAdmissionSeason = currentMonth >= 3 && currentMonth <= 5;
 
   const statsItems = [
-    { label: "Reach", count: reachCount, dot: CAT_STYLE.Reach.dot },
-    { label: "Target", count: targetCount, dot: CAT_STYLE.Target.dot },
-    { label: "Safety", count: safetyCount, dot: CAT_STYLE.Safety.dot },
+    { label: "Reach", count: reachCount, dot: CAT_STYLE.Reach.dot, range: "15% 미만", meaning: "도전" },
+    { label: "Target", count: targetCount, dot: CAT_STYLE.Target.dot, range: "15–70%", meaning: "현실적" },
+    { label: "Safety", count: safetyCount, dot: CAT_STYLE.Safety.dot, range: "70% 이상", meaning: "안전권" },
   ].filter((i) => i.count > 0);
 
   const showStats = hasSpecs && quickResults.length > 0 && statsItems.length > 0;
+
+  // 라인업 균형 해석 — 학생이 다음 행동을 정할 수 있도록 한 줄 가이드 제공
+  const balanceMessage = (() => {
+    const total = reachCount + targetCount + safetyCount;
+    if (total === 0) return "";
+    if (safetyCount === 0) {
+      return "안전권 학교(70%↑)가 없어요. 균형을 위해 1–2개 추가를 추천해요.";
+    }
+    if (reachCount === 0) {
+      return "도전 학교(15%↓)가 없어요. 더 높은 목표도 고려해볼 만해요.";
+    }
+    if (reachCount / total >= 0.6) {
+      return "도전 학교 비중이 높아요. 현실적·안전권 학교도 늘려 균형을 맞춰보세요.";
+    }
+    if (safetyCount / total >= 0.6) {
+      return "안전권 위주 라인업이에요. 도전 학교도 1–2개 고려해볼 만해요.";
+    }
+    return "균형 잡힌 라인업이에요. 이 흐름으로 라인업을 확정해보세요.";
+  })();
 
   const [statsGridRef] = useAutoAnimate<HTMLDivElement>({
     duration: 250,
@@ -171,29 +190,43 @@ function InsightsPageInner() {
             >
               {showStats ? (
               <section aria-label="합격 가능성 분포" ref={statsViewRef}>
-                <h2 className="font-headline text-base font-bold mb-2.5">합격 가능성 분포</h2>
+                <div className="mb-2.5">
+                  <h2 className="font-headline text-base font-bold">합격 가능성 분포</h2>
+                  <p className="text-xs text-muted-foreground mt-1 leading-snug">
+                    내 스펙으로 매칭된 상위 8개교를 합격 확률로 분류했어요
+                  </p>
+                </div>
                 <div
                   ref={statsGridRef}
                   className="grid rounded-2xl bg-muted/40 border border-border/50 overflow-hidden"
                   style={{ gridTemplateColumns: `repeat(${statsItems.length}, 1fr)` }}
                 >
-                  {statsItems.map(({ label, count, dot }, i) => (
+                  {statsItems.map(({ label, count, dot, range, meaning }, i) => (
                     <CountTile
                       key={label}
                       label={label}
                       count={count}
                       dot={dot}
+                      range={range}
+                      meaning={meaning}
                       borderRight={i < statsItems.length - 1}
                     />
                   ))}
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Top 8 매칭 기준 — 자세한 분석은{" "}
-                  <Link href="/analysis" className="text-primary font-semibold underline-offset-2 hover:underline">
-                    분석 페이지
-                  </Link>
-                  에서.
-                </p>
+                {balanceMessage && (
+                  <div className="mt-2.5 flex items-start gap-2">
+                    <Info className="w-3.5 h-3.5 text-muted-foreground/70 shrink-0 mt-0.5" aria-hidden="true" />
+                    <p className="text-xs text-muted-foreground leading-snug">
+                      {balanceMessage}{" "}
+                      <Link
+                        href="/analysis"
+                        className="text-primary font-semibold underline-offset-2 hover:underline whitespace-nowrap"
+                      >
+                        분석 페이지 →
+                      </Link>
+                    </p>
+                  </div>
+                )}
               </section>
               ) : null}
             </SkeletonWrapper>
@@ -310,24 +343,30 @@ function CountTile({
   label,
   count,
   dot,
+  range,
+  meaning,
   borderRight,
 }: {
   label: string;
   count: number;
   dot: string;
+  range: string;
+  meaning: string;
   borderRight: boolean;
 }) {
   const display = useCountUp(count, { duration: 900 });
   return (
-    <div className={`p-4 text-center ${borderRight ? "border-r border-border/50" : ""}`}>
-      <div className="flex items-center justify-center gap-1.5 mb-1">
+    <div className={`px-2.5 py-3.5 text-center ${borderRight ? "border-r border-border/50" : ""}`}>
+      <div className="flex items-center justify-center gap-1.5 mb-2">
         <span className={`w-2 h-2 rounded-full ${dot}`} aria-hidden="true" />
         <p className="text-2xs text-muted-foreground font-medium">{label}</p>
       </div>
-      <p className="text-lg font-bold tabular-nums leading-tight text-foreground">
+      <p className="text-2xl font-bold tabular-nums leading-none text-foreground font-headline">
         {display}
-        <span className="text-2xs font-normal text-muted-foreground ml-0.5">개</span>
+        <span className="text-xs font-normal text-muted-foreground ml-0.5">개</span>
       </p>
+      <p className="text-2xs text-muted-foreground mt-2 leading-tight tabular-nums">{range}</p>
+      <p className="text-2xs text-muted-foreground/70 leading-tight">{meaning}</p>
     </div>
   );
 }
