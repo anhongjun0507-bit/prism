@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Home, Activity, Wrench, FileText, MessageSquare, MoreHorizontal } from "lucide-react";
+import { Home, Activity, Wrench, FileText, MessageSquare, MoreHorizontal, Crown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PrismLogo } from "@/components/brand/PrismLogo";
 import { useAuth } from "@/lib/auth-context";
 import { shouldShowSidebar } from "@/lib/sidebar-visibility";
 import { MORE_NAV_ITEMS } from "@/lib/nav-more-items";
 import { trackPrismEvent } from "@/lib/analytics/events";
+import { normalizePlan, PLANS } from "@/lib/plans";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -33,9 +34,18 @@ const navItems = [
 
 export function DesktopSidebar() {
   const pathname = usePathname();
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
   if (!shouldShowSidebar(pathname, !!user, loading)) return null;
+
+  const currentPlan = normalizePlan(profile?.plan);
+  const planInfo = PLANS[currentPlan];
+  const displayName = profile?.name || user?.displayName || "학생";
+  const initials = displayName.slice(0, 2).toUpperCase();
+  const photoURL = profile?.photoURL || user?.photoURL || "";
+  // Free → Pro 업그레이드 유도, Pro/Elite → 프로필 관리로
+  const ctaHref = currentPlan === "free" ? "/subscription" : "/profile";
+  const ctaLabel = currentPlan === "free" ? "Pro 업그레이드" : "계정 관리";
 
   const onMoreRoute = MORE_NAV_ITEMS.some(
     (i) => pathname === i.href || pathname.startsWith(i.href + "/"),
@@ -120,10 +130,45 @@ export function DesktopSidebar() {
           </button>
         </nav>
 
-        {/* Footer hint — 작은 도움말 */}
-        <div className="px-card-lg py-card text-sm text-muted-foreground border-t border-border/40">
-          <p className="font-medium text-foreground/80 mb-0.5">PRISM</p>
-          <p>미국 대학 입시 매니저</p>
+        {/* User card — 이름·플랜 뱃지·관리 CTA. Free는 업그레이드, Pro/Elite는 프로필. */}
+        <div className="border-t border-border/40 p-3">
+          <Link
+            href={ctaHref}
+            aria-label={`${displayName} — ${planInfo.displayName} 플랜, ${ctaLabel}`}
+            className="group flex items-center gap-3 p-2.5 rounded-xl hover:bg-accent/40 transition-colors"
+          >
+            <div className="relative w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold overflow-hidden shrink-0 ring-1 ring-border/60">
+              {photoURL ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={photoURL} alt="" className="w-full h-full object-cover" />
+              ) : (
+                initials
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-semibold truncate">{displayName}</p>
+                {currentPlan !== "free" && (
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold leading-none shrink-0",
+                      currentPlan === "elite"
+                        ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                        : "bg-primary/15 text-primary"
+                    )}
+                  >
+                    {currentPlan === "elite" && <Crown className="w-2.5 h-2.5" aria-hidden="true" />}
+                    {planInfo.displayName}
+                  </span>
+                )}
+              </div>
+              <p className="text-2xs text-muted-foreground truncate mt-0.5">{ctaLabel}</p>
+            </div>
+            <ChevronRight
+              className="w-4 h-4 text-muted-foreground/60 group-hover:text-foreground transition-colors shrink-0"
+              aria-hidden="true"
+            />
+          </Link>
         </div>
       </aside>
 

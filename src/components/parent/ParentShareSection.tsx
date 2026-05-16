@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
-import { Copy, Share2, Trash2, Plus, AlertCircle } from "lucide-react";
+import { Copy, Share2, Trash2, Plus, AlertCircle, Send, Mail, MessageCircle } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
@@ -10,6 +13,7 @@ import { trackPrismEvent } from "@/lib/analytics/events";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SkeletonWrapper } from "@/components/ui/skeleton-wrapper";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import type { ParentViewTokenLike } from "@/lib/parent/types";
 
@@ -26,6 +30,8 @@ export function ParentShareSection() {
   const [issuing, setIssuing] = useState(false);
   const [revoking, setRevoking] = useState<string | null>(null);
   const [confirmRevoke, setConfirmRevoke] = useState<string | null>(null);
+  // 보내기 모달 — 발급된 token을 선택해 카카오/이메일/URL 옵션 노출 (2-7 audit)
+  const [sendModal, setSendModal] = useState<ParentViewTokenLike | null>(null);
   const { toast } = useToast();
   const showApiError = useApiErrorToast();
   const [tokensRef] = useAutoAnimate<HTMLUListElement>({
@@ -127,6 +133,44 @@ export function ParentShareSection() {
     await handleCopy(t.token);
   };
 
+  const buildShareMessage = (t: ParentViewTokenLike) => {
+    const url = buildUrl(t.token);
+    return `${t.studentName} 학부모님, 입시 진행 상황을 확인하실 수 있어요. (PRISM)\n\n${url}`;
+  };
+
+  const sendKakao = (t: ParentViewTokenLike) => {
+    // Kakao 공식 share SDK 없이도 안정적인 방법: navigator.share를 우선 시도 (모바일에서 카카오톡이
+    // 시스템 share 시트에 포함됨). 데스크톱이면 URL 복사 + "카톡에 붙여넣기" 안내.
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      navigator.share({
+        title: "PRISM 학부모 리포트",
+        text: buildShareMessage(t),
+        url: buildUrl(t.token),
+      }).then(() => {
+        trackPrismEvent("parent_token_shared", { method: "kakao" });
+      }).catch((err) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        void handleCopy(t.token);
+      });
+    } else {
+      void handleCopy(t.token);
+      toast({
+        title: "URL이 복사됐어요",
+        description: "카카오톡 채팅창에 붙여넣어 보내주세요.",
+      });
+      trackPrismEvent("parent_token_shared", { method: "kakao_desktop" });
+    }
+  };
+
+  const sendEmail = (t: ParentViewTokenLike) => {
+    const subject = encodeURIComponent("[PRISM] 자녀 입시 진행 상황 리포트");
+    const body = encodeURIComponent(buildShareMessage(t));
+    if (typeof window !== "undefined") {
+      window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    }
+    trackPrismEvent("parent_token_shared", { method: "email" });
+  };
+
   return (
     <Card className="p-5 bg-card border-none shadow-sm space-y-4">
       <div>
@@ -143,7 +187,7 @@ export function ParentShareSection() {
         skeleton={
           <div className="space-y-2">
             {[0, 1].map((i) => (
-              <div key={i} className="h-20 rounded-xl bg-muted/30 animate-pulse" />
+              <Skeleton key={i} className="h-20 rounded-xl" />
             ))}
           </div>
         }
@@ -161,6 +205,7 @@ export function ParentShareSection() {
                 busy={revoking === t.token}
                 onCopy={() => handleCopy(t.token)}
                 onShare={() => handleShare(t)}
+                onSendClick={() => setSendModal(t)}
                 onRevoke={() => setConfirmRevoke(t.token)}
               />
             ))}
@@ -206,6 +251,71 @@ export function ParentShareSection() {
           }
         }}
       />
+
+      {/* 보내기 모달 — 카카오/이메일/URL 복사 선택지 + 미리보기 메시지 (2-7 audit) */}
+      <Dialog
+        open={sendModal !== null}
+        onOpenChange={(open) => !open && setSendModal(null)}
+      >
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>학부모께 보내기</DialogTitle>
+            <DialogDescription>
+              아래 미리보기로 보낼 메시지를 확인하고, 사용하실 채널을 선택하세요.
+            </DialogDescription>
+          </DialogHeader>
+          {sendModal && (
+            <>
+              <div className="rounded-xl bg-muted/40 border border-border/40 p-3 text-xs text-foreground/90 leading-relaxed whitespace-pre-line">
+                {buildShareMessage(sendModal)}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 gap-1.5 bg-[#FEE500] hover:bg-[#FEE500]/90 text-[#3C1E1E] border-[#FEE500] hover:border-[#FEE500]"
+                  onClick={() => {
+                    sendKakao(sendModal);
+                    setSendModal(null);
+                  }}
+                >
+                  <MessageCircle className="w-4 h-4" aria-hidden="true" />
+                  카카오톡
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 gap-1.5"
+                  onClick={() => {
+                    sendEmail(sendModal);
+                    setSendModal(null);
+                  }}
+                >
+                  <Mail className="w-4 h-4" aria-hidden="true" />
+                  이메일
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 gap-1.5"
+                  onClick={() => {
+                    void handleCopy(sendModal.token);
+                    setSendModal(null);
+                  }}
+                >
+                  <Copy className="w-4 h-4" aria-hidden="true" />
+                  URL 복사
+                </Button>
+              </div>
+            </>
+          )}
+          <DialogFooter className="mt-2">
+            <Button type="button" variant="ghost" onClick={() => setSendModal(null)}>
+              닫기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
@@ -215,12 +325,14 @@ function TokenCard({
   busy,
   onCopy,
   onShare,
+  onSendClick,
   onRevoke,
 }: {
   token: ParentViewTokenLike;
   busy: boolean;
   onCopy: () => void;
   onShare: () => void;
+  onSendClick: () => void;
   onRevoke: () => void;
 }) {
   const expiresIn = formatRemaining(t.expiresAt);
@@ -253,23 +365,32 @@ function TokenCard({
       <div className="flex gap-2">
         <Button
           type="button"
-          variant="outline"
           size="sm"
           className="flex-1 gap-1.5"
-          onClick={onCopy}
+          onClick={onSendClick}
         >
-          <Copy className="w-3.5 h-3.5" aria-hidden="true" />
-          URL 복사
+          <Send className="w-3.5 h-3.5" aria-hidden="true" />
+          학부모께 보내기
         </Button>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="flex-1 gap-1.5"
+          className="gap-1.5"
+          onClick={onCopy}
+          aria-label="URL 복사"
+        >
+          <Copy className="w-3.5 h-3.5" aria-hidden="true" />
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
           onClick={onShare}
+          aria-label="시스템 공유"
         >
           <Share2 className="w-3.5 h-3.5" aria-hidden="true" />
-          공유
         </Button>
       </div>
     </li>

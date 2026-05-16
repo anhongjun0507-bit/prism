@@ -13,6 +13,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import { ParentShareSection } from "@/components/parent/ParentShareSection";
 import { Users, TrendingUp, Award, Download, Sparkles, FileText } from "lucide-react";
@@ -122,23 +123,23 @@ function ParentReportPageInner() {
 
   const reportSkeleton = (
     <div className="space-y-6" aria-hidden="true">
-      <div className="dark-hero-gradient rounded-xl h-40 animate-pulse opacity-70" />
+      <Skeleton className="rounded-xl h-40" />
       <Card className="p-5 bg-card border-none shadow-sm space-y-3">
-        <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+        <Skeleton className="h-4 w-24" />
         <div className="grid grid-cols-3 gap-3">
           {[0, 1, 2].map((i) => (
             <div key={i} className="p-3 bg-muted/30 rounded-xl space-y-2">
-              <div className="h-3 w-10 bg-muted rounded animate-pulse mx-auto" />
-              <div className="h-7 w-12 bg-muted rounded animate-pulse mx-auto" />
+              <Skeleton className="h-3 w-10 mx-auto" />
+              <Skeleton className="h-7 w-12 mx-auto" />
             </div>
           ))}
         </div>
       </Card>
       <Card className="p-5 bg-card border-none shadow-sm space-y-3">
-        <div className="h-4 w-28 bg-muted rounded animate-pulse" />
+        <Skeleton className="h-4 w-28" />
         <div className="space-y-2">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-6 w-full bg-muted rounded animate-pulse" />
+            <Skeleton key={i} className="h-6 w-full" />
           ))}
         </div>
       </Card>
@@ -164,28 +165,28 @@ function ParentReportPageInner() {
 
   const metaPane = (
     <div className="space-y-6">
-      {/* Header card */}
-      <Card className="dark-hero-gradient text-white border-none p-6 relative overflow-hidden">
-        <div className="absolute top-[-20%] right-[-10%] w-32 h-32 bg-primary/20 rounded-full blur-[60px]" />
+      {/* Header card — 학부모 리포트 hero: navy + coral 그라디언트 (2-7 audit) */}
+      <Card className="parent-hero-gradient text-white border-none p-6 relative overflow-hidden">
+        <div className="absolute top-[-20%] left-[-5%] w-40 h-40 bg-white/10 rounded-full blur-[80px]" />
         <div className="relative z-10">
-          <Badge className="bg-white/10 text-white border-white/20 mb-2">
+          <Badge className="bg-white/15 text-white border-white/20 mb-2 backdrop-blur-sm">
             <Users className="w-3 h-3 mr-1" /> 학부모 리포트
           </Badge>
           <h2 className="font-headline text-2xl font-bold">{profile.name || "학생"}의 입시 현황</h2>
-          <p className="text-sm text-white/70 mt-1">
+          <p className="text-sm text-white/75 mt-1">
             {new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long" })} 기준
           </p>
-          <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-white/10">
+          <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-white/15">
             <div>
-              <p className="text-xs text-white/60">학년</p>
+              <p className="text-xs text-white/70">학년</p>
               <p className="text-sm font-bold">{profile.grade || "-"}</p>
             </div>
             <div>
-              <p className="text-xs text-white/60">목표 대학교</p>
+              <p className="text-xs text-white/70">목표 대학교</p>
               <p className="text-sm font-bold truncate">{profile.dreamSchool || "-"}</p>
             </div>
             <div>
-              <p className="text-xs text-white/60">전공</p>
+              <p className="text-xs text-white/70">전공</p>
               <p className="text-sm font-bold truncate">{profile.major || "-"}</p>
             </div>
           </div>

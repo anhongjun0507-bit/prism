@@ -14,7 +14,7 @@ import { updateProfile as fbUpdateProfile, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { MAJOR_LIST } from "@/lib/constants";
-import { Camera, Loader2, LogOut, Crown, Moon, Globe, Trash2 } from "lucide-react";
+import { Camera, Loader2, LogOut, Crown, Moon, Globe, Trash2, Check } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { Switch } from "@/components/ui/switch";
 import Link from "next/link";
@@ -51,10 +51,19 @@ function ProfilePageInner() {
   const [grade, setGrade] = useState("");
   const [dreamSchool, setDreamSchool] = useState("");
   const [major, setMajor] = useState("Computer Science");
+  // 학업 정보 — AI 카운슬러·What-If·Analysis가 함께 읽는 단일 소스.
+  // 모두 string으로 보관(빈 문자열 = 미입력). 표시·검증은 string으로 처리.
+  const [gpa, setGpa] = useState("");
+  const [sat, setSat] = useState("");
+  const [toefl, setToefl] = useState("");
   const [saving, setSaving] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
-  // 이름 validation 에러 — toast 대신 input 하단 inline 노출 (접근성 + 즉각 인지)
+  // 필수/범위 validation 에러 — toast 대신 input 하단 inline 노출 (접근성 + 즉각 인지)
   const [nameError, setNameError] = useState<string | null>(null);
+  const [gradeError, setGradeError] = useState<string | null>(null);
+  const [gpaError, setGpaError] = useState<string | null>(null);
+  const [satError, setSatError] = useState<string | null>(null);
+  const [toeflError, setToeflError] = useState<string | null>(null);
 
   // 계정 삭제 플로우: step 1 = 경고, step 2 = 이메일 재입력, closed = 닫힘
   const [deleteStep, setDeleteStep] = useState<"closed" | "warn" | "confirm">("closed");
@@ -74,13 +83,19 @@ function ProfilePageInner() {
   const pGrade = profile?.grade || "";
   const pDream = profile?.dreamSchool || "";
   const pMajor = profile?.major || "Computer Science";
+  const pGpa = profile?.gpa || "";
+  const pSat = profile?.sat || "";
+  const pToefl = profile?.toefl || "";
   useEffect(() => {
     setName(pName);
     setPhotoURL(pPhoto);
     setGrade(pGrade);
     setDreamSchool(pDream);
     setMajor(pMajor);
-  }, [pName, pPhoto, pGrade, pDream, pMajor]);
+    setGpa(pGpa);
+    setSat(pSat);
+    setToefl(pToefl);
+  }, [pName, pPhoto, pGrade, pDream, pMajor, pGpa, pSat, pToefl]);
 
   const initials = (name || "학생").slice(0, 2).toUpperCase();
   const hasChanges =
@@ -88,18 +103,40 @@ function ProfilePageInner() {
     photoURL !== (profile?.photoURL || user?.photoURL || "") ||
     grade !== (profile?.grade || "") ||
     dreamSchool !== (profile?.dreamSchool || "") ||
-    major !== (profile?.major || "Computer Science");
+    major !== (profile?.major || "Computer Science") ||
+    gpa !== (profile?.gpa || "") ||
+    sat !== (profile?.sat || "") ||
+    toefl !== (profile?.toefl || "");
+
+  // 범위 검증 헬퍼 — 빈 문자열은 통과(선택 필드), 값이 있으면 min/max 검사.
+  // 반환값: 오류 메시지 또는 null. saveProfile 호출 직전과 onChange 둘 다에서 사용.
+  const validateRange = (raw: string, min: number, max: number, label: string): string | null => {
+    const v = raw.trim();
+    if (!v) return null;
+    const n = Number(v);
+    if (!Number.isFinite(n)) return `숫자를 입력해주세요`;
+    if (n < min || n > max) return `${label} (${min}–${max})`;
+    return null;
+  };
 
   const handleSave = async () => {
     if (!user) {
       toast({ title: "로그인이 필요해요", variant: "destructive" });
       return;
     }
-    if (!name.trim()) {
-      setNameError("이름을 입력해주세요");
-      return;
-    }
-    setNameError(null);
+    // 필수 + 범위 검증을 한 번에 — 첫 에러에서 멈추지 않고 모두 표시.
+    const nErr = !name.trim() ? "이름을 입력해주세요" : null;
+    const gErr = !grade ? "학년을 선택해주세요" : null;
+    const gpErr = validateRange(gpa, 0, 4.5, "GPA는 0–4.5 사이");
+    const sErr = validateRange(sat, 400, 1600, "SAT는 400–1600 사이");
+    const tErr = validateRange(toefl, 0, 120, "TOEFL은 0–120 사이");
+    setNameError(nErr);
+    setGradeError(gErr);
+    setGpaError(gpErr);
+    setSatError(sErr);
+    setToeflError(tErr);
+    if (nErr || gErr || gpErr || sErr || tErr) return;
+
     setSaving(true);
     try {
       // Firebase Auth 메타(displayName·photoURL) 갱신 — user 객체에 즉시 반영돼
@@ -109,13 +146,18 @@ function ProfilePageInner() {
         photoURL: photoURL.trim() || null,
       });
 
-      // Firestore profile 갱신 — 앱 전반의 profile 표시에 사용
+      // Firestore profile 갱신 — 앱 전반의 profile 표시에 사용.
+      // 학업 점수는 빈 문자열이면 undefined로 보내 Firestore가 미설정으로 인식하게 함
+      // (ignoreUndefinedProperties로 자동 스킵; 기존 값은 그대로 유지하려면 빈 문자열 그대로 보냄)
       await saveProfile({
         name: name.trim(),
         photoURL: photoURL.trim() || undefined,
         grade,
         dreamSchool: dreamSchool.trim(),
         major,
+        gpa: gpa.trim(),
+        sat: sat.trim(),
+        toefl: toefl.trim(),
       });
 
       toast({ title: "프로필 저장됨", description: "변경사항이 저장되었어요." });
@@ -252,23 +294,43 @@ function ProfilePageInner() {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">학년</Label>
-            <div className="flex flex-wrap gap-1.5">
+            <Label className="text-xs text-muted-foreground">
+              학년 <span className="text-red-500" aria-hidden="true">*</span>
+            </Label>
+            <div
+              role="radiogroup"
+              aria-required="true"
+              aria-invalid={!!gradeError}
+              aria-describedby={gradeError ? "profile-grade-error" : undefined}
+              className="flex flex-wrap gap-1.5"
+            >
               {GRADES.map((g) => (
                 <button
                   key={g}
                   type="button"
-                  onClick={() => setGrade(g)}
+                  role="radio"
+                  aria-checked={grade === g}
+                  onClick={() => {
+                    setGrade(g);
+                    if (gradeError) setGradeError(null);
+                  }}
                   className={`px-3 h-9 rounded-xl text-xs font-medium border transition-colors ${
                     grade === g
                       ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-muted/50 text-foreground border-border hover:bg-muted"
+                      : gradeError
+                        ? "bg-muted/50 text-foreground border-destructive/60 hover:bg-muted"
+                        : "bg-muted/50 text-foreground border-border hover:bg-muted"
                   }`}
                 >
                   {g}
                 </button>
               ))}
             </div>
+            {gradeError && (
+              <p id="profile-grade-error" className="text-xs text-destructive mt-1">
+                {gradeError}
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -296,6 +358,109 @@ function ProfilePageInner() {
           </div>
         </Card>
 
+        {/* 학업 정보 — AI 카운슬러·What-If·Analysis가 함께 읽는 단일 소스 */}
+        <Card className="p-5 rounded-2xl border border-border/60 bg-card shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold">학업 정보</h2>
+            <p className="text-2xs text-muted-foreground/80">선택 입력</p>
+          </div>
+          <p className="text-2xs text-muted-foreground leading-relaxed -mt-2">
+            입력하면 AI 카운슬러 답변과 What-If 시뮬레이션이 더 정확해져요.
+          </p>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="profile-gpa" className="text-xs text-muted-foreground">GPA</Label>
+              <Input
+                id="profile-gpa"
+                type="number"
+                step="0.01"
+                inputMode="decimal"
+                min={0}
+                max={4.5}
+                placeholder="3.85"
+                value={gpa}
+                onChange={(e) => {
+                  setGpa(e.target.value);
+                  if (gpaError) setGpaError(null);
+                }}
+                aria-invalid={!!gpaError}
+                aria-describedby={gpaError ? "profile-gpa-error" : "profile-gpa-hint"}
+                className={`h-11 rounded-xl text-sm ${
+                  gpaError ? "border-destructive focus-visible:ring-destructive" : ""
+                }`}
+              />
+              {gpaError ? (
+                <p id="profile-gpa-error" className="text-2xs text-destructive">{gpaError}</p>
+              ) : (
+                <p id="profile-gpa-hint" className="text-2xs text-muted-foreground/80">0–4.5</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="profile-sat" className="text-xs text-muted-foreground">SAT</Label>
+              <Input
+                id="profile-sat"
+                type="number"
+                inputMode="numeric"
+                min={400}
+                max={1600}
+                placeholder="1450"
+                value={sat}
+                onChange={(e) => {
+                  setSat(e.target.value);
+                  if (satError) setSatError(null);
+                }}
+                aria-invalid={!!satError}
+                aria-describedby={satError ? "profile-sat-error" : "profile-sat-hint"}
+                className={`h-11 rounded-xl text-sm ${
+                  satError ? "border-destructive focus-visible:ring-destructive" : ""
+                }`}
+              />
+              {satError ? (
+                <p id="profile-sat-error" className="text-2xs text-destructive">{satError}</p>
+              ) : (
+                <p id="profile-sat-hint" className="text-2xs text-muted-foreground/80">400–1600</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="profile-toefl" className="text-xs text-muted-foreground">TOEFL</Label>
+              <Input
+                id="profile-toefl"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={120}
+                placeholder="105"
+                value={toefl}
+                onChange={(e) => {
+                  setToefl(e.target.value);
+                  if (toeflError) setToeflError(null);
+                }}
+                aria-invalid={!!toeflError}
+                aria-describedby={toeflError ? "profile-toefl-error" : "profile-toefl-hint"}
+                className={`h-11 rounded-xl text-sm ${
+                  toeflError ? "border-destructive focus-visible:ring-destructive" : ""
+                }`}
+              />
+              {toeflError ? (
+                <p id="profile-toefl-error" className="text-2xs text-destructive">{toeflError}</p>
+              ) : (
+                <p id="profile-toefl-hint" className="text-2xs text-muted-foreground/80">0–120</p>
+              )}
+            </div>
+          </div>
+
+          <p className="text-2xs text-muted-foreground/80 leading-relaxed border-t border-border/40 pt-3">
+            더 자세한 학업 분석은{" "}
+            <Link href="/analysis" className="text-primary font-medium hover:underline">
+              상세 분석
+            </Link>
+            에서 AP/ACT/IELTS 등을 입력할 수 있어요.
+          </p>
+        </Card>
+
         {/* Theme settings */}
         <Card className="p-5 rounded-2xl border border-border/60 bg-card shadow-sm space-y-4">
           <h2 className="text-sm font-bold">테마 설정</h2>
@@ -321,11 +486,15 @@ function ProfilePageInner() {
 
         </Card>
 
-        {/* Save */}
+        {/* Save — 변경 있을 때만 primary 활성, idle 시 green '저장됨 ✓' (2-9 audit) */}
         <Button
           onClick={handleSave}
-          disabled={saving || !hasChanges || !name.trim()}
-          className="w-full h-12 rounded-xl"
+          disabled={saving || !hasChanges || !name.trim() || !grade}
+          className={`w-full h-12 rounded-xl ${
+            !saving && !hasChanges
+              ? "!bg-emerald-50 dark:!bg-emerald-950/30 !text-emerald-700 dark:!text-emerald-300 !border-emerald-200 dark:!border-emerald-900/50 hover:!bg-emerald-100 dark:hover:!bg-emerald-950/50"
+              : ""
+          }`}
           size="lg"
         >
           {saving ? (
@@ -333,7 +502,14 @@ function ProfilePageInner() {
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
               저장 중...
             </>
-          ) : hasChanges ? "변경사항 저장" : "저장됨"}
+          ) : hasChanges ? (
+            "변경사항 저장"
+          ) : (
+            <>
+              <Check className="w-4 h-4 mr-1.5" />
+              저장됨
+            </>
+          )}
         </Button>
 
         {/* Secondary links */}

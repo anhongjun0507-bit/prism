@@ -126,6 +126,14 @@ export interface Essay {
   reviews?: EssayReview[];
   /** AI 타임머신 구조 — 재생성 시 덮어씀. 단일 객체로 관리(리뷰처럼 누적 안 함). */
   outline?: EssayOutline;
+  /**
+   * 2차 검수 1-9: 14일간 0단어 상태로 방치된 에세이를 자동 archive.
+   * archived=true면 메인 목록에서 숨기고 "보관함" 섹션에서만 노출.
+   * 사용자가 복원할 때까지 데이터는 보존(영구 삭제 X).
+   */
+  archived?: boolean;
+  /** ISO — 자동/수동 archive된 시각. archived=true일 때만 의미 있음. */
+  archivedAt?: string;
 }
 
 /**

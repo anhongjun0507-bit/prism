@@ -454,17 +454,48 @@ export function EssayEditor({
             aria-label="에세이 작성 영역"
             className="min-h-[380px] rounded-2xl p-5 pb-12 text-sm leading-relaxed border-none shadow-sm focus-visible:ring-primary/20 bg-card"
           />
-          <div className="sticky bottom-0 flex justify-end gap-2 pt-2 pb-2 px-1 bg-background/80 backdrop-blur-sm rounded-b-2xl">
-            <Badge variant="secondary" className="px-2.5 py-1 text-xs">
-              {wordCount} 단어
-            </Badge>
+          <div className="sticky bottom-0 flex items-center justify-end gap-2 pt-2 pb-2 px-1 bg-background/80 backdrop-blur-sm rounded-b-2xl">
+            {activeEssay.wordLimit && activeEssay.wordLimit > 0 ? (
+              (() => {
+                const pct = (wordCount / activeEssay.wordLimit!) * 100;
+                const tone =
+                  pct < 50
+                    ? "bg-muted text-muted-foreground"
+                    : pct < 100
+                    ? "bg-primary/10 text-primary"
+                    : pct <= 120
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                    : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
+                return (
+                  <>
+                    <div
+                      className="flex-1 max-w-[160px] h-1.5 rounded-full bg-muted/60 overflow-hidden"
+                      role="progressbar"
+                      aria-valuenow={wordCount}
+                      aria-valuemin={0}
+                      aria-valuemax={activeEssay.wordLimit}
+                      aria-label={`${wordCount}/${activeEssay.wordLimit} 단어`}
+                    >
+                      <div
+                        className={`h-full transition-[width] duration-200 ease-out ${
+                          pct < 100 ? "bg-primary/70" : pct <= 120 ? "bg-emerald-500" : "bg-amber-500"
+                        }`}
+                        style={{ width: `${Math.min(100, pct)}%` }}
+                      />
+                    </div>
+                    <span className={`text-2xs font-semibold tabular-nums rounded-full px-2 h-5 leading-5 ${tone}`}>
+                      {wordCount}/{activeEssay.wordLimit} 단어
+                    </span>
+                  </>
+                );
+              })()
+            ) : (
+              <Badge variant="secondary" className="px-2.5 py-1 text-xs">
+                {wordCount} 단어
+              </Badge>
+            )}
             <Badge variant="secondary" className="px-2.5 py-1 text-xs">
               {charCount}자
-              {activeEssay.wordLimit && (
-                <span className={charCount > activeEssay.wordLimit ? " text-red-500" : ""}>
-                  /{activeEssay.wordLimit}
-                </span>
-              )}
             </Badge>
           </div>
         </div>

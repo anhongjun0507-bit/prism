@@ -174,14 +174,24 @@ const MAJOR_ADJ_MULT = -10;
 const MAJOR_DEFAULT = 0.5;
 
 /**
- * 4-tier 분류 경계. CollegeVine 기준 (CV는 75/40/15 사용; 우리는 80/40/15 — Safety 좁힘).
- * 이유: 한국 학생의 international penalty 감안 시 Safety 인플레 방지.
+ * 4-tier 분류 경계. CollegeVine 기준 (CV는 75/40/15 사용; 우리는 85/40/15 — Safety 더 좁힘).
+ *
+ * 2차 검수 1-7 후속: 한 학생당 Safety 564개로 인플레되는 문제.
+ *  - prob >= 80만으로는 학교 자체 합격률(base.r)이 매우 높은 학교가 곧바로 Safety로
+ *    분류되어, 한국 국제학생이 "지원하면 거의 무조건 붙는다"고 오해.
+ *  - 진짜 Safety는 "확률 높음 + 학업 우위(=학생이 학교 중간 admits보다 위에 있음)"를
+ *    모두 만족해야 한다. 둘 다 아니면 Target로 강등.
+ *
+ * SAFETY_ACADEMIC_FLOOR: academicIdx(±30 clamp 후)가 이 값 이상이어야 진짜 Safety.
+ * 6점은 GPA +0.3 또는 SAT +85 정도의 우위에 해당.
  */
 const CAT_THRESHOLDS = {
-  SAFETY: 80,
+  SAFETY: 85,
   TARGET: 40,
   HARD_TARGET: 15,
   // < HARD_TARGET = Reach
+  /** Safety 자격: 확률 외에 academicIdx ≥ 이 값 (그렇지 않으면 Target) */
+  SAFETY_ACADEMIC_FLOOR: 6,
 } as const;
 
 /**
@@ -298,7 +308,9 @@ export function matchSchools(sp: Specs, aps: AP[] = [], ecs: EC[] = []): School[
 
     // ── 9. 최종 합산 + clamp ────────────────────────────────────
     let prob = base + academic + ecPts + awards + qual + toeflPts + hooks + majorAdj;
-    prob = Math.max(PROB_FLOOR, Math.min(PROB_CEILING, Math.round(prob)));
+    // 1자리 소수까지 보존 — 95.3%/94.7% 같은 미세 차이를 사용자에게 노출(2-6).
+    // tie-breaking과 카테고리 임계값도 0.1% 단위 그대로 사용 가능.
+    prob = Math.max(PROB_FLOOR, Math.min(PROB_CEILING, Math.round(prob * 10) / 10));
 
     // ── 10. 신뢰 구간 (margin은 학교 selectivity에 따라 다름) ────
     const margin = u.r < RANGE_MARGIN.HIGHLY_SELECTIVE.rateBelow ? RANGE_MARGIN.HIGHLY_SELECTIVE.margin
@@ -309,10 +321,18 @@ export function matchSchools(sp: Specs, aps: AP[] = [], ecs: EC[] = []): School[
     const hi = Math.min(PROB_CEILING, prob + margin);
 
     // ── 11. 카테고리 분류 (CollegeVine style) ───────────────────
-    const cat = prob >= CAT_THRESHOLDS.SAFETY     ? "Safety"
-              : prob >= CAT_THRESHOLDS.TARGET     ? "Target"
-              : prob >= CAT_THRESHOLDS.HARD_TARGET ? "Hard Target"
-              : "Reach";
+    // Safety는 prob 기준 + 학업 우위(academicIdx) 모두 만족해야 한다.
+    // academicIdx가 낮은데 학교 base rate만 높아서 prob이 올라간 경우는 Target로 강등.
+    let cat: string;
+    if (prob >= CAT_THRESHOLDS.SAFETY && academic >= CAT_THRESHOLDS.SAFETY_ACADEMIC_FLOOR) {
+      cat = "Safety";
+    } else if (prob >= CAT_THRESHOLDS.TARGET) {
+      cat = "Target";
+    } else if (prob >= CAT_THRESHOLDS.HARD_TARGET) {
+      cat = "Hard Target";
+    } else {
+      cat = "Reach";
+    }
 
     // ── 12. Net cost estimate (needAid=true일 때 휴리스틱 할인) ──
     const netCost = u.tuition
@@ -331,5 +351,20 @@ export function matchSchools(sp: Specs, aps: AP[] = [], ecs: EC[] = []): School[
       ecPts: Math.round(ecPts),
       academicIdx: Math.round(academic),
     };
-  }).sort((a, b) => (b.prob ?? 0) - (a.prob ?? 0)); // default: probability desc
+  }).sort((a, b) => {
+    // 1차: prob desc.
+    const dp = (b.prob ?? 0) - (a.prob ?? 0);
+    if (dp !== 0) return dp;
+    // 2차 검수 1-6: tie-breaking. prob이 같아도 일관된 순서를 보장해야 페이지 새로고침
+    // 시마다 학교 순서가 미세하게 바뀌는 incoherent UX를 막을 수 있다.
+    //  2-A: US News rank asc (낮을수록 위) — rk가 0/없으면 999로 push.
+    const ra = a.rk || 999;
+    const rb = b.rk || 999;
+    if (ra !== rb) return ra - rb;
+    //  2-B: 학교 자체 합격률 asc — 더 까다로운 학교가 앞으로 (대학교 prestige proxy).
+    const dr = (a.r ?? 999) - (b.r ?? 999);
+    if (dr !== 0) return dr;
+    //  2-C: 이름 사전순 — 위 둘이 모두 같으면 결정론적 정렬.
+    return a.n.localeCompare(b.n);
+  });
 }

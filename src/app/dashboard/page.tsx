@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   Sparkles, ChevronRight,
   LogOut, Crown, Settings, Heart, Search,
+  TrendingUp, MessageSquare, LineChart,
 } from "lucide-react";
 import { CAT_STYLE, CAT_ORDER } from "@/lib/analysis-helpers";
 import { TodayFocusCard } from "@/components/dashboard/TodayFocusCard";
@@ -39,6 +40,8 @@ import {
 import { SchoolLogo } from "@/components/SchoolLogo";
 import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ProfileCompletionBanner } from "@/components/ProfileCompletionBanner";
+import { getGradeContext, shouldShowApplicationDDay } from "@/lib/grade";
 import { useVisualViewportSpaceBelow } from "@/hooks/use-visual-viewport";
 import { usePageDwell } from "@/hooks/use-page-dwell";
 import dynamic from "next/dynamic";
@@ -71,7 +74,7 @@ export default function DashboardPage() {
 }
 
 function DashboardPageInner() {
-  const { profile, user, logout, toggleFavorite, isFavorite } = useAuth();
+  const { profile, user, logout, snapshots, toggleFavorite, isFavorite } = useAuth();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const showApiError = useApiErrorToast();
   const displayName = profile?.name || user?.displayName || "학생";
@@ -146,6 +149,10 @@ function DashboardPageInner() {
     ? getDDay(dreamSchoolData.ea || dreamSchoolData.rd || "Jan 1")
     : getDDay("Jan 1");
   const dday = formatDDay(nextDeadline);
+  // 학년 컨텍스트 — D-day를 hero에 표시할지(11/12학년/졸업) 결정.
+  // 9/10학년에게 "D-169 조기지원"은 misleading. 단일 소스(profile.grade)에서만 파생.
+  const gradeCtx = getGradeContext(profile?.grade);
+  const showDDay = shouldShowApplicationDDay(profile?.grade);
 
   const currentPlan = normalizePlan(profile?.plan);
   const planInfo = PLANS[currentPlan];
@@ -164,6 +171,13 @@ function DashboardPageInner() {
     return counts;
   }, [savedSchoolResults]);
   const showLineupDist = hasSpecs && savedSchoolResults.length > 0;
+
+  // Hero 아래 메트릭 스트립 — 저장 대학교 평균 prob (1자리 round-off)
+  const avgSavedProb = useMemo(() => {
+    if (savedSchoolResults.length === 0) return null;
+    const sum = savedSchoolResults.reduce((acc, s) => acc + (s.prob ?? 0), 0);
+    return Math.round((sum / savedSchoolResults.length) * 10) / 10;
+  }, [savedSchoolResults]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const searchResults = useMemo(() => {
@@ -346,11 +360,31 @@ function DashboardPageInner() {
 
             <div className="flex items-stretch gap-4 mt-5 pt-5 border-t border-hero-muted">
               <div className="flex-1 min-w-0">
-                <p className="text-2xs text-hero-muted uppercase tracking-wide font-semibold mb-1">
-                  {dreamSchoolData?.ea ? "조기 지원" : "정시 지원"}
-                </p>
-                <p className="text-3xl font-bold tabular-nums leading-none font-headline">{dday.primary}</p>
-                <p className="text-2xs text-hero-muted mt-1.5">{dday.hint}</p>
+                {showDDay ? (
+                  <>
+                    <p className="text-2xs text-hero-muted uppercase tracking-wide font-semibold mb-1">
+                      {dreamSchoolData?.ea ? "조기 지원" : "정시 지원"}
+                    </p>
+                    <p className="text-3xl font-bold tabular-nums leading-none font-headline">{dday.primary}</p>
+                    <p className="text-2xs text-hero-muted mt-1.5">{dday.hint}</p>
+                  </>
+                ) : gradeCtx.isUnset ? (
+                  <>
+                    <p className="text-2xs text-hero-muted uppercase tracking-wide font-semibold mb-1">학년 미입력</p>
+                    <p className="text-xl font-bold leading-tight font-headline">프로필 완성</p>
+                    <p className="text-2xs text-hero-muted mt-1.5">D-day는 학년 입력 후</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-2xs text-hero-muted uppercase tracking-wide font-semibold mb-1">현재 학년</p>
+                    <p className="text-xl font-bold leading-tight font-headline">{gradeCtx.label}</p>
+                    <p className="text-2xs text-hero-muted mt-1.5">
+                      {gradeCtx.yearsUntilApplication != null
+                        ? `지원 시즌까지 ${gradeCtx.yearsUntilApplication}년`
+                        : "준비 단계"}
+                    </p>
+                  </>
+                )}
               </div>
               {showLineupDist && (
                 <div className="hidden md:flex md:flex-col md:flex-1 md:px-5 md:border-l md:border-hero-muted">
@@ -401,6 +435,9 @@ function DashboardPageInner() {
           </div>
         </Card>
 
+        {/* 학년 미입력 시 hero 바로 아래 강한 유도 — single source of truth(profile.grade) 정착 */}
+        <ProfileCompletionBanner />
+
         {/* TodayFocusCard — Hero 바로 아래 */}
         <TodayFocusCard />
         {/* 첫 방문자 비차단 안내 — 30일 TTL, dismiss 후 미노출 */}
@@ -408,8 +445,81 @@ function DashboardPageInner() {
         {/* 임계값 미달이면 자체 숨김 */}
         <LiveStatsBar variant="mini" />
 
-        {/* Urgent deadline alert — D-30 이하만 */}
-        {nextDeadline > 0 && nextDeadline <= 30 && (
+        {/* 메트릭 스트립 — 저장 학교·평균 합격률·AI 상담·성장 기록 (스펙 입력 시만) */}
+        {hasSpecs && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <Link
+              href="/analysis"
+              onClick={() => trackSectionClick(SECTION_IDS.HOME_METRIC_SAVED, 1, "/analysis")}
+              className="block"
+            >
+              <Card className="p-3.5 rounded-xl h-full hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ease-toss active:scale-[0.98]">
+                <div className="flex items-center gap-1.5 mb-2 text-muted-foreground">
+                  <Heart className="w-3.5 h-3.5" />
+                  <p className="text-2xs font-medium">저장한 대학교</p>
+                </div>
+                <p className="text-xl font-bold tabular-nums leading-none font-headline">
+                  {profile?.favoriteSchools?.length ?? 0}
+                  <span className="text-xs font-medium text-muted-foreground ml-0.5">곳</span>
+                </p>
+              </Card>
+            </Link>
+            <Link
+              href="/analysis"
+              onClick={() => trackSectionClick(SECTION_IDS.HOME_METRIC_AVG_PROB, 2, "/analysis")}
+              className="block"
+            >
+              <Card className="p-3.5 rounded-xl h-full hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ease-toss active:scale-[0.98]">
+                <div className="flex items-center gap-1.5 mb-2 text-muted-foreground">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  <p className="text-2xs font-medium">평균 합격률</p>
+                </div>
+                <p className="text-xl font-bold tabular-nums leading-none font-headline">
+                  {avgSavedProb != null ? (
+                    <>{avgSavedProb}<span className="text-xs font-medium text-muted-foreground ml-0.5">%</span></>
+                  ) : (
+                    <span className="text-sm font-medium text-muted-foreground">저장 후 표시</span>
+                  )}
+                </p>
+              </Card>
+            </Link>
+            <Link
+              href="/tools/chat"
+              onClick={() => trackSectionClick(SECTION_IDS.HOME_METRIC_AI_CHAT, 3, "/tools/chat")}
+              className="block"
+            >
+              <Card className="p-3.5 rounded-xl h-full hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ease-toss active:scale-[0.98]">
+                <div className="flex items-center gap-1.5 mb-2 text-muted-foreground">
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <p className="text-2xs font-medium">AI 상담</p>
+                </div>
+                <p className="text-xl font-bold tabular-nums leading-none font-headline">
+                  {profile?.aiChatCount ?? 0}
+                  <span className="text-xs font-medium text-muted-foreground ml-0.5">회</span>
+                </p>
+              </Card>
+            </Link>
+            <Link
+              href="/insights"
+              onClick={() => trackSectionClick(SECTION_IDS.HOME_METRIC_GROWTH, 4, "/insights")}
+              className="block"
+            >
+              <Card className="p-3.5 rounded-xl h-full hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ease-toss active:scale-[0.98]">
+                <div className="flex items-center gap-1.5 mb-2 text-muted-foreground">
+                  <LineChart className="w-3.5 h-3.5" />
+                  <p className="text-2xs font-medium">성장 기록</p>
+                </div>
+                <p className="text-xl font-bold tabular-nums leading-none font-headline">
+                  {snapshots.length}
+                  <span className="text-xs font-medium text-muted-foreground ml-0.5">개</span>
+                </p>
+              </Card>
+            </Link>
+          </div>
+        )}
+
+        {/* Urgent deadline alert — D-30 이하만, 그리고 학년이 입시 단계일 때만 */}
+        {showDDay && nextDeadline > 0 && nextDeadline <= 30 && (
           <div className="rounded-2xl p-4 flex items-center gap-3 bg-destructive/10 border border-destructive/25">
             <div className="w-10 h-10 rounded-xl bg-destructive/15 flex items-center justify-center shrink-0">
               <span className="text-destructive font-bold text-sm tabular-nums">D-{nextDeadline}</span>

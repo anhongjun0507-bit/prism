@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 import { BottomNav, BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 import { streamWithAuth, consumeSSE } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -710,7 +711,9 @@ function ChatPageInner() {
                 <div className="max-w-[82%] space-y-1.5">
                   <div
                     className={cn(
-                      "px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap",
+                      "px-4 py-2.5 text-sm leading-relaxed",
+                      // 마크다운 렌더 케이스 외엔 raw 텍스트의 줄바꿈을 보존.
+                      (!isAi || m.error || i === 0) && "whitespace-pre-wrap",
                       isAi
                         ? m.error
                           ? "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 rounded-2xl rounded-tl-md border border-red-200 dark:border-red-900"
@@ -718,12 +721,30 @@ function ChatPageInner() {
                         : "bg-gradient-to-br from-primary to-primary/85 text-white rounded-2xl rounded-tr-md shadow-md shadow-primary/20"
                     )}
                   >
-                    {isAi && i === 0 ? highlightProfile(m.content) : m.content}
-                    {showCaret && (
-                      <span
-                        aria-hidden="true"
-                        className="inline-block w-1.5 h-4 bg-primary/80 ml-0.5 align-middle animate-pulse"
-                      />
+                    {isAi && i === 0 ? (
+                      <>
+                        {highlightProfile(m.content)}
+                      </>
+                    ) : isAi && !m.error ? (
+                      <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-0 prose-p:leading-relaxed prose-p:text-sm prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0.5 prose-li:text-sm prose-strong:text-foreground prose-strong:font-semibold prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:before:content-none prose-code:after:content-none prose-a:text-primary prose-a:font-medium prose-a:no-underline hover:prose-a:underline prose-headings:font-headline prose-headings:font-bold prose-h1:text-base prose-h2:text-sm prose-h3:text-sm prose-h1:mt-3 prose-h1:mb-1.5 prose-h2:mt-3 prose-h2:mb-1.5 prose-h3:mt-2 prose-h3:mb-1 prose-hr:my-3">
+                        <ReactMarkdown>{m.content}</ReactMarkdown>
+                        {showCaret && (
+                          <span
+                            aria-hidden="true"
+                            className="inline-block w-1.5 h-4 bg-primary/80 ml-0.5 align-middle animate-pulse"
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        {m.content}
+                        {showCaret && (
+                          <span
+                            aria-hidden="true"
+                            className="inline-block w-1.5 h-4 bg-primary/80 ml-0.5 align-middle animate-pulse"
+                          />
+                        )}
+                      </>
                     )}
                   </div>
                   {showCopy && (

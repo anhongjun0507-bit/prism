@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/EmptyState";
 import { SkeletonWrapper } from "@/components/ui/skeleton-wrapper";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { LiveStatsBar } from "@/components/landing/LiveStatsBar";
 import { AdmissionFeed } from "@/components/AdmissionFeed";
@@ -104,7 +105,8 @@ function InsightsPageInner() {
 
   const quickResults = useMemo(() => allMatchResults.slice(0, 8), [allMatchResults]);
   const safetyCount = quickResults.filter((s) => s.cat === "Safety").length;
-  const targetCount = quickResults.filter((s) => s.cat === "Target" || s.cat === "Hard Target").length;
+  const targetCount = quickResults.filter((s) => s.cat === "Target").length;
+  const hardTargetCount = quickResults.filter((s) => s.cat === "Hard Target").length;
   const reachCount = quickResults.filter((s) => s.cat === "Reach").length;
 
   // dashboard와 동일한 Mar-May commitment window — AdmissionFeed/Banner 노출 기준
@@ -113,15 +115,28 @@ function InsightsPageInner() {
 
   const statsItems = [
     { label: "Reach", count: reachCount, dot: CAT_STYLE.Reach.dot, range: "15% 미만", meaning: "도전" },
-    { label: "Target", count: targetCount, dot: CAT_STYLE.Target.dot, range: "15–70%", meaning: "현실적" },
+    { label: "Hard Target", count: hardTargetCount, dot: CAT_STYLE["Hard Target"].dot, range: "15–45%", meaning: "어려운 현실" },
+    { label: "Target", count: targetCount, dot: CAT_STYLE.Target.dot, range: "45–70%", meaning: "현실적" },
     { label: "Safety", count: safetyCount, dot: CAT_STYLE.Safety.dot, range: "70% 이상", meaning: "안전권" },
-  ].filter((i) => i.count > 0);
+  ];
 
-  const showStats = hasSpecs && quickResults.length > 0 && statsItems.length > 0;
+  const statsTotal = reachCount + hardTargetCount + targetCount + safetyCount;
+  const showStats = hasSpecs && quickResults.length > 0 && statsTotal > 0;
+
+  // 성장 섹션 타임라인 필터 — 전체/3·6·12개월. 너무 길어진 기록에서 최근 변화를 비교하기 위함.
+  const [timelineFilter, setTimelineFilter] = useState<"all" | "3m" | "6m" | "12m">("all");
+  const filteredSnapshots = useMemo(() => {
+    if (timelineFilter === "all") return snapshots;
+    const months = timelineFilter === "3m" ? 3 : timelineFilter === "6m" ? 6 : 12;
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - months);
+    const cutoffIso = cutoff.toISOString().split("T")[0];
+    return snapshots.filter((s) => s.date >= cutoffIso);
+  }, [snapshots, timelineFilter]);
 
   // 라인업 균형 해석 — 학생이 다음 행동을 정할 수 있도록 한 줄 가이드 제공
   const balanceMessage = (() => {
-    const total = reachCount + targetCount + safetyCount;
+    const total = statsTotal;
     if (total === 0) return "";
     if (safetyCount === 0) {
       return "안전권 학교(70%↑)가 없어요. 균형을 위해 1–2개 추가를 추천해요.";
@@ -186,30 +201,29 @@ function InsightsPageInner() {
             {/* Stats row */}
             <SkeletonWrapper
               loading={matchLoading}
-              skeleton={<div className="rounded-2xl bg-muted/40 border border-border/50 p-4 h-[88px] animate-pulse" />}
+              skeleton={<Skeleton className="rounded-2xl h-[88px]" />}
             >
               {showStats ? (
               <section aria-label="합격 가능성 분포" ref={statsViewRef}>
                 <div className="mb-2.5">
                   <h2 className="font-headline text-base font-bold">합격 가능성 분포</h2>
                   <p className="text-xs text-muted-foreground mt-1 leading-snug">
-                    내 스펙으로 매칭된 상위 8개교를 합격 확률로 분류했어요
+                    내 스펙으로 매칭된 상위 {statsTotal}개교를 합격 확률로 분류했어요
                   </p>
                 </div>
                 <div
                   ref={statsGridRef}
-                  className="grid rounded-2xl bg-muted/40 border border-border/50 overflow-hidden"
-                  style={{ gridTemplateColumns: `repeat(${statsItems.length}, 1fr)` }}
+                  className="rounded-2xl bg-muted/40 border border-border/50 p-4 space-y-3"
                 >
-                  {statsItems.map(({ label, count, dot, range, meaning }, i) => (
-                    <CountTile
+                  {statsItems.map(({ label, count, dot, range, meaning }) => (
+                    <CategoryBar
                       key={label}
                       label={label}
                       count={count}
+                      total={statsTotal}
                       dot={dot}
                       range={range}
                       meaning={meaning}
-                      borderRight={i < statsItems.length - 1}
                     />
                   ))}
                 </div>
@@ -247,17 +261,25 @@ function InsightsPageInner() {
             {/* Growth — 2회 이상 snapshot */}
             {snapshots.length >= 2 ? (
               (() => {
-                const first = snapshots[0];
-                const current = snapshots[snapshots.length - 1];
+                const inRange = filteredSnapshots.length >= 2 ? filteredSnapshots : snapshots;
+                const first = inRange[0];
+                const current = inRange[inRange.length - 1];
                 const totalSatDiff =
                   first.sat && current.sat ? parseInt(current.sat) - parseInt(first.sat) : 0;
                 const totalProbDiff =
                   first.dreamSchoolProb != null && current.dreamSchoolProb != null
                     ? current.dreamSchoolProb - first.dreamSchoolProb
                     : null;
-                const probData = snapshots
+                const probData = inRange
                   .filter((s) => s.dreamSchoolProb != null)
                   .map((s) => ({ x: s.date, y: s.dreamSchoolProb as number }));
+
+                const filterChips: { id: "all" | "3m" | "6m" | "12m"; label: string }[] = [
+                  { id: "3m", label: "3개월" },
+                  { id: "6m", label: "6개월" },
+                  { id: "12m", label: "1년" },
+                  { id: "all", label: "전체" },
+                ];
 
                 return (
                   <Card ref={growthViewRef} className="p-4 rounded-2xl bg-card border border-border/60 shadow-sm">
@@ -265,8 +287,30 @@ function InsightsPageInner() {
                       <TrendingUp className="w-4 h-4 text-primary" />
                       <p className="text-sm font-bold">나의 성장</p>
                       <span className="text-xs text-muted-foreground ml-auto">
-                        {snapshots.length}회 기록
+                        {inRange.length}회 · 전체 {snapshots.length}회
                       </span>
+                    </div>
+
+                    <div className="flex gap-1.5 mb-3" role="tablist" aria-label="기간 필터">
+                      {filterChips.map((c) => {
+                        const active = timelineFilter === c.id;
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={active}
+                            onClick={() => setTimelineFilter(c.id)}
+                            className={`text-2xs font-semibold px-2.5 h-7 rounded-full border transition-colors ${
+                              active
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-background text-muted-foreground border-border/60 hover:border-primary/40 hover:text-foreground"
+                            }`}
+                          >
+                            {c.label}
+                          </button>
+                        );
+                      })}
                     </div>
 
                     {probData.length >= 2 && (
@@ -339,34 +383,49 @@ function InsightsPageInner() {
   );
 }
 
-function CountTile({
+function CategoryBar({
   label,
   count,
+  total,
   dot,
   range,
   meaning,
-  borderRight,
 }: {
   label: string;
   count: number;
+  total: number;
   dot: string;
   range: string;
   meaning: string;
-  borderRight: boolean;
 }) {
   const display = useCountUp(count, { duration: 900 });
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
   return (
-    <div className={`px-2.5 py-3.5 text-center ${borderRight ? "border-r border-border/50" : ""}`}>
-      <div className="flex items-center justify-center gap-1.5 mb-2">
-        <span className={`w-2 h-2 rounded-full ${dot}`} aria-hidden="true" />
-        <p className="text-2xs text-muted-foreground font-medium">{label}</p>
+    <div>
+      <div className="flex items-center gap-2 mb-1">
+        <span className={`w-2 h-2 rounded-full ${dot} shrink-0`} aria-hidden="true" />
+        <p className="text-xs font-semibold">{label}</p>
+        <span className="text-2xs text-muted-foreground tabular-nums">
+          {range} · {meaning}
+        </span>
+        <p className="ml-auto text-sm font-bold tabular-nums leading-none font-headline">
+          {display}
+          <span className="text-2xs font-normal text-muted-foreground ml-0.5">개</span>
+        </p>
       </div>
-      <p className="text-2xl font-bold tabular-nums leading-none text-foreground font-headline">
-        {display}
-        <span className="text-xs font-normal text-muted-foreground ml-0.5">개</span>
-      </p>
-      <p className="text-2xs text-muted-foreground mt-2 leading-tight tabular-nums">{range}</p>
-      <p className="text-2xs text-muted-foreground/70 leading-tight">{meaning}</p>
+      <div
+        className="h-2 rounded-full bg-muted/60 overflow-hidden"
+        role="progressbar"
+        aria-valuenow={count}
+        aria-valuemin={0}
+        aria-valuemax={total}
+        aria-label={`${label} ${count}개, 전체의 ${pct}%`}
+      >
+        <div
+          className={`h-full ${dot} transition-[width] duration-700 ease-toss`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
     </div>
   );
 }

@@ -19,6 +19,23 @@ import { CAT_STYLE } from "@/lib/analysis-helpers";
 import { useToast } from "@/hooks/use-toast";
 import { PageIntroCard } from "@/components/PageIntroCard";
 
+/** Spec 라벨 옆에 baseline 대비 변경량을 작은 알약 형태로 표시. value의 부호로 색을 결정. */
+function DeltaPill({ value, formatted }: { value: number; formatted: string }) {
+  const positive = value > 0;
+  return (
+    <span
+      className={`inline-flex items-center text-2xs font-semibold tabular-nums rounded-full px-1.5 h-4 leading-none ${
+        positive
+          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+          : "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+      }`}
+      aria-label={`기준값 대비 ${formatted}`}
+    >
+      {formatted}
+    </span>
+  );
+}
+
 /* ───── helpers ───── */
 // 사용자 분석 페이지에서 저장한 profile.specs를 baseline으로 우선 사용 — what-if 시뮬레이션이
 // 실제 분석 결과와 동일한 출발점을 갖도록. profile.specs가 없으면 flat 필드로 fallback.
@@ -140,24 +157,37 @@ function WhatIfPageInner() {
 
   // what-if는 슬라이더 변경 시 debounce 후 fetch (interactive UX).
   // retryToken 증가 시 재시도. 에러 시 whatIfResults는 이전 값 유지(깨짐 방지).
+  //
+  // 2차 검수 1-3: "What-If 무한 로딩" 버그 — 슬라이더를 빠르게 움직이면
+  // 매 변경마다 이전 fetch의 .then/.catch가 `if (cancelled) return`으로 빠져나가
+  // setSimulating(false)를 못 호출. 결과적으로 simulating=true가 영구 락된 채
+  // 스피너만 돌아가는 현상. 요청 ID + AbortController로 교체:
+  //  - reqId가 최신과 일치할 때만 state 업데이트 (오래된 응답이 새 상태 덮어쓰기 방지)
+  //  - cleanup에서 abort()로 in-flight 요청도 명시적 취소
+  //  - 매 effect 사이클은 반드시 simulating을 false로 되돌리고 종료
+  const requestIdRef = useRef(0);
   useEffect(() => {
     if (!profile) return;
-    let cancelled = false;
+    const reqId = ++requestIdRef.current;
+    const controller = new AbortController();
     const timer = setTimeout(() => {
       setSimulating(true);
       setSimError(null);
       fetchWithAuth<{ results: School[] }>("/api/match", {
         method: "POST",
         body: JSON.stringify({ specs: buildSpecs(profile, { gpa, sat, toefl, ecTier, awardTier }) }),
+        signal: controller.signal,
       })
         .then((d) => {
-          if (cancelled) return;
+          if (reqId !== requestIdRef.current) return;
           setWhatIfResults(d.results || []);
           setSimulating(false);
         })
         .catch((e) => {
-          if (cancelled) return;
+          if (reqId !== requestIdRef.current) return;
           setSimulating(false);
+          // AbortError는 의도된 취소 — 에러 토스트 띄우지 않음.
+          if (e?.name === "AbortError" || controller.signal.aborted) return;
           setSimError("시뮬레이션에 실패했어요. 다시 시도해주세요.");
           toast({
             title: "시뮬레이션 실패",
@@ -167,7 +197,10 @@ function WhatIfPageInner() {
           console.warn("[what-if] simulation fetch failed:", e);
         });
     }, 500); // 500ms debounce — 모바일 슬라이더 터치 드래그 시 과도한 요청 완화
-    return () => { cancelled = true; clearTimeout(timer); };
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [profile, gpa, sat, toefl, ecTier, awardTier, retryToken, toast]);
 
   /* ── category counts ── */
@@ -268,6 +301,23 @@ function WhatIfPageInner() {
   const ecLabels: Record<number, string> = { 1: "최상", 2: "우수", 3: "보통", 4: "기본" };
   const awardLabels: Record<number, string> = { 0: "없음", 1: "교내", 2: "지역", 3: "전국", 4: "국제" };
 
+  /* ── slider deltas — baseline 대비 변경량을 라벨 옆에 즉시 표시 ── */
+  const numericDelta = (current: string, base: string, decimals: number) => {
+    const c = parseFloat(current);
+    const b = parseFloat(base);
+    if (isNaN(c) || isNaN(b)) return null;
+    const d = +(c - b).toFixed(decimals);
+    if (d === 0) return null;
+    return d;
+  };
+  const gpaDelta = numericDelta(gpa, baselineGpa, 2);
+  const satDelta = numericDelta(sat, baselineSat, 0);
+  const toeflDelta = numericDelta(toefl, baselineToefl, 0);
+  const ecDelta = ecTier - baselineEcTier;
+  const awardDelta = awardTier - baselineAwardTier;
+  // 확률 변화 막대의 너비 — Top 10 중 가장 큰 절대값 기준으로 normalize.
+  const maxAbsDiff = diffs.length > 0 ? Math.max(...diffs.map((d) => Math.abs(d.diff))) : 0;
+
   /* ═══ RENDER ═══ */
   const statusBlock = (
     <>
@@ -309,7 +359,10 @@ function WhatIfPageInner() {
 
         {/* GPA */}
         <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">GPA (Unweighted)</label>
+          <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+            GPA (Unweighted)
+            {gpaDelta != null && <DeltaPill value={gpaDelta} formatted={`${gpaDelta > 0 ? "+" : ""}${gpaDelta.toFixed(2)}`} />}
+          </label>
           <Input
             type="number"
             inputMode="decimal"
@@ -325,7 +378,10 @@ function WhatIfPageInner() {
 
         {/* SAT */}
         <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">SAT</label>
+          <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+            SAT
+            {satDelta != null && <DeltaPill value={satDelta} formatted={`${satDelta > 0 ? "+" : ""}${satDelta}`} />}
+          </label>
           <Input
             type="number"
             inputMode="numeric"
@@ -340,7 +396,10 @@ function WhatIfPageInner() {
 
         {/* TOEFL */}
         <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">TOEFL</label>
+          <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+            TOEFL
+            {toeflDelta != null && <DeltaPill value={toeflDelta} formatted={`${toeflDelta > 0 ? "+" : ""}${toeflDelta}`} />}
+          </label>
           <Input
             type="number"
             inputMode="numeric"
@@ -355,7 +414,10 @@ function WhatIfPageInner() {
 
         {/* EC Tier */}
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">비교과 (EC) 등급</label>
+          <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+            비교과 (EC) 등급
+            {ecDelta !== 0 && <DeltaPill value={-ecDelta} formatted={`${ecDelta < 0 ? "↑" : "↓"}${Math.abs(ecDelta)}단계`} />}
+          </label>
           <div className="flex gap-2">
             {([1, 2, 3, 4] as const).map((t) => (
               <Button
@@ -379,7 +441,10 @@ function WhatIfPageInner() {
 
         {/* Award Tier */}
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">수상 등급 (가장 높은 수상 1개 기준)</label>
+          <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+            수상 등급 (가장 높은 수상 1개 기준)
+            {awardDelta !== 0 && <DeltaPill value={awardDelta} formatted={`${awardDelta > 0 ? "+" : ""}${awardDelta}단계`} />}
+          </label>
           <div className="flex gap-2 flex-wrap">
             {([0, 1, 2, 3, 4] as const).map((t) => (
               <Button
@@ -650,35 +715,56 @@ function WhatIfPageInner() {
             {diffs.map((d) => {
               const improved = d.diff > 0;
               const catChanged = d.baseCat !== d.newCat;
+              // 좌우 대칭 막대 — 중앙선(0) 기준 + 오른쪽(증가)·- 왼쪽(감소).
+              const barPct = maxAbsDiff > 0 ? (Math.abs(d.diff) / maxAbsDiff) * 50 : 0;
               return (
-                <div key={d.name} className="flex items-center gap-3 rounded-xl border p-3">
-                  {/* school color dot */}
-                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color || "#6366f1" }} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{d.name}</p>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                      <span>{d.baseProb}%</span>
-                      <span>→</span>
-                      <span className="font-medium text-foreground">{d.newProb}%</span>
-                      {catChanged && (
-                        <span className="text-xs ml-1 text-muted-foreground">
-                          ({d.baseCat} → {d.newCat})
-                        </span>
-                      )}
+                <div key={d.name} className="rounded-xl border p-3 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color || "#6366f1" }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">{d.name}</p>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                        <span>{d.baseProb}%</span>
+                        <span>→</span>
+                        <span className="font-medium text-foreground">{d.newProb}%</span>
+                        {catChanged && (
+                          <span className="text-xs ml-1 text-muted-foreground">
+                            ({d.baseCat} → {d.newCat})
+                          </span>
+                        )}
+                      </div>
                     </div>
+                    <Badge
+                      variant="outline"
+                      className={`shrink-0 gap-0.5 text-xs font-semibold ${
+                        improved
+                          ? "border-emerald-300 text-emerald-700 bg-emerald-50 dark:bg-emerald-900/20"
+                          : "border-red-300 text-red-600 bg-red-50 dark:bg-red-900/20"
+                      }`}
+                    >
+                      {improved ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                      {improved ? `+${d.diff}%` : `${d.diff}%`}
+                    </Badge>
                   </div>
-                  {/* diff badge */}
-                  <Badge
-                    variant="outline"
-                    className={`shrink-0 gap-0.5 text-xs font-semibold ${
-                      improved
-                        ? "border-emerald-300 text-emerald-700 bg-emerald-50"
-                        : "border-red-300 text-red-600 bg-red-50"
-                    }`}
+                  {/* 학교별 ±% 막대 — 중앙 기준 좌우 발산 */}
+                  <div
+                    className="relative h-1.5 rounded-full bg-muted/60 overflow-hidden"
+                    role="img"
+                    aria-label={`${d.name} 합격 확률 ${improved ? "증가" : "감소"} ${Math.abs(d.diff)}%`}
                   >
-                    {improved ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                    {improved ? `+${d.diff}%` : `${d.diff}%`}
-                  </Badge>
+                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-border" aria-hidden="true" />
+                    <div
+                      className={`absolute top-0 bottom-0 transition-[width,left] duration-300 ease-toss ${
+                        improved ? "bg-emerald-500" : "bg-red-500"
+                      }`}
+                      style={
+                        improved
+                          ? { left: "50%", width: `${barPct}%` }
+                          : { right: "50%", width: `${barPct}%` }
+                      }
+                      aria-hidden="true"
+                    />
+                  </div>
                 </div>
               );
             })}

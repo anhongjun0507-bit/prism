@@ -102,28 +102,47 @@ export async function GET(req: NextRequest) {
     // Step 4: Create Firebase custom token
     const customToken = await auth.createCustomToken(firebaseUid);
 
-    // Step 5: Return HTML that signs in via popup messaging.
-    // postMessage 두 번째 인자에 명시적 origin 전달 → 다른 origin의 페이지가 opener를 가장해도 토큰 못 받음
-    // state는 그대로 opener에 돌려보내 opener가 자기 sessionStorage 값과 대조 (CSRF).
+    // Step 5: 클라이언트에 customToken을 전달.
+    // 두 가지 흐름 모두 지원:
+    //   (a) 데스크톱 popup: window.opener가 존재 → postMessage로 전달 후 popup close.
+    //   (b) 모바일·인앱 redirect: opener가 없거나 closed → sessionStorage에 token+state 저장 후 홈으로 navigate.
+    //       AuthProvider 부팅 effect가 sessionStorage에서 token을 소비해 signInWithCustomToken 호출.
+    // postMessage 두 번째 인자에 명시적 origin 전달 → 다른 origin의 페이지가 opener를 가장해도 토큰 못 받음.
     return new NextResponse(
       `<!DOCTYPE html><html><body>
         <script>
           (function() {
             var TARGET_ORIGIN = ${JSON.stringify(targetOrigin)};
-            try {
-              window.opener && window.opener.postMessage({
-                type: "kakao-login-success",
-                customToken: ${JSON.stringify(customToken)},
-                state: ${JSON.stringify(state)}
-              }, TARGET_ORIGIN);
-            } catch (e) {
-              window.opener && window.opener.postMessage({
-                type: "kakao-login-error",
-                error: String(e && e.message || e),
-                state: ${JSON.stringify(state)}
-              }, TARGET_ORIGIN);
+            var TOKEN = ${JSON.stringify(customToken)};
+            var STATE = ${JSON.stringify(state)};
+            var hasOpener = false;
+            try { hasOpener = !!(window.opener && !window.opener.closed); } catch (_) { hasOpener = false; }
+
+            if (hasOpener) {
+              try {
+                window.opener.postMessage({
+                  type: "kakao-login-success",
+                  customToken: TOKEN,
+                  state: STATE
+                }, TARGET_ORIGIN);
+              } catch (e) {
+                window.opener.postMessage({
+                  type: "kakao-login-error",
+                  error: String(e && e.message || e),
+                  state: STATE
+                }, TARGET_ORIGIN);
+              }
+              try { window.close(); } catch (_) { /* cross-origin */ }
+              return;
             }
-            window.close();
+
+            // Redirect 모드: 토큰을 sessionStorage에 저장 후 홈으로 navigate.
+            // 동일 origin이므로 sessionStorage가 후속 페이지에서도 읽힘.
+            try {
+              sessionStorage.setItem("prism_kakao_token", TOKEN);
+              sessionStorage.setItem("prism_kakao_state_returned", STATE);
+            } catch (_) { /* private mode 등 */ }
+            window.location.replace("/");
           })();
         </script>
         <p>로그인 처리 중...</p>

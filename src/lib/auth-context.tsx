@@ -2,12 +2,14 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from "react";
 import {
-  onAuthStateChanged, signInWithPopup, signOut, signInWithCustomToken,
+  onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult,
+  signOut, signInWithCustomToken,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   updateProfile, sendPasswordResetEmail,
   User,
 } from "firebase/auth";
 import { auth, googleProvider, appleProvider, db } from "./firebase";
+import { shouldUseRedirectAuth, isKakaoTalkInApp } from "./auth-helpers";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
 import type { PlanType, BillingCycle } from "./plans";
 // matchSchools는 server-only. snapshot 생성 시 dreamProb·catCounts는
@@ -157,6 +159,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: u.displayName || "Master", grade: "", dreamSchool: "", major: "", onboarded: false, plan: "elite",
     });
 
+    // 부팅 시 1회: redirect 기반 OAuth 결과 hydrate.
+    // - Google/Apple: signInWithRedirect 이후 페이지가 redirect로 복귀하면 getRedirectResult가 1회 결과를 돌려준다.
+    //   onAuthStateChanged가 어차피 user를 set하므로 우리는 에러 케이스만 신경쓰면 됨.
+    // - Kakao: callback이 sessionStorage에 customToken을 저장해두면 그걸 소비해 signInWithCustomToken 호출.
+    //   state는 redirect 모드에서도 클라이언트 sessionStorage에 미리 저장된 값과 대조 → CSRF.
+    getRedirectResult(auth).catch((e) => {
+      logError("[auth] getRedirectResult failed:", e);
+    });
+    try {
+      const kakaoToken = sessionStorage.getItem("prism_kakao_token");
+      const kakaoStateReturned = sessionStorage.getItem("prism_kakao_state_returned");
+      const kakaoStateExpected = sessionStorage.getItem("prism_kakao_state");
+      if (kakaoToken && kakaoStateReturned && kakaoStateExpected && kakaoStateReturned === kakaoStateExpected) {
+        sessionStorage.removeItem("prism_kakao_token");
+        sessionStorage.removeItem("prism_kakao_state_returned");
+        sessionStorage.removeItem("prism_kakao_state");
+        signInWithCustomToken(auth, kakaoToken).catch((e) => {
+          logError("[auth] kakao redirect token signIn failed:", e);
+        });
+      } else if (kakaoToken) {
+        // state 불일치 — 토큰 파기 (CSRF 의심)
+        sessionStorage.removeItem("prism_kakao_token");
+        sessionStorage.removeItem("prism_kakao_state_returned");
+      }
+    } catch { /* private mode 등 sessionStorage 접근 실패 */ }
+
     const unsub = onAuthStateChanged(auth, (u) => {
       cleanup(); // 이전 사용자의 profile 구독 해제
       setUser(u);
@@ -224,7 +252,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [isMaster]);
 
   const loginWithGoogle = async () => {
-    await signInWithPopup(auth, googleProvider);
+    // 모바일·iOS Safari·인앱브라우저는 popup이 차단·silent fail이 잦아 redirect로 분기.
+    // 데스크톱은 popup이 즉시 결과를 주므로 그대로 유지.
+    // redirect 결과는 onAuthStateChanged + getRedirectResult가 부팅 시 한 번에 처리.
+    if (shouldUseRedirectAuth()) {
+      await signInWithRedirect(auth, googleProvider);
+      return; // 페이지가 곧 unload — 이후 코드 실행 안 됨
+    }
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (e: unknown) {
+      // popup 차단·열림 실패 시 redirect로 fallback. 사용자 클릭 직후이므로
+      // navigation은 즉시 허용됨.
+      const code = (e && typeof e === "object" && "code" in e) ? (e as { code: string }).code : "";
+      if (code === "auth/popup-blocked" || code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+        await signInWithRedirect(auth, googleProvider);
+        return;
+      }
+      throw e;
+    }
   };
 
   const signUpWithEmail = async (email: string, password: string, name: string) => {
@@ -251,10 +297,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithKakao = async () => {
     // Kakao login via REST API → Firebase custom token.
-    // 팝업으로 Kakao OAuth 열고, callback 라우트가 postMessage로 customToken 전달 → signInWithCustomToken.
+    // 흐름:
+    //   1) 데스크톱: popup으로 Kakao OAuth → callback이 postMessage로 customToken 반환 → signInWithCustomToken.
+    //   2) 모바일/인앱브라우저: 전체 페이지 redirect → callback이 token을 sessionStorage에 임시 저장 후 홈으로 복귀 → 부팅 시 hydration.
+    //   3) 카카오톡 인앱: WebView 한계로 OAuth 자체가 깨짐 → 명확한 안내 메시지로 외부 브라우저 유도.
     const KAKAO_CLIENT_ID = process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID;
     if (!KAKAO_CLIENT_ID) {
       throw new Error("카카오 로그인이 아직 설정되지 않았습니다.");
+    }
+
+    // 카카오톡 인앱브라우저는 자체 WebView가 OAuth domain 호출을 제한적으로 처리해
+    // 로그인이 거의 실패한다. 외부 브라우저로 열어달라는 안내가 가장 안정적.
+    if (isKakaoTalkInApp()) {
+      throw new Error("카카오톡 안에서는 로그인이 어려워요. 우측 상단 메뉴에서 ‘다른 브라우저로 열기’를 눌러주세요.");
     }
 
     // CSRF 방어: 랜덤 state를 sessionStorage에 저장 → callback popup이 되돌려준 state와 대조.
@@ -268,11 +323,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {}
 
     const redirectUri = `${window.location.origin}/api/auth/kakao/callback`;
-    const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&state=${encodeURIComponent(state)}`;
 
+    // 모바일·인앱브라우저는 popup 차단·UX 어색 → 전체 페이지 redirect.
+    // mode=redirect를 query에 실어 callback이 postMessage 대신 home redirect를 선택하게 한다.
+    if (shouldUseRedirectAuth()) {
+      const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&state=${encodeURIComponent(state)}&prism_mode=redirect`;
+      window.location.href = kakaoAuthUrl;
+      // 페이지가 곧 unload — Promise를 resolve하지 않아도 무방. 호출자는 navigation을 기다리지 않음.
+      return new Promise<void>(() => {});
+    }
+
+    const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&state=${encodeURIComponent(state)}`;
     const popup = window.open(kakaoAuthUrl, "kakao-login", "width=480,height=700");
     if (!popup) {
-      throw new Error("팝업이 차단되었어요. 팝업 차단을 해제하고 다시 시도해주세요.");
+      // popup 차단 시 redirect로 자동 fallback — 사용자에게 별도 액션 요구 안 함.
+      window.location.href = `${kakaoAuthUrl}&prism_mode=redirect`;
+      return new Promise<void>(() => {});
     }
 
     // 같은 origin의 콜백 페이지만 신뢰 — 다른 origin의 위장 메시지 차단
@@ -346,7 +412,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const loginWithApple = async () => {
-    await signInWithPopup(auth, appleProvider);
+    if (shouldUseRedirectAuth()) {
+      await signInWithRedirect(auth, appleProvider);
+      return;
+    }
+    try {
+      await signInWithPopup(auth, appleProvider);
+    } catch (e: unknown) {
+      const code = (e && typeof e === "object" && "code" in e) ? (e as { code: string }).code : "";
+      if (code === "auth/popup-blocked" || code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+        await signInWithRedirect(auth, appleProvider);
+        return;
+      }
+      throw e;
+    }
   };
 
   const logout = async () => {

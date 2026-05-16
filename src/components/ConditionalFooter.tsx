@@ -5,6 +5,7 @@ import { Footer } from "./Footer";
 
 const PUBLIC_ROUTES = [
   "/",
+  "/login",
   "/pricing",
   "/sample-report",
   "/terms",

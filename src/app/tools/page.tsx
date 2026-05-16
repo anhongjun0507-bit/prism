@@ -172,7 +172,7 @@ function ToolsPageInner() {
               >
                 <Card
                   className={cn(
-                    "hover-card p-4 rounded-2xl bg-card shadow-sm h-full flex flex-col gap-2.5 relative",
+                    "hover-card p-5 rounded-2xl bg-card shadow-sm h-full min-h-[176px] flex flex-col gap-3 relative",
                     isRecommended
                       ? "border-2 border-primary/50 shadow-md"
                       : "border border-border/60",
@@ -187,14 +187,14 @@ function ToolsPageInner() {
                     </Badge>
                   )}
                   <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center",
+                    "w-11 h-11 rounded-xl flex items-center justify-center",
                     isRecommended ? "bg-primary/15" : "bg-primary/10",
                   )}>
-                    <Icon className="w-5 h-5 text-primary" aria-hidden="true" />
+                    <Icon className="w-6 h-6 text-primary" aria-hidden="true" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold">{label}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{desc}</p>
+                    <p className="text-base font-semibold leading-tight">{label}</p>
+                    <p className="text-[13px] text-muted-foreground mt-1 leading-snug">{desc}</p>
                   </div>
                   <p className="mt-auto pl-2 border-l-2 border-primary/30 text-2xs text-primary/75 leading-snug">
                     {useWhen}

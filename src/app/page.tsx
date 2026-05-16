@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { AuthSection } from "@/components/landing/AuthSection";
 import { SampleReportShowcase } from "@/components/landing/SampleReportShowcase";
 import { TrustSignalBar } from "@/components/landing/TrustSignalBar";
@@ -8,6 +9,7 @@ import { FAQAccordion } from "@/components/landing/FAQAccordion";
 import { PrismLogo } from "@/components/brand/PrismLogo";
 import { OnboardingSlides } from "@/components/landing/OnboardingSlides";
 import { AsideHighlights } from "@/components/landing/AsideHighlights";
+import { InteractiveHeroDemo } from "@/components/landing/InteractiveHeroDemo";
 import { LANDING_FAQS } from "@/lib/landing-faq";
 
 export const metadata: Metadata = {
@@ -95,8 +97,9 @@ export default function LandingPage() {
         className="brand-orb brand-orb-mesh brand-orb-violet top-1/3 -right-32 w-80 h-80 opacity-25 dark:opacity-15"
         aria-hidden="true"
       />
+      {/* 하단 orb — 푸터 가독성 저하 방지로 amber → indigo/primary tint, opacity 더 낮춤. */}
       <div
-        className="brand-orb brand-orb-mesh brand-orb-amber -bottom-20 left-1/4 w-72 h-72 opacity-20 dark:opacity-12"
+        className="brand-orb brand-orb-mesh brand-orb-primary -bottom-20 left-1/4 w-72 h-72 opacity-10 dark:opacity-8"
         aria-hidden="true"
       />
 
@@ -155,6 +158,11 @@ export default function LandingPage() {
           </div>
         </header>
 
+        {/* ═══ Interactive demo — 가입 전 즉시 체감, GPA·SAT 슬라이더로 3개 학교 합격 확률 미리보기 ═══ */}
+        <div className="w-full mb-6">
+          <InteractiveHeroDemo />
+        </div>
+
         {/* ═══ Trust signals — 3 metrics directly under hero ═══ */}
         <TrustSignalBar />
         {/* 임계값 미달이면 자체 숨김 — 출시 직후엔 보이지 않다가 데이터 누적되면 자동 노출. */}
@@ -187,9 +195,13 @@ export default function LandingPage() {
           </p>
         </section>
 
-        {/* ═══ Client-side Auth UI — mobile/tablet inline. lg+ 에서는 우측 sticky 칼럼이 대신함 ═══ */}
-        <div className="w-full lg:hidden">
-          <AuthSection />
+        {/* ═══ Client-side Auth UI — mobile/tablet inline. lg+ 에서는 우측 sticky 칼럼이 대신함 ═══
+            AuthSection이 useSearchParams로 returnTo를 읽으므로 Suspense로 감싸 정적 렌더 호환.
+            id="auth" 앵커 — PublicHeader의 "지금 무료 시작" CTA가 스크롤 타깃으로 사용. */}
+        <div id="auth" className="w-full lg:hidden scroll-mt-20">
+          <Suspense fallback={<div className="h-72" aria-hidden="true" />}>
+            <AuthSection />
+          </Suspense>
         </div>
 
         {/* ═══ How it works — 3 simple steps ═══ */}
@@ -249,15 +261,18 @@ export default function LandingPage() {
 
         {/* ═══ Right column on lg+: Auth, sticky so always visible ═══ */}
         <aside
+          id="auth"
           aria-label="로그인"
-          className="hidden lg:block lg:sticky lg:top-12 lg:self-start w-full"
+          className="hidden lg:block lg:sticky lg:top-20 lg:self-start w-full scroll-mt-20"
         >
           <div className="rounded-3xl bg-card/70 dark:bg-card/40 backdrop-blur-md border border-border/60 shadow-xl shadow-primary/5 p-6">
             <p className="text-sm font-semibold text-foreground mb-1">3초 안에 시작</p>
             <p className="text-xs text-muted-foreground mb-5">
               GPA·SAT만 있으면 1,001개 대학 합격 확률이 열려요.
             </p>
-            <AuthSection />
+            <Suspense fallback={<div className="h-72" aria-hidden="true" />}>
+              <AuthSection />
+            </Suspense>
           </div>
           {/* 1920px 우측 aside 빈 공간 보강 — 모바일/태블릿은 hidden lg:block 부모가 차단해 중복 없음. */}
           <AsideHighlights />

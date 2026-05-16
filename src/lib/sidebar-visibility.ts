@@ -13,7 +13,7 @@ export function shouldShowSidebar(
   authLoading: boolean,
 ): boolean {
   if (authLoading || !isAuthenticated) return false;
-  if (pathname === "/" || pathname === "/onboarding") return false;
+  if (pathname === "/" || pathname === "/onboarding" || pathname === "/login") return false;
   if (pathname.startsWith("/parent-view/")) return false;
   return true;
 }

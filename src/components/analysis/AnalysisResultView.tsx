@@ -217,27 +217,65 @@ export function AnalysisResultView({ specs, onBack, toggleFavorite, isFavorite }
           <p className="text-2xs text-white/40 mt-3 text-center">탭하여 카테고리별 필터</p>
         </Card>
 
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-            <Input
-              placeholder="대학교 검색..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-10 rounded-xl bg-muted/50 dark:bg-card/60 border-none text-sm"
-            />
+        {/* 검색/정렬·카테고리 칩 — 페이지 스크롤 중에도 sticky로 유지 */}
+        <div className="sticky top-0 z-20 -mx-gutter-sm md:-mx-gutter px-gutter-sm md:px-gutter pt-2 pb-3 bg-background/95 backdrop-blur-sm space-y-2 border-b border-border/50">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="대학교 검색..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-10 rounded-xl bg-muted/50 dark:bg-card/60 border-none text-sm"
+              />
+            </div>
+            <button
+              onClick={() => {
+                const next: SortMode = sortBy === "probDesc" ? "probAsc" : sortBy === "probAsc" ? "rank" : "probDesc";
+                setSortBy(next);
+              }}
+              className="h-10 px-3 rounded-xl bg-muted/50 dark:bg-card/60 text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap hover:bg-muted transition-colors"
+              title="정렬 기준 변경"
+            >
+              {sortBy === "probDesc" ? "확률 높은 순" : sortBy === "probAsc" ? "도전 먼저" : "랭킹 순"}
+              <TrendingUp className={`w-3.5 h-3.5 ${sortBy === "probAsc" ? "rotate-180" : ""} transition-transform`} />
+            </button>
           </div>
-          <button
-            onClick={() => {
-              const next: SortMode = sortBy === "probDesc" ? "probAsc" : sortBy === "probAsc" ? "rank" : "probDesc";
-              setSortBy(next);
-            }}
-            className="h-10 px-3 rounded-xl bg-muted/50 dark:bg-card/60 text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap hover:bg-muted transition-colors"
-            title="정렬 기준 변경"
-          >
-            {sortBy === "probDesc" ? "확률 높은 순" : sortBy === "probAsc" ? "도전 먼저" : "랭킹 순"}
-            <TrendingUp className={`w-3.5 h-3.5 ${sortBy === "probAsc" ? "rotate-180" : ""} transition-transform`} />
-          </button>
+          {/* hero 카테고리 그리드가 viewport에서 사라져도 빠르게 카테고리 좁힐 수 있도록 compact 칩 */}
+          {results.length > 0 && (
+            <div
+              className="flex gap-1.5 overflow-x-auto scrollbar-none"
+              role="tablist"
+              aria-label="카테고리 빠른 필터"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={filterCat === null}
+                onClick={() => setFilterCat(null)}
+                className={`shrink-0 h-7 px-3 rounded-full text-2xs font-semibold transition-colors ${filterCat === null ? "bg-primary text-white" : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+              >
+                전체 {results.length}
+              </button>
+              {CAT_ORDER.map((cat) => {
+                const count = results.filter((s) => s.cat === cat).length;
+                if (count === 0) return null;
+                const isActive = filterCat === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    onClick={() => setFilterCat(isActive ? null : cat)}
+                    className={`shrink-0 h-7 px-3 rounded-full text-2xs font-semibold transition-colors ${isActive ? "bg-primary text-white" : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                  >
+                    {cat} {count}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 

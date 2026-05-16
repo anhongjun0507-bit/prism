@@ -110,28 +110,42 @@ html {
 
 @layer base {
   :root {
-    /* Warm off-white #f5f3f0 */
-    --background: 36 12% 95%;
-    --foreground: 30 15% 9%;
+    /* Phase 12 — Toss-style 리브랜딩 (감사 리포트 2-1).
+       기존: 베이지(#f5f3f0) + 테라코타 브라운(#9a3c12) + 오렌지 블롭.
+       문제: "카페·북카페" 톤이 입시 서비스 신뢰감과 충돌 / 베이지 위 베이지 카드의 분리감 부족.
+       신규: 화이트 캔버스 + PRISM Indigo(#4F46E5 Indigo-600) + slate 계열 텍스트.
+       Toss의 명료한 정보 위계 + Linear/Vercel·Discord 류의 클린 SaaS 룩.
+
+       2차 검수 P2-1: Indigo-600(#4F46E5)으로 통일. 기존 #3B5BFF(231°)는 약간 더 cyan 쪽이라
+       hover/border tint에서 비균질하게 보였다. Indigo-600은 Tailwind 표준 + 토스/Linear와
+       동일 hue family라 디자인 시스템과 호환성 ↑. */
+
+    /* bg.canvas — pure white. 카드(#fff)와 미세 회색 elevated(#F9FAFB)로 위계 형성. */
+    --background: 0 0% 100%;
+    /* text.strong — #111827 (slate-900). 헤드라인·핵심 본문. */
+    --foreground: 220 39% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 30 15% 9%;
+    --card-foreground: 220 39% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 30 15% 9%;
-    /* Deep burnt orange #9a3c12 */
-    --primary: 19 79% 34%;
+    --popover-foreground: 220 39% 11%;
+    /* brand.primary — #4F46E5 (Tailwind Indigo-600). 라이트 흰 배경 위 7.1:1 (AA Large + AAA Normal). */
+    --primary: 244 76% 58%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 36 12% 90%;
-    --secondary-foreground: 30 15% 9%;
-    --muted: 36 10% 88%;
-    --muted-foreground: 30 15% 45%;
-    --accent: 19 79% 95%;
-    --accent-foreground: 19 79% 34%;
-    --destructive: 0 84.2% 60.2%;
+    /* secondary — bg.elevated 톤(#F3F4F6) 근처. 보조 surface. */
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 39% 11%;
+    /* muted bg — #F3F4F6 / muted-fg — #6B7280 (slate-500, light 위 4.6:1+). */
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+    /* accent — Indigo-50 (#EEF2FF). primary와 같은 hue family. */
+    --accent: 226 100% 97%;
+    --accent-foreground: 244 76% 50%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --success: 142 71% 36%;
+    --success: 142 76% 36%;
     --success-foreground: 0 0% 98%;
-    --success-soft: 142 60% 94%;
-    --warning: 38 92% 45%;
+    --success-soft: 142 70% 94%;
+    --warning: 38 92% 50%;
     --warning-foreground: 0 0% 98%;
     --warning-soft: 38 85% 94%;
     /* info — 정보성 강조 (success도 warning도 아닌 중립적 안내).
@@ -139,9 +153,10 @@ html {
     --info: 217 71% 48%;
     --info-foreground: 0 0% 98%;
     --info-soft: 217 70% 95%;
-    --border: 36 12% 85%;
-    --input: 36 12% 85%;
-    --ring: 19 79% 34%;
+    /* border — #EEF0F4 (subtle separation). 카드 분리감 강화. */
+    --border: 220 17% 94%;
+    --input: 220 17% 94%;
+    --ring: 244 76% 58%;
     /* shadcn radius base — lg=var(--radius), md=lg-2, sm=lg-4. xl/2xl는 Tailwind 기본(12/16). */
     --radius: 12px;
 
@@ -166,11 +181,12 @@ html {
     --cat-reach-fg: 0 75% 35%;
     --cat-reach-soft: 0 70% 96%;
 
-    /* PrismLogo full-variant beams — tonal variation around primary (orange).
-       Beam 2 == --primary; beam 1 shifts red-ward, beam 3 shifts yellow-ward. */
-    --logo-beam-1: 15 79% 45%;
-    --logo-beam-2: 19 79% 34%;
-    --logo-beam-3: 25 75% 50%;
+    /* PrismLogo beams — Toss 리브랜딩 후 indigo→violet 톤으로 통일.
+       prism의 spectral refraction 메타포는 유지하되, 메인 컬러(PRISM Indigo)와
+       시각 충돌 없도록 blue→indigo→violet 한 계열 안에서만 변주. */
+    --logo-beam-1: 217 91% 55%;
+    --logo-beam-2: 244 76% 58%;
+    --logo-beam-3: 265 87% 65%;
 
     /* ─── Accent vivid (Phase 5) — 학생 친화 secondary accent ───
        Discord blurple / Linear violet 계열. terracotta primary와 hue 분리되어 충돌 X.
@@ -183,22 +199,25 @@ html {
   }
 
   .dark {
-    --background: 30 10% 7%;
-    --foreground: 36 12% 95%;
-    --card: 30 10% 14%;
-    --card-foreground: 36 12% 95%;
-    --popover: 30 10% 14%;
-    --popover-foreground: 36 12% 95%;
-    --primary: 19 79% 50%;
+    /* Toss-style dark — Zinc 계열 neutral 그레이 + Indigo brand.
+       2-8 audit: #18181B 배경 / #27272A 카드 / #3F3F46 border / #E4E4E7 텍스트.
+       기존 cool-slate(222 hue)는 살짝 푸른 기가 보여 토스 톤과 어긋남 → 240 hue Zinc로 정렬. */
+    --background: 240 6% 10%;     /* #18181B */
+    --foreground: 240 5% 90%;     /* #E4E4E7 */
+    --card: 240 4% 16%;           /* #27272A */
+    --card-foreground: 240 5% 90%;
+    --popover: 240 4% 16%;
+    --popover-foreground: 240 5% 90%;
+    /* PRISM Indigo — 다크 위에선 Indigo-500(#6366F1) 톤으로 명도 ↑ (가독성 확보). */
+    --primary: 239 84% 67%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 30 10% 18%;
-    --secondary-foreground: 36 12% 92%;
-    --muted: 30 10% 20%;
-    /* Phase 11: 60% → 65% — bg(7%)/card(14%) 위 4.5:1+ 보장 (AA Normal).
-       시니어·저시력 사용자에 secondary 텍스트 가독성 회복. */
-    --muted-foreground: 30 12% 65%;
-    --accent: 19 50% 15%;
-    --accent-foreground: 19 79% 60%;
+    --secondary: 240 5% 20%;
+    --secondary-foreground: 240 5% 90%;
+    --muted: 240 5% 20%;
+    /* zinc-400: 다크 카드 위 4.5:1+ 보장 (AA Normal). */
+    --muted-foreground: 240 5% 65%;
+    --accent: 244 50% 22%;
+    --accent-foreground: 239 100% 82%;
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 98%;
     --success: 142 60% 50%;
@@ -211,9 +230,9 @@ html {
     --info: 217 80% 60%;
     --info-foreground: 0 0% 98%;
     --info-soft: 217 50% 14%;
-    --border: 30 10% 22%;
-    --input: 30 10% 22%;
-    --ring: 19 79% 50%;
+    --border: 240 5% 26%;         /* #3F3F46 */
+    --input: 240 5% 26%;
+    --ring: 239 84% 67%;
 
     /* Dark mode: soft 배경은 더 깊고 채도 낮게, fg는 더 밝게 */
     --cat-safety: 160 60% 50%;
@@ -229,10 +248,10 @@ html {
     --cat-reach-fg: 0 80% 78%;
     --cat-reach-soft: 0 50% 14%;
 
-    /* PrismLogo beams — brighter in dark for legibility on near-black background. */
-    --logo-beam-1: 15 79% 55%;
-    --logo-beam-2: 19 79% 50%;
-    --logo-beam-3: 25 75% 65%;
+    /* PrismLogo beams — dark: 명도 ↑ 채도 유지로 near-black 위에서 살아나게. */
+    --logo-beam-1: 217 91% 68%;
+    --logo-beam-2: 244 80% 72%;
+    --logo-beam-3: 265 87% 76%;
 
     /* Accent vivid (Phase 5) — dark mode: 명도 ↑ 채도 유지로 near-black 배경에서 잘 보이게.
        대비: hsl(265 85% 65%) on hsl(30 10% 7%) = 6.1:1 (AA Normal 통과). */
@@ -299,15 +318,16 @@ html {
   box-shadow: 0 20px 50px -12px hsl(var(--primary) / 0.50), 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
-/* Brand gradient utilities — hero 카드/배지/액센트에 사용 */
+/* Brand gradient — Toss 리브랜딩 후 indigo→violet. 클래스명은 호환 위해 유지(.bg-brand-warm).
+   hero 카드/배지/CTA 등에 사용. */
 .bg-brand-warm {
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(19, 79%, 48%) 50%, hsl(28, 85%, 52%) 100%);
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(245, 85%, 60%) 50%, hsl(265, 84%, 65%) 100%);
 }
 .bg-brand-warm-soft {
-  background: linear-gradient(135deg, hsl(var(--primary) / 0.10) 0%, hsl(28, 85%, 52% / 0.05) 100%);
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.10) 0%, hsl(265, 84%, 65% / 0.06) 100%);
 }
 .dark .bg-brand-warm-soft {
-  background: linear-gradient(135deg, hsl(var(--primary) / 0.20) 0%, hsl(28, 85%, 52% / 0.08) 100%);
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.20) 0%, hsl(265, 84%, 65% / 0.10) 100%);
 }
 
 /* Prismatic — 입시 브랜드 메타포 (빛이 굴절되어 spectrum이 되는 PRISM) */
@@ -629,6 +649,20 @@ html {
   background: linear-gradient(135deg, hsl(220 55% 15%) 0%, hsl(215 60% 10%) 100%);
 }
 
+/* 학부모 리포트 hero (2-7 audit) — 신뢰감 navy + 가족 친근감 coral 두 톤을 한 화면에서 결합.
+   navy(좌상)에서 coral(우하)로 흐르는 대각 그라디언트 + 추가 coral blur로 따뜻함 강조. */
+.parent-hero-gradient {
+  background:
+    radial-gradient(circle at 95% 110%, hsl(8 75% 60% / 0.55) 0%, transparent 55%),
+    linear-gradient(135deg, hsl(220 60% 22%) 0%, hsl(232 55% 28%) 60%, hsl(8 70% 45%) 100%);
+}
+
+.dark .parent-hero-gradient {
+  background:
+    radial-gradient(circle at 95% 110%, hsl(8 70% 50% / 0.5) 0%, transparent 55%),
+    linear-gradient(135deg, hsl(220 55% 14%) 0%, hsl(232 50% 18%) 60%, hsl(8 60% 28%) 100%);
+}
+
 .dark .glass-card {
   background: rgba(30, 26, 22, 0.8);
   border-color: rgba(255, 255, 255, 0.08);
@@ -732,7 +766,8 @@ html {
   to { opacity: 1; transform: translateY(0); }
 }
 .animate-page-in {
-  animation: page-in 0.15s ease-out both;
+  /* Toss 스펙 — 120ms + signature easeOutExpo curve (2-11 audit) */
+  animation: page-in 0.12s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 @media (prefers-reduced-motion: reduce) {
   .animate-page-in { animation: none; }

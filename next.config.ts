@@ -59,6 +59,13 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // 외부 링크/SEO 호환 — /faq URL을 직접 입력하거나 외부에서 들어와도 404 대신
+  // 랜딩의 FAQ 섹션으로 안내. /help는 별도 상세 페이지라 보존.
+  async redirects() {
+    return [
+      { source: "/faq", destination: "/#faq", permanent: true },
+    ];
+  },
   images: {
     remotePatterns: [
       {

@@ -125,7 +125,10 @@ async function loadStudentContext(uid: string): Promise<LoadedProfile> {
     if (name) lines.push(`이름: ${name}`);
     if (grade) lines.push(`학년: ${grade}`);
     if (dreamSchool) lines.push(`목표 대학교: ${dreamSchool}`);
-    if (specsMajor) lines.push(`지망 전공: ${specsMajor}`);
+    // 전공은 hero-field — 다른 항목보다 강조해서 LLM이 절대 임의로 다른 전공(CS↔DS,
+    // Bio↔Biochem 등)으로 바꿔 부르지 못하게 한다. 2차 검수 1-8: AI 카운슬러가
+    // "Data Science"를 CS로 살짝 오해한 사례 대응.
+    if (specsMajor) lines.push(`★ 지망 전공: "${specsMajor}" (이 전공명 그대로 호명하세요. 임의로 다른 전공명으로 바꾸지 마세요)`);
     if (gpa || gpaUW) lines.push(`GPA: ${gpa || gpaUW}${gpaW ? ` (W ${gpaW})` : ""}`);
     if (sat) lines.push(`SAT: ${sat}`);
     if (act) lines.push(`ACT: ${act}`);
@@ -300,6 +303,12 @@ const SYSTEM_PROMPT = `당신은 '프리즘 선생님'이에요. 미국 대학 �
    - ✅ "OO님 SAT 1480이면 UIUC CS(중간 50% 1450-1550)에서 경쟁력 있어요"
 2. [익명 합격/불합격 사례]가 있으면 "비슷한 스펙의 학생이 ○○에 합격했어요"처럼 구체 사례로 근거 제시.
 3. 학생이 저장한 관심 학교가 있으면 해당 학교를 우선 예시로 사용하세요.
+4. **전공 명칭은 프로필에 적힌 표현 그대로 사용**하세요. 절대 임의로 비슷한 전공으로 바꾸지 마세요.
+   - ❌ "Data Science" → "CS" / "Computer Science"로 호명
+   - ❌ "Biochemistry" → "Biology" / "Bio"로 호명
+   - ❌ "Applied Math" → "Math" / "Mathematics"로 호명
+   - ✅ 프로필에 "Data Science"라고 되어있으면 답변에서도 "Data Science"
+   - 관련 분야 비교가 필요하면 "Data Science는 CS와 통계가 결합된 분야로…"처럼 학생 전공을 기준으로 설명하세요.
 
 # 응답 규칙
 1. 자연스러운 한국어 존댓말 ("~해요", "~이에요"). 번역체 절대 금지

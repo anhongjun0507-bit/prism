@@ -69,12 +69,16 @@ export function AnalysisFormWizard({ specs, updateSpec, onSubmit }: Props) {
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 <FormField label="GPA (Unweighted)" placeholder="3.5" type="number" step="0.01"
+                  min={0} max={4}
                   value={specs.gpaUW} onChange={(v) => updateSpec("gpaUW", v)} />
                 <FormField label="GPA (Weighted)" placeholder="4.0" type="number" step="0.01"
+                  min={0} max={5}
                   value={specs.gpaW} onChange={(v) => updateSpec("gpaW", v)} />
                 <FormField label="SAT" placeholder="1250" type="number"
+                  min={400} max={1600}
                   value={specs.sat} onChange={(v) => updateSpec("sat", v)} />
                 <FormField label="ACT" placeholder="28" type="number"
+                  min={1} max={36}
                   value={specs.act} onChange={(v) => updateSpec("act", v)} />
                 {(() => {
                   const sat = parseInt(specs.sat);
@@ -98,11 +102,14 @@ export function AnalysisFormWizard({ specs, updateSpec, onSubmit }: Props) {
                   );
                 })()}
                 <FormField label="TOEFL" placeholder="110" type="number"
+                  min={0} max={120}
                   value={specs.toefl} onChange={(v) => updateSpec("toefl", v)} />
                 <FormField label="IELTS" placeholder="7.5" type="number" step="0.5"
+                  min={0} max={9}
                   value={specs.ielts} onChange={(v) => updateSpec("ielts", v)} />
               </div>
               <FormField label="Class Rank (%)" placeholder="5" type="number"
+                min={1} max={100}
                 value={specs.classRank} onChange={(v) => updateSpec("classRank", v)} />
             </Card>
 
@@ -112,8 +119,10 @@ export function AnalysisFormWizard({ specs, updateSpec, onSubmit }: Props) {
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 <FormField label="AP 과목 수" placeholder="8" type="number"
+                  min={0} max={20}
                   value={specs.apCount} onChange={(v) => updateSpec("apCount", v)} />
                 <FormField label="AP 평균 점수 (1-5)" placeholder="4.5" type="number" step="0.1"
+                  min={1} max={5}
                   value={specs.apAvg} onChange={(v) => updateSpec("apAvg", v)} />
               </div>
               <div className="bg-accent/30 rounded-xl p-4">

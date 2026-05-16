@@ -14,6 +14,10 @@ export const SECTION_IDS = {
   HOME_ADMISSION_BANNER: "home_admission_banner",
   HOME_MY_SCHOOLS: "home_my_schools",
   HOME_UPGRADE_NUDGE: "home_upgrade_nudge",
+  HOME_METRIC_SAVED: "home_metric_saved",
+  HOME_METRIC_AVG_PROB: "home_metric_avg_prob",
+  HOME_METRIC_AI_CHAT: "home_metric_ai_chat",
+  HOME_METRIC_GROWTH: "home_metric_growth",
 
   // /insights
   INSIGHTS_STATS_DISTRIBUTION: "insights_stats_distribution",

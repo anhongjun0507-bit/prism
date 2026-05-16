@@ -394,19 +394,14 @@ function SpecAnalysisPageInner() {
                 <CheckCircle2 className="w-4 h-4" /> 강점
               </h3>
               {analysis.items.filter(i => i.status === "강점").map(s => (
-                <Card key={s.category} className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-bold text-sm text-emerald-900 dark:text-emerald-300">{s.category}</p>
-                    <Badge className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-none text-xs">{s.score}점</Badge>
-                  </div>
-                  <p className="text-sm text-emerald-800 dark:text-emerald-400 leading-relaxed mb-2">{s.feedback}</p>
-                  <div className="bg-white/60 dark:bg-emerald-950/40 rounded-lg p-2">
-                    <p className="text-xs text-emerald-900 dark:text-emerald-300 flex gap-1">
-                      <Lightbulb className="w-3 h-3 shrink-0 mt-0.5" />
-                      <span>{s.recommendation}</span>
-                    </p>
-                  </div>
-                </Card>
+                <WhyNextCard
+                  key={s.category}
+                  tone="emerald"
+                  category={s.category}
+                  score={s.score}
+                  why={s.feedback}
+                  next={s.recommendation}
+                />
               ))}
             </div>
           )}
@@ -418,19 +413,14 @@ function SpecAnalysisPageInner() {
                 <AlertCircle className="w-4 h-4" /> 보강 필요
               </h3>
               {analysis.items.filter(i => i.status === "약점").map(s => (
-                <Card key={s.category} className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="font-bold text-sm text-red-900 dark:text-red-300">{s.category}</p>
-                    <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-none text-xs">{s.score}점</Badge>
-                  </div>
-                  <p className="text-sm text-red-800 dark:text-red-400 leading-relaxed">{s.feedback}</p>
-                  <div className="bg-white dark:bg-red-950/40 rounded-lg p-2">
-                    <p className="text-xs text-red-900 dark:text-red-300 flex gap-1">
-                      <Lightbulb className="w-3 h-3 shrink-0 mt-0.5" />
-                      <span>{s.recommendation}</span>
-                    </p>
-                  </div>
-                </Card>
+                <WhyNextCard
+                  key={s.category}
+                  tone="red"
+                  category={s.category}
+                  score={s.score}
+                  why={s.feedback}
+                  next={s.recommendation}
+                />
               ))}
             </div>
           )}
@@ -561,5 +551,64 @@ function SpecAnalysisPageInner() {
 
       <BottomNav />
     </main>
+  );
+}
+
+/**
+ * 강점·약점 항목 카드. 분석 이유(Why)와 다음 행동(Next)을 2단으로 분리.
+ * 모바일은 세로 stack, lg부터 2-col grid — 시선이 좌→우로 자연스럽게 흐르도록.
+ */
+function WhyNextCard({
+  tone,
+  category,
+  score,
+  why,
+  next,
+}: {
+  tone: "emerald" | "red";
+  category: string;
+  score: number;
+  why: string;
+  next: string;
+}) {
+  const styles = tone === "emerald"
+    ? {
+        card: "bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800",
+        title: "text-emerald-900 dark:text-emerald-300",
+        body: "text-emerald-800 dark:text-emerald-400",
+        badge: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300",
+        nextBg: "bg-white/60 dark:bg-emerald-950/40",
+        nextText: "text-emerald-900 dark:text-emerald-300",
+        labelMuted: "text-emerald-700/70 dark:text-emerald-400/70",
+      }
+    : {
+        card: "bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800",
+        title: "text-red-900 dark:text-red-300",
+        body: "text-red-800 dark:text-red-400",
+        badge: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300",
+        nextBg: "bg-white dark:bg-red-950/40",
+        nextText: "text-red-900 dark:text-red-300",
+        labelMuted: "text-red-700/70 dark:text-red-400/70",
+      };
+  return (
+    <Card className={`p-4 ${styles.card}`}>
+      <div className="flex items-center justify-between mb-3">
+        <p className={`font-bold text-sm ${styles.title}`}>{category}</p>
+        <Badge className={`border-none text-xs ${styles.badge}`}>{score}점</Badge>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div>
+          <p className={`text-2xs font-bold uppercase tracking-wide mb-1 ${styles.labelMuted}`}>Why · 이유</p>
+          <p className={`text-sm leading-relaxed ${styles.body}`}>{why}</p>
+        </div>
+        <div className={`rounded-lg p-2.5 ${styles.nextBg}`}>
+          <p className={`text-2xs font-bold uppercase tracking-wide mb-1 ${styles.labelMuted}`}>Next · 다음 행동</p>
+          <p className={`text-xs leading-relaxed flex gap-1.5 ${styles.nextText}`}>
+            <Lightbulb className="w-3.5 h-3.5 shrink-0 mt-0.5" aria-hidden="true" />
+            <span>{next}</span>
+          </p>
+        </div>
+      </div>
+    </Card>
   );
 }

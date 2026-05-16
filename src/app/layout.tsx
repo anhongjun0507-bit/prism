@@ -23,6 +23,8 @@ import { AppShell } from "@/components/AppShell";
 import { StorageQuotaBanner } from "@/components/StorageQuotaBanner";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { ConditionalFooter } from "@/components/ConditionalFooter";
+import { PublicHeader } from "@/components/PublicHeader";
+import { MobileCTABar } from "@/components/MobileCTABar";
 import { SessionExpiryWatcher } from "@/components/SessionExpiryWatcher";
 import { I18nProvider } from "@/lib/i18n";
 
@@ -78,10 +80,11 @@ export const viewport: Viewport = {
   // (instead of overlaying), so sticky/100dvh inputs land above the keyboard.
   interactiveWidget: 'resizes-content',
   viewportFit: 'cover', // enable env(safe-area-inset-*) on iOS
-  // Light/dark별 theme-color → 모바일 status bar 색 자동
+  // Light/dark별 theme-color → 모바일 status bar 색 자동.
+  // Toss 리브랜딩 후: light는 화이트 캔버스(#FFFFFF), dark는 slate canvas(#0F1320).
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#9a3c12" },
-    { media: "(prefers-color-scheme: dark)", color: "#1a1714" },
+    { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
+    { media: "(prefers-color-scheme: dark)", color: "#0F1320" },
   ],
 };
 
@@ -149,6 +152,8 @@ export default function RootLayout({
                 {/* Desktop sidebar — lg+에서만 표시. 모바일은 BottomNav로 대체 (각 페이지가 직접 렌더). */}
                 <DesktopSidebar />
                 <AppShell>
+                  {/* 공개·마케팅 라우트 전용 sticky 헤더. 인증 라우트는 자체 사이드바·BottomNav가 대체. */}
+                  <PublicHeader />
                   {/* Content shell —
                         모바일·태블릿: max-w-md / md:max-w-2xl 중앙 정렬 (기존 mobile-first 디자인 보호).
                         lg+: cap 해제 — 페이지가 자체 lg:max-w-* 로 콘텐츠 폭을 통제하고,
@@ -157,6 +162,8 @@ export default function RootLayout({
                     <PageTransition>{children}</PageTransition>
                   </main>
                   <ConditionalFooter />
+                  {/* 모바일 공개 라우트 sticky CTA — hero AuthSection이 화면 밖일 때만 노출. */}
+                  <MobileCTABar />
                 </AppShell>
                 <Toaster />
                 <SessionExpiryWatcher />

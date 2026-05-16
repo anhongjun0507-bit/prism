@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
  */
 
 export function FormField({
-  label, inputMode, ...props
+  label, inputMode, min, max, hint, ...props
 }: {
   label: string;
   placeholder: string;
@@ -19,6 +19,11 @@ export function FormField({
   step?: string;
   /** 모바일 키보드 힌트. 미지정 시 type="number"는 step에 따라 decimal/numeric 자동 추론. */
   inputMode?: "text" | "decimal" | "numeric";
+  /** 숫자 입력 범위 — type="number"일 때만 적용. 범위 밖이면 비파괴적으로 inline 경고 표시. */
+  min?: number;
+  max?: number;
+  /** 보조 설명/단위 안내. min/max가 둘 다 있으면 자동으로 "(min-max 사이)"를 fallback으로 보여줌. */
+  hint?: string;
   value: string;
   onChange: (v: string) => void;
 }) {
@@ -30,6 +35,18 @@ export function FormField({
         ? "decimal"
         : "numeric"
       : undefined);
+
+  // 2차 검수 1-4: TOEFL/SAT 등 숫자 입력에 범위 검증 추가. min/max가 지정되면
+  // - HTML5 min/max attr 동시 적용 (브라우저 native 검증·모바일 키보드 힌트 호환)
+  // - 값이 범위 밖이면 inline 경고 (form submit은 막지 않고 user에게 visibility만 제공)
+  const num = props.type === "number" && props.value ? Number(props.value) : NaN;
+  const hasRange = props.type === "number" && (min != null || max != null);
+  const isOutOfRange =
+    hasRange && Number.isFinite(num)
+      ? (min != null && num < min) || (max != null && num > max)
+      : false;
+  const rangeHint = hint ?? (min != null && max != null ? `${min}–${max} 사이로 입력해주세요` : undefined);
+
   return (
     <div className="space-y-1.5">
       <Label htmlFor={id} className="text-xs text-muted-foreground">{label}</Label>
@@ -37,12 +54,25 @@ export function FormField({
         id={id}
         type={props.type}
         step={props.step}
+        min={min}
+        max={max}
         inputMode={resolvedInputMode}
         placeholder={props.placeholder}
         value={props.value}
         onChange={(e) => props.onChange(e.target.value)}
-        className="h-11 rounded-xl"
+        aria-invalid={isOutOfRange || undefined}
+        aria-describedby={rangeHint ? `${id}-hint` : undefined}
+        className={`h-11 rounded-xl ${
+          isOutOfRange ? "border-destructive focus-visible:ring-destructive" : ""
+        }`}
       />
+      {isOutOfRange ? (
+        <p id={`${id}-hint`} className="text-2xs text-destructive">
+          {rangeHint ?? `범위를 확인해주세요 (${min ?? "-"}–${max ?? "-"})`}
+        </p>
+      ) : rangeHint ? (
+        <p id={`${id}-hint`} className="text-2xs text-muted-foreground/80">{rangeHint}</p>
+      ) : null}
     </div>
   );
 }

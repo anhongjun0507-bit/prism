@@ -236,7 +236,40 @@ function EssaysPageInner() {
           setEssaysLoading(false);
           return;
         }
-        setEssays(list);
+        // 2차 검수 1-9: 0단어 14일 무변동 에세이 자동 archive.
+        // 사용자가 만들고 한 글자도 안 쓴 채 방치한 카드가 목록을 어지럽혀 "내가 진행 중인
+        // 에세이"가 무엇인지 흐려진다. 영구 삭제는 위험하므로 archived=true로 표시만 하고
+        // 메인 목록에서 숨김 — 데이터는 그대로 보존.
+        const ARCHIVE_THRESHOLD_MS = 14 * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        const toArchive: Essay[] = [];
+        const enriched = list.map((e) => {
+          if (e.archived) return e;
+          const trimmed = (e.content || "").trim();
+          if (trimmed.length > 0) return e;
+          const last = e.updatedAt ? Date.parse(e.updatedAt) : NaN;
+          if (!Number.isFinite(last)) return e;
+          if (now - last < ARCHIVE_THRESHOLD_MS) return e;
+          const archived: Essay = { ...e, archived: true, archivedAt: new Date().toISOString() };
+          toArchive.push(archived);
+          return archived;
+        });
+        if (toArchive.length > 0) {
+          // 비동기 firestore 배치 — UI는 즉시 archived로 표시되고, 쓰기 실패는 console에만.
+          (async () => {
+            try {
+              const batch = writeBatch(db);
+              const colWrite = collection(db, "users", user.uid, "essays");
+              for (const e of toArchive) {
+                batch.set(doc(colWrite, e.id), { archived: true, archivedAt: e.archivedAt }, { merge: true });
+              }
+              await batch.commit();
+            } catch (err) {
+              logError("[essays] auto-archive batch failed:", err);
+            }
+          })();
+        }
+        setEssays(enriched);
         setEssaysLoading(false);
       },
       (err) => { logError("[essays] snapshot error:", err); setEssaysLoading(false); }
@@ -352,6 +385,26 @@ function EssaysPageInner() {
 
   const wordCount = activeEssay ? countWords(activeEssay.content) : 0;
   const charCount = activeEssay?.content.length || 0;
+
+  // 리스트 뷰 필터 — 전체/AI 첨삭 받은 것/아직 안 받은 것/보관함(archived).
+  // 보관함은 별도 토글로 두어 "본 작업"과 "정리된 것"을 분리.
+  const [listFilter, setListFilter] = useState<"all" | "reviewed" | "draft" | "archived">("all");
+  const filterCounts = useMemo(() => {
+    const active = essays.filter((e) => !e.archived);
+    return {
+      all: active.length,
+      reviewed: active.filter((e) => (e.reviews ?? []).length > 0).length,
+      draft: active.filter((e) => (e.reviews ?? []).length === 0).length,
+      archived: essays.filter((e) => e.archived).length,
+    };
+  }, [essays]);
+  const visibleEssays = useMemo(() => {
+    if (listFilter === "archived") return essays.filter((e) => e.archived);
+    const active = essays.filter((e) => !e.archived);
+    if (listFilter === "reviewed") return active.filter((e) => (e.reviews ?? []).length > 0);
+    if (listFilter === "draft") return active.filter((e) => (e.reviews ?? []).length === 0);
+    return active;
+  }, [essays, listFilter]);
 
   const handleSave = () => {
     if (!activeEssay) return;
@@ -696,6 +749,44 @@ function EssaysPageInner() {
         </Link>
       </div>
 
+      {/* 상태 필터 칩 — 전체·AI 첨삭 완료·작성 중·보관함 */}
+      {(filterCounts.all > 0 || filterCounts.archived > 0) && (
+        <div
+          className="px-gutter-sm md:px-gutter mb-3 lg:max-w-content-wide lg:mx-auto flex gap-1.5 overflow-x-auto scrollbar-none"
+          role="tablist"
+          aria-label="에세이 상태 필터"
+        >
+          {[
+            { id: "all" as const, label: "전체", count: filterCounts.all },
+            { id: "reviewed" as const, label: "AI 첨삭 완료", count: filterCounts.reviewed },
+            { id: "draft" as const, label: "작성 중", count: filterCounts.draft },
+            { id: "archived" as const, label: "보관함", count: filterCounts.archived },
+          ].map((c) => {
+            const active = listFilter === c.id;
+            if (c.id === "archived" && c.count === 0) return null;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setListFilter(c.id)}
+                className={`shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-3 h-8 rounded-full border transition-colors ${
+                  active
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-muted-foreground border-border/60 hover:border-primary/40 hover:text-foreground"
+                }`}
+              >
+                {c.label}
+                <span className={`tabular-nums text-2xs ${active ? "text-primary-foreground/80" : "text-muted-foreground/70"}`}>
+                  {c.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div ref={essayListRef} className="px-6 space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-3 md:items-start md:space-y-0 lg:max-w-content-wide lg:mx-auto">
         {essaysLoading && essays.length === 0 ? (
           Array.from({ length: 2 }).map((_, i) => (
@@ -710,21 +801,42 @@ function EssaysPageInner() {
               </CardContent>
             </Card>
           ))
-        ) : essays.length === 0 ? (
+        ) : visibleEssays.length === 0 ? (
           <Card variant="elevated" className="md:col-span-2">
             <EmptyState
               illustration="essay"
-              title="에세이를 시작해볼까요?"
-              description={<>Common App·대학교 supplemental 뿐만 아니라<br />자유 주제의 일반 에세이도 작성할 수 있어요</>}
+              title={
+                listFilter === "all"
+                  ? "에세이를 시작해볼까요?"
+                  : listFilter === "reviewed"
+                  ? "AI 첨삭 받은 에세이가 없어요"
+                  : listFilter === "draft"
+                  ? "작성 중인 에세이가 없어요"
+                  : "보관된 에세이가 없어요"
+              }
+              description={
+                listFilter === "all" ? (
+                  <>Common App·대학교 supplemental 뿐만 아니라<br />자유 주제의 일반 에세이도 작성할 수 있어요</>
+                ) : (
+                  <>다른 필터를 선택해보세요.</>
+                )
+              }
               action={
-                <Button onClick={() => setView("picker")} size="lg" className="px-8">
-                  에세이 시작하기 <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
+                listFilter === "all" ? (
+                  <Button onClick={() => setView("picker")} size="lg" className="px-8">
+                    에세이 시작하기 <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                ) : (
+                  <Button variant="outline" onClick={() => setListFilter("all")} size="sm">
+                    전체 보기
+                  </Button>
+                )
               }
             />
           </Card>
         ) : (
-          essays.map((essay) => {
+          // listFilter 적용 후 가시 에세이.
+          visibleEssays.map((essay) => {
             const reviews = (essay.reviews ?? []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
             const isExpanded = expandedReviewsFor.has(essay.id);
             return (
@@ -757,11 +869,33 @@ function EssaysPageInner() {
                         >
                           <Trash2 size={14} aria-hidden="true" />
                         </button>
-                        <Badge variant="secondary" className="text-xs">
-                          {essay.content.split(/\s+/).filter(Boolean).length} 단어
-                        </Badge>
+                        <EssayWordCounter
+                          words={essay.content.split(/\s+/).filter(Boolean).length}
+                          limit={essay.wordLimit}
+                        />
                       </div>
                     </div>
+                    {/* 진행률 막대 — wordLimit이 있을 때만, 색상은 단계별 (적정 범위 80~100% 녹색) */}
+                    {essay.wordLimit && essay.wordLimit > 0 && (() => {
+                      const wc = essay.content.split(/\s+/).filter(Boolean).length;
+                      const pct = Math.min(100, Math.round((wc / essay.wordLimit) * 100));
+                      const tone = pct >= 100 ? "bg-emerald-500" : pct >= 50 ? "bg-primary" : "bg-muted-foreground/40";
+                      return (
+                        <div
+                          className="h-1 rounded-full bg-muted/60 overflow-hidden"
+                          role="progressbar"
+                          aria-valuenow={wc}
+                          aria-valuemin={0}
+                          aria-valuemax={essay.wordLimit}
+                          aria-label={`${wc}/${essay.wordLimit} 단어`}
+                        >
+                          <div
+                            className={`h-full ${tone} transition-[width] duration-300 ease-toss`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      );
+                    })()}
                     <p className="text-xs text-muted-foreground line-clamp-2 min-h-[2.4em] leading-[1.2]">
                       {essay.prompt || "\u00A0"}
                     </p>
@@ -850,5 +984,40 @@ function EssaysPageInner() {
 
       <BottomNav />
     </div>
+  );
+}
+
+/**
+ * 에세이 카드 우상단 단어 카운터.
+ * wordLimit이 있을 때만 "245/500" 형식으로 진행률 표시. 단계별 색으로 적정 범위 가이드.
+ *   - <50%: 회색 (아직 짧음)
+ *   - 50~99%: 파란 (작성 중)
+ *   - 100~120%: 녹색 (적정)
+ *   - >120%: 호박 (초과 — 줄이라는 신호)
+ */
+function EssayWordCounter({ words, limit }: { words: number; limit?: number }) {
+  if (!limit || limit <= 0) {
+    return (
+      <Badge variant="secondary" className="text-xs">
+        {words} 단어
+      </Badge>
+    );
+  }
+  const pct = (words / limit) * 100;
+  const tone =
+    pct < 50
+      ? "bg-muted text-muted-foreground"
+      : pct < 100
+      ? "bg-primary/10 text-primary"
+      : pct <= 120
+      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+      : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
+  return (
+    <span
+      className={`inline-flex items-center text-2xs font-semibold tabular-nums rounded-full px-2 h-5 leading-none ${tone}`}
+      aria-label={`${words}단어, 제한 ${limit}단어`}
+    >
+      {words}/{limit}
+    </span>
   );
 }

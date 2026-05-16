@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, X, Plus, GraduationCap } from "lucide-react";
+import { Search, X, Plus, GraduationCap, Sparkles, Heart } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { PageIntroCard } from "@/components/PageIntroCard";
@@ -139,6 +139,39 @@ function ComparePageInner() {
   function removeSchool(name: string) {
     setSelected(selected.filter((s) => s.n !== name));
   }
+
+  // 추천 조합 — 매치 결과가 있을 때 Reach/Target/Safety를 한 번에 채움.
+  // 기본 전략: 사용자 합격 확률이 가장 높은 Safety, 적정선 Target, 도전 Reach 하나씩.
+  const recommendedTrio = useMemo<School[] | null>(() => {
+    if (matchedSchools.length === 0) return null;
+    const pickHighestProb = (cat: string) =>
+      matchedSchools.filter((s) => s.cat === cat).sort((a, b) => (b.prob ?? 0) - (a.prob ?? 0))[0];
+    const reach = pickHighestProb("Reach");
+    const target = pickHighestProb("Target");
+    const safety = pickHighestProb("Safety");
+    const trio = [reach, target, safety].filter((s): s is School => !!s);
+    if (trio.length < 2) return null;
+    return trio;
+  }, [matchedSchools]);
+
+  function applyRecommendedTrio() {
+    if (!recommendedTrio) return;
+    setSelected(recommendedTrio.slice(0, MAX_SCHOOLS));
+    setOpenSlot(null);
+    setSearchQ("");
+  }
+
+  // 즐겨찾기 — 빈 슬롯을 빠르게 채우는 단축키. 인덱스 lookup으로 school 객체 구성.
+  const favoriteSchools = useMemo<School[]>(() => {
+    const favNames = profile?.favoriteSchools || [];
+    if (favNames.length === 0) return [];
+    const byName = new Map(effectiveSchools.map((s) => [s.n, s]));
+    return favNames
+      .map((n) => byName.get(n))
+      .filter((s): s is School => !!s)
+      .filter((s) => !selectedNames.has(s.n))
+      .slice(0, 5);
+  }, [profile?.favoriteSchools, effectiveSchools, selectedNames]);
 
   const rows: RowDef[] = useMemo(() => {
     const base: RowDef[] = [
@@ -321,6 +354,47 @@ function ComparePageInner() {
                 autoFocus
               />
             </div>
+
+            {/* 추천 조합 — 검색어 비어 있을 때만 노출 (검색 흐름 방해 X) */}
+            {!searchQ.trim() && recommendedTrio && selected.length === 0 && (
+              <button
+                type="button"
+                onClick={applyRecommendedTrio}
+                className="w-full flex items-center gap-3 p-3 rounded-xl bg-primary/5 hover:bg-primary/10 border border-primary/20 transition-colors text-left"
+              >
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold">추천 조합 한 번에 채우기</p>
+                  <p className="text-2xs text-muted-foreground truncate">
+                    {recommendedTrio.map((s) => s.n).join(" · ")}
+                  </p>
+                </div>
+              </button>
+            )}
+
+            {/* 즐겨찾기 — 검색어 비어 있을 때만 노출 */}
+            {!searchQ.trim() && favoriteSchools.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-2xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                  <Heart className="w-3 h-3" /> 즐겨찾기에서 추가
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {favoriteSchools.map((s) => (
+                    <button
+                      key={s.n}
+                      type="button"
+                      onClick={() => addSchool(s)}
+                      className="px-3 h-8 rounded-full bg-card border border-border text-xs font-medium hover:bg-accent/50 hover:border-primary/30 transition-colors flex items-center gap-1.5 max-w-[200px]"
+                    >
+                      <span className="truncate">{s.n}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="max-h-60 overflow-y-auto space-y-1">
               {filteredSchools.length === 0 && (
                 <p className="text-xs text-muted-foreground text-center py-4">

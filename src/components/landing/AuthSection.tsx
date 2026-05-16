@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Eye, EyeOff, ArrowLeft, Info } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, ArrowLeft, Info, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { isKakaoTalkInApp, isInAppBrowser } from "@/lib/auth-helpers";
 
 type AuthView = "main" | "email-login" | "email-signup" | "reset-password";
 
@@ -25,8 +26,22 @@ function errMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
+// returnTo query param 검증 — open redirect 방지.
+// 외부 도메인이나 protocol-relative URL이 returnTo로 주입되면 로그인 후 임의 도메인으로 송출될 수 있음.
+// 동일 origin·root-relative path만 허용. 빈 값/null/외부 도메인은 모두 null 반환.
+function safeReturnTo(raw: string | null): string | null {
+  if (!raw) return null;
+  // protocol-relative("//evil.com")·절대 URL·스킴(javascript:) 모두 차단.
+  if (!raw.startsWith("/") || raw.startsWith("//")) return null;
+  // 길이 제한 — 비정상적으로 긴 URL은 거부.
+  if (raw.length > 512) return null;
+  return raw;
+}
+
 export function AuthSection() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = useMemo(() => safeReturnTo(searchParams?.get("returnTo") ?? null), [searchParams]);
   const { user, profile, loading, loginWithGoogle, loginWithEmail, signUpWithEmail, resetPassword, loginWithKakao, loginWithApple } = useAuth();
   const [authLoading, setAuthLoading] = useState<string | null>(null);
   const [view, setView] = useState<AuthView>("main");
@@ -42,19 +57,28 @@ export function AuthSection() {
   // env 누락 = 카카오 로그인 임시 비활성. 이전엔 silent disabled로 사용자가 이유를 몰랐음.
   const kakaoConfigured = useMemo(() => !!process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID, []);
 
+  // 카카오톡 인앱브라우저 / 인스타·라인·네이버 등 WebView 감지 — OAuth가 거의 실패하므로
+  // 클릭 전에 외부 브라우저 안내. SSR 시점엔 navigator가 없어 false → mount 후에만 true 가능.
+  const [inAppKind, setInAppKind] = useState<"kakao" | "other" | null>(null);
+  useEffect(() => {
+    if (isKakaoTalkInApp()) setInAppKind("kakao");
+    else if (isInAppBrowser()) setInAppKind("other");
+  }, []);
+
   useEffect(() => {
     if (loading || !user) return;
     // 신규 가입자: Firestore 프로필이 아직 없어도 /onboarding으로 진행.
     // 기존 계정: profile이 null이면 Firestore 구독 일시 실패일 수 있으므로 일단 보류,
     // 단 5초 내에도 profile이 안 오면 "스냅샷 정체" 가능성이 있으므로 onboarded 가정으로 진행.
-    // (서버 규칙 위반/네트워크 지연 시에도 사용자가 무한 spinner에 갇히지 않게 fallback.)
+    // returnTo가 있으면 /dashboard 대신 그 경로로 — 보호 라우트 직접 접근 시 deep link 보존.
     const creationTime = user.metadata.creationTime
       ? new Date(user.metadata.creationTime).getTime()
       : 0;
     // 30초 → 60초로 확대: 카카오 OAuth 왕복(팝업·네트워크 느림) + Firestore 첫 쓰기 race.
     const isNewAccount = creationTime > 0 && Date.now() - creationTime < 60_000;
+    const postLoginDest = returnTo ?? "/dashboard";
     if (profile) {
-      router.replace(profile.onboarded ? "/dashboard" : "/onboarding");
+      router.replace(profile.onboarded ? postLoginDest : "/onboarding");
       return;
     }
     if (isNewAccount) {
@@ -63,10 +87,10 @@ export function AuthSection() {
     }
     // 기존 계정인데 profile snapshot이 늦으면 5s 안전망 — 그동안 사용자에게도 보이는 spinner 유지.
     const fallback = setTimeout(() => {
-      router.replace("/dashboard");
+      router.replace(postLoginDest);
     }, 5000);
     return () => clearTimeout(fallback);
-  }, [user, profile, loading, router]);
+  }, [user, profile, loading, router, returnTo]);
 
   const handleGoogle = async () => {
     setAuthLoading("google");
@@ -191,6 +215,24 @@ export function AuthSection() {
     <div className="w-full space-y-2.5">
       {view === "main" && (
         <div className="animate-welcome-item" style={{ animationDelay: "0.55s" }}>
+          {/* 인앱브라우저 사전 안내 — 카카오톡/인스타/라인 등은 OAuth가 자체 WebView 한계로 거의 실패한다.
+              감사 리포트 1-2의 KakaoTalk in-app 실패율 100% 문제 대응: 클릭 전에 외부 브라우저 유도. */}
+          {inAppKind && (
+            <div
+              role="alert"
+              className="mb-4 rounded-xl border border-amber-400/60 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/50 p-3.5 flex gap-2.5"
+            >
+              <AlertTriangle className="w-[18px] h-[18px] text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />
+              <div className="text-xs leading-relaxed text-amber-900 dark:text-amber-200">
+                <p className="font-semibold mb-0.5">
+                  {inAppKind === "kakao" ? "카카오톡 안에서는 로그인이 어려워요" : "인앱브라우저에서는 로그인이 어려워요"}
+                </p>
+                <p>
+                  우측 상단 메뉴(⋮)에서 <strong>‘다른 브라우저로 열기’</strong>를 눌러 Chrome·Safari로 열어주세요.
+                </p>
+              </div>
+            </div>
+          )}
           {/* Primary: Kakao
               env가 없으면 disabled 대신 onClick에서 안내 — silent fail 회피.
               버튼 자체는 활성 상태처럼 보이되, "준비 중" 메시지로 사용자가 다른 옵션으로 자연 이동. */}
@@ -246,10 +288,16 @@ export function AuthSection() {
             Apple로 계속하기
           </button>
 
-          {/* Email */}
+          {/* Email — Secondary tier: 텍스트 링크 톤으로 위계 명확화.
+              과거엔 bg-muted/text-muted-foreground라 시각상 disabled처럼 보였고,
+              SNS 4종 + 이메일이 같은 사이즈로 나열돼 결정 피로가 컸음 (감사 리포트 1-1, 2-4).
+              "다른 방법으로 계속하기 ↓" 톤이 아닌 직접적인 액션 워딩 유지(컨버전 우선) +
+              underline·primary 컬러로 클릭 가능성 즉시 인지. */}
           <button
+            type="button"
             onClick={() => { setView("email-login"); setError(""); }}
-            className="w-full h-12 rounded-xl bg-muted text-muted-foreground font-semibold text-base flex items-center justify-center gap-2 hover:bg-border active:scale-[0.98] transition-colors mt-2.5"
+            aria-label="이메일로 로그인하기"
+            className="w-full mt-4 py-2 text-sm font-semibold text-primary hover:text-primary/80 active:scale-[0.98] transition-colors underline-offset-4 hover:underline"
           >
             이메일로 계속하기
           </button>

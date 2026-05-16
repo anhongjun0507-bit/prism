@@ -157,14 +157,18 @@ export function estimateEcTier(profile: ProfileInput): number {
 
 /**
  * "11학년" / "12학년" / "10학년" / "9학년" → 예상 입시 연도.
- * 현재 년도 기준. 파싱 실패 시 year+2.
+ * 현재 년도 기준. 파싱 실패/미입력 시 null (호출부에서 합의된 기본 처리).
+ *
+ * 미입력에 대한 내부 fallback(+2 = 11학년 가정)은 사용자 혼란을 만든다.
+ * 단일 소스(profile.grade)를 기준으로 캐시/프롬프트가 정직하게 "미입력"을 전파하도록
+ * null을 반환. 호출부는 grade context 판단(grade.ts) 후 의도적으로 처리한다.
  */
-export function estimateGradYear(grade: string | undefined | null, currentYear: number): number {
-  if (!grade) return currentYear + 2;
+export function estimateGradYear(grade: string | undefined | null, currentYear: number): number | null {
+  if (!grade) return null;
   const g = grade.trim();
-  if (g.includes("12")) return currentYear + 1;
+  if (g.includes("12") || g.includes("졸업")) return currentYear + 1;
   if (g.includes("11")) return currentYear + 2;
   if (g.includes("10")) return currentYear + 3;
   if (g.includes("9")) return currentYear + 4;
-  return currentYear + 2;
+  return null;
 }

@@ -28,7 +28,7 @@ import { db } from "@/lib/firebase";
 import {
   collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch,
 } from "firebase/firestore";
-import { Calendar as CalendarIcon, CheckCircle2, ChevronRight, Plus, Trash2, Sparkles } from "lucide-react";
+import { Calendar as CalendarIcon, CheckCircle2, ChevronRight, Plus, Trash2, Sparkles, AlertCircle } from "lucide-react";
 import { readJSON, writeJSON } from "@/lib/storage";
 import { EmptyState } from "@/components/EmptyState";
 import { PageIntroCard } from "@/components/PageIntroCard";
@@ -145,6 +145,8 @@ function PlannerPageInner() {
   const searchParams = useSearchParams();
   const [tasks, setTasks] = useState<PlannerTask[]>(() => loadLocalTasks());
   const [showCompleted, setShowCompleted] = useState(true);
+  const [showOverdue, setShowOverdue] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<TaskCategory | "all">("all");
 
   // Dialog state
   const [editingTask, setEditingTask] = useState<PlannerTask | null>(null);
@@ -275,11 +277,29 @@ function PlannerPageInner() {
 
   /* ─── Derived ─── */
   const sorted = useMemo(() => sortTasks(tasks), [tasks]);
-  const incomplete = sorted.filter(t => !t.completed);
-  const completed = sorted.filter(t => t.completed);
+  const filteredAll = useMemo(
+    () => categoryFilter === "all" ? sorted : sorted.filter(t => t.category === categoryFilter),
+    [sorted, categoryFilter]
+  );
+  const incomplete = filteredAll.filter(t => !t.completed);
+  const completed = filteredAll.filter(t => t.completed);
+  const overdue = incomplete.filter(t => getDDay(t.dueDate) < 0);
+  const upcoming = incomplete.filter(t => getDDay(t.dueDate) >= 0);
   const completedCount = completed.length;
-  const progress = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
-  const urgent = incomplete.filter(t => { const d = getDDay(t.dueDate); return d >= 0 && d <= 30; });
+  const overdueCount = overdue.length;
+  // 진행률·긴급 배너는 필터와 독립 — 사용자가 카테고리를 좁혀도 전역 알림은 유지.
+  const globalCompletedCount = tasks.filter(t => t.completed).length;
+  const progress = tasks.length > 0 ? Math.round((globalCompletedCount / tasks.length) * 100) : 0;
+  const urgent = tasks.filter(t => {
+    if (t.completed) return false;
+    const d = getDDay(t.dueDate);
+    return d >= 0 && d <= 30;
+  });
+  const categoryCounts = useMemo(() => {
+    const counts: Partial<Record<TaskCategory, number>> = {};
+    tasks.forEach(t => { counts[t.category] = (counts[t.category] ?? 0) + 1; });
+    return counts;
+  }, [tasks]);
 
   /* ─── Dialog handlers ─── */
   const openAddDialog = () => { setEditingTask(null); setDialogOpen(true); };
@@ -530,30 +550,54 @@ function PlannerPageInner() {
 
         {/* Main — Pending + Completed timeline */}
         <div className="space-y-6 min-w-0">
-        {/* Timeline — Pending */}
-        {incomplete.length > 0 && (
+        {/* Category filter chips — 필터칩으로 카테고리 좁히기 */}
+        {tasks.length > 0 && (
+          <div
+            className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-gutter-sm md:-mx-gutter px-gutter-sm md:px-gutter pb-1"
+            role="tablist"
+            aria-label="카테고리 필터"
+          >
+            <FilterChip
+              active={categoryFilter === "all"}
+              label="전체"
+              count={tasks.length}
+              onClick={() => setCategoryFilter("all")}
+            />
+            {TASK_CATEGORIES.filter(c => (categoryCounts[c] ?? 0) > 0).map(c => (
+              <FilterChip
+                key={c}
+                active={categoryFilter === c}
+                label={c}
+                count={categoryCounts[c] ?? 0}
+                onClick={() => setCategoryFilter(c)}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Timeline — Upcoming only (overdue은 별도 섹션) */}
+        {upcoming.length > 0 && (
           <div className="space-y-4 relative">
             <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-muted z-0" />
 
-            {incomplete.map((t, i) => {
+            {upcoming.map((t, i) => {
               const dday = getDDay(t.dueDate);
-              const isOverdue = dday < 0;
-              const isUrgent = dday >= 0 && dday <= 7;
+              const isUrgent = dday <= 7;
               return (
                 <div key={t.id} className="flex gap-4 relative z-10 animate-stagger" style={{ ["--i" as string]: i } as React.CSSProperties}>
                   <div className={cn(
                     "w-8 h-8 rounded-full border-2 bg-background shrink-0 flex items-center justify-center",
-                    isOverdue ? "border-red-300" : isUrgent ? "border-amber-300" : "border-muted"
+                    isUrgent ? "border-amber-300" : "border-muted"
                   )}>
                     <div className={cn(
                       "w-2 h-2 rounded-full",
-                      isOverdue ? "bg-red-500" : isUrgent ? "bg-amber-500" : "bg-muted-foreground/30"
+                      isUrgent ? "bg-amber-500" : "bg-muted-foreground/30"
                     )} />
                   </div>
                   <Card
                     variant="elevated"
                     interactive
-                    className={cn("flex-1 p-4", isOverdue && "border-l-2 border-l-red-400")}
+                    className="flex-1 p-4"
                     onClick={() => openEditDialog(t)}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -565,17 +609,12 @@ function PlannerPageInner() {
                           <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
                             <CalendarIcon size={12} aria-hidden="true" /> {formatDate(t.dueDate)}
                           </span>
-                          {dday >= 0 && dday <= 30 && (
+                          {dday <= 30 && (
                             <Badge className={cn("text-xs border-none px-1.5",
                               dday <= 3 ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200"
                                 : dday <= 7 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200"
                                 : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200")}>
                               {dday === 0 ? "D-Day" : `D-${dday}`}
-                            </Badge>
-                          )}
-                          {isOverdue && (
-                            <Badge className="text-xs border-none px-1.5 bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200">
-                              {Math.abs(dday)}일 지남
                             </Badge>
                           )}
                         </div>
@@ -595,6 +634,75 @@ function PlannerPageInner() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* 필터에서 결과 없음 — 카테고리 필터 적용했는데 어떤 섹션에도 항목이 없을 때 */}
+        {categoryFilter !== "all" && upcoming.length === 0 && overdueCount === 0 && completedCount === 0 && (
+          <Card className="p-6 text-center text-sm text-muted-foreground rounded-xl">
+            &quot;{categoryFilter}&quot; 카테고리에 일정이 없어요.
+          </Card>
+        )}
+
+        {/* 지난 항목 — Overdue collapsible */}
+        {overdueCount > 0 && (
+          <div className="space-y-3">
+            <button
+              onClick={() => setShowOverdue(!showOverdue)}
+              className="flex items-center gap-2 text-sm font-semibold text-red-700 dark:text-red-300 w-full"
+              aria-expanded={showOverdue}
+            >
+              <AlertCircle className="w-4 h-4" aria-hidden="true" />
+              지난 항목 ({overdueCount})
+              <ChevronRight className={cn("w-3.5 h-3.5 ml-auto transition-transform", showOverdue && "rotate-90")} aria-hidden="true" />
+            </button>
+            {showOverdue && (
+              <div className="space-y-3 relative">
+                <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-muted z-0" />
+                {overdue.map((t) => {
+                  const dday = getDDay(t.dueDate);
+                  return (
+                    <div key={t.id} className="flex gap-4 relative z-10">
+                      <div className="w-8 h-8 rounded-full border-2 bg-background shrink-0 flex items-center justify-center border-red-300">
+                        <div className="w-2 h-2 rounded-full bg-red-500" />
+                      </div>
+                      <Card
+                        variant="elevated"
+                        interactive
+                        className="flex-1 p-4 border-l-2 border-l-red-400"
+                        onClick={() => openEditDialog(t)}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1 flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge variant="outline" className={cn("text-xs px-1.5 py-0.5 border-none", CATEGORY_COLORS[t.category])}>
+                                {t.category}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
+                                <CalendarIcon size={12} aria-hidden="true" /> {formatDate(t.dueDate)}
+                              </span>
+                              <Badge className="text-xs border-none px-1.5 bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200">
+                                {Math.abs(dday)}일 지남
+                              </Badge>
+                            </div>
+                            <h3 className="font-bold text-sm">{t.title}</h3>
+                            {t.notes && <p className="text-xs text-muted-foreground line-clamp-2">{t.notes}</p>}
+                          </div>
+                          <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={false}
+                              onCheckedChange={() => toggleComplete(t)}
+                              className="rounded-full w-5 h-5"
+                              aria-label="완료 토글"
+                            />
+                          </div>
+                        </div>
+                      </Card>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -705,6 +813,32 @@ function PlannerPageInner() {
 
       <BottomNav />
     </div>
+  );
+}
+
+/* ─── Category filter chip ─── */
+function FilterChip({
+  active, label, count, onClick,
+}: { active: boolean; label: string; count: number; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={cn(
+        "shrink-0 inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-xs font-semibold transition-colors",
+        active
+          ? "bg-primary text-white"
+          : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+      )}
+    >
+      <span>{label}</span>
+      <span className={cn(
+        "tabular-nums text-[10px] px-1.5 py-px rounded-full",
+        active ? "bg-white/20" : "bg-background/70"
+      )}>{count}</span>
+    </button>
   );
 }
 

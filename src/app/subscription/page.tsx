@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
-import { Check, Crown, ArrowUpRight, Download, Upload, Sun, Moon, ShieldAlert } from "lucide-react";
+import { Check, Crown, ArrowUpRight, Download, Upload, Sun, Moon, ShieldAlert, CalendarClock, CreditCard, Receipt } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { isHapticEnabled, setHapticEnabled, haptic } from "@/hooks/use-haptic";
 import { isChimeEnabled, setChimeEnabled, chime } from "@/lib/chime";
@@ -19,6 +19,36 @@ import { fetchWithAuth } from "@/lib/api-client";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const DATA_KEYS = ["prism_essays", "prism_planner", "prism_snapshots"];
+
+/* ─── Billing helpers ─── */
+function computeNextBillingDate(activatedAt: string | undefined, billing: "monthly" | "yearly" | undefined): Date | null {
+  if (!activatedAt) return null;
+  const base = new Date(activatedAt);
+  if (Number.isNaN(base.getTime())) return null;
+  const next = new Date(base);
+  if (billing === "yearly") next.setFullYear(next.getFullYear() + 1);
+  else next.setMonth(next.getMonth() + 1);
+  return next;
+}
+
+function formatKoreanDate(d: Date | null): string {
+  if (!d) return "—";
+  return d.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
+}
+
+function daysUntil(d: Date | null): number | null {
+  if (!d) return null;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const target = new Date(d);
+  target.setHours(0, 0, 0, 0);
+  return Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function maskOrderId(orderId: string): string {
+  if (orderId.length <= 8) return orderId;
+  return `${orderId.slice(0, 4)}…${orderId.slice(-4)}`;
+}
 
 export default function SubscriptionPage() {
   return <AuthRequired><SubscriptionPageInner /></AuthRequired>;
@@ -121,6 +151,66 @@ function SubscriptionPageInner() {
             <p className="text-white/80 text-sm mt-1">{monthlyPriceLabel}</p>
           </div>
         </Card>
+
+        {/* 결제일 / 수단 / 영수증 — 유료 플랜 + 결제 기록 있을 때만 */}
+        {currentPlan !== "free" && profile?.lastPayment && (() => {
+          const nextDate = computeNextBillingDate(profile.planActivatedAt, profile.planBilling);
+          const daysLeft = daysUntil(nextDate);
+          const billingLabel = profile.planBilling === "yearly" ? "연간 결제" : "월간 결제";
+          const lp = profile.lastPayment;
+          const approvedDate = lp.approvedAt ? new Date(lp.approvedAt) : null;
+          return (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* 다음 결제일 */}
+              <Card className="bg-card border-none shadow-sm p-4 space-y-2">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <CalendarClock className="w-3.5 h-3.5" aria-hidden="true" />
+                  <p className="text-xs font-semibold">다음 결제일</p>
+                </div>
+                <p className="text-base font-bold tabular-nums">{formatKoreanDate(nextDate)}</p>
+                <div className="flex items-center gap-1.5 text-2xs text-muted-foreground">
+                  <span>{billingLabel}</span>
+                  {daysLeft !== null && daysLeft >= 0 && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <span className="tabular-nums">D-{daysLeft}</span>
+                    </>
+                  )}
+                </div>
+              </Card>
+
+              {/* 결제 수단 */}
+              <Card className="bg-card border-none shadow-sm p-4 space-y-2">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <CreditCard className="w-3.5 h-3.5" aria-hidden="true" />
+                  <p className="text-xs font-semibold">결제 수단</p>
+                </div>
+                <p className="text-base font-bold">{lp.method || "—"}</p>
+                <p className="text-2xs text-muted-foreground">Toss Payments</p>
+              </Card>
+
+              {/* 영수증 (최근 결제) */}
+              <Card className="bg-card border-none shadow-sm p-4 space-y-2">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Receipt className="w-3.5 h-3.5" aria-hidden="true" />
+                  <p className="text-xs font-semibold">최근 영수증</p>
+                </div>
+                <p className="text-base font-bold tabular-nums">
+                  ₩{lp.totalAmount.toLocaleString()}
+                </p>
+                <div className="flex items-center gap-1.5 text-2xs text-muted-foreground">
+                  <span className="tabular-nums">
+                    {approvedDate
+                      ? approvedDate.toLocaleDateString("ko-KR", { month: "short", day: "numeric" })
+                      : "—"}
+                  </span>
+                  <span aria-hidden="true">·</span>
+                  <span className="font-mono">{maskOrderId(lp.orderId)}</span>
+                </div>
+              </Card>
+            </div>
+          );
+        })()}
 
         {/* 결제 안내 — 유료 플랜만 */}
         {currentPlan !== "free" && (
