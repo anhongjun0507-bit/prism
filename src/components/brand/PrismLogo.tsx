@@ -37,7 +37,10 @@ const BEAM_IDS = [
   "prism-beam-5",
 ] as const;
 
-const BEAM_COLORS = ["#60A5FA", "#A78BFA", "#F472B6", "#FB923C", "#FBBF24"] as const;
+// v2 redesign: 모든 beam은 단일 잉크 색 — 무지개·violet·terracotta 폐기.
+// inverse 모드에서는 white로 자동 치환되어 다크 hero 위에서도 가시.
+const BEAM_INK = "hsl(var(--accent-ink))";
+const BEAM_COLORS = [BEAM_INK, BEAM_INK, BEAM_INK, BEAM_INK, BEAM_INK] as const;
 
 export function PrismLogo({
   size = 32,

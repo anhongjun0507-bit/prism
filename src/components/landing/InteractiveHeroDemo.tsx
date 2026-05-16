@@ -62,7 +62,7 @@ export function InteractiveHeroDemo() {
   return (
     <section
       aria-label="합격 확률 미리보기"
-      className="w-full rounded-3xl border border-border bg-card p-5 sm:p-6 shadow-glow-sm"
+      className="w-full rounded-lg border border-border-subtle bg-card p-5 sm:p-6 shadow-hairline"
     >
       <div className="flex items-baseline justify-between mb-4">
         <div>

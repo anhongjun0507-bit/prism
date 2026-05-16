@@ -26,7 +26,7 @@ export const SegmentedControl = React.forwardRef<
   <RadioGroupPrimitive.Root
     ref={ref}
     className={cn(
-      "flex items-center gap-1 bg-muted/50 rounded-xl p-1",
+      "flex items-center gap-1 bg-muted/60 rounded-lg p-1",
       className
     )}
     {...props}
@@ -47,9 +47,9 @@ export const SegmentedControlItem = React.forwardRef<
   <RadioGroupPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all",
+      "relative flex-1 py-2.5 rounded-md text-sm font-semibold transition-colors duration-micro ease-brand",
       "text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-      "data-[state=checked]:bg-white dark:data-[state=checked]:bg-card data-[state=checked]:shadow-sm data-[state=checked]:text-foreground",
+      "data-[state=checked]:bg-background data-[state=checked]:text-foreground",
       "disabled:opacity-50 disabled:cursor-not-allowed",
       className
     )}

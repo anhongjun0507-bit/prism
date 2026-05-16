@@ -56,7 +56,7 @@ export function ParentReportView({
       <ParentNav token={token} active="dashboard" />
 
       {/* Header */}
-      <header className="bg-gradient-to-br from-primary/10 via-background to-background border-b border-border/60 px-6 py-10">
+      <header className="bg-accent border-b border-border-subtle px-6 py-10">
         <div className="max-w-2xl mx-auto space-y-2">
           <p className="text-sm font-semibold text-primary">PRISM 학부모 리포트</p>
           <h1 className="font-headline text-3xl font-bold text-foreground">
@@ -191,10 +191,7 @@ export function ParentReportView({
           </section>
         )}
 
-        {/* 응원 포인트 — Phase 6: card-tinted (accent-vivid violet) + hover-glow.
-            terracotta primary는 신뢰/실용, violet은 감정/응원. 학부모 메시지 컨텍스트에
-            violet이 더 따뜻한 톤. hover-glow는 PC에서 카드를 "들여다보는" 시각 hint. */}
-        <section className="card-tinted hover-glow rounded-2xl p-6 space-y-3">
+        <section className="bg-card border border-border-subtle rounded-md p-6 space-y-3">
           <h2 className="font-headline text-xl font-bold text-foreground">학부모님께 한마디</h2>
           <p className="text-foreground/80 leading-relaxed">
             자녀가 미국 대학 입시를 준비하며 한 걸음 한 걸음 나아가고 있어요. 조급해하지 마시고,

@@ -29,14 +29,9 @@ export default function SampleReportPage() {
   return (
     <main className="min-h-dvh bg-background">
       {/* Hero */}
-      <section className="relative overflow-hidden border-b border-border/60">
-        <div
-          className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-background dark:from-primary/20"
-          aria-hidden="true"
-        />
-        <div className="absolute -top-16 -right-10 w-64 h-64 bg-primary/20 rounded-full blur-3xl opacity-60" aria-hidden="true" />
+      <section className="relative overflow-hidden border-b border-border-subtle bg-accent">
         <div className="relative px-gutter-sm md:px-gutter py-10 md:py-16 max-w-content-narrow mx-auto text-center">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 text-xs font-bold mb-4">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-pill bg-gold-soft text-gold-strong border border-gold/30 text-xs font-bold mb-4">
             학부모 전용 샘플
           </span>
           <h1 className="font-headline font-bold text-3xl md:text-4xl leading-tight mb-3">

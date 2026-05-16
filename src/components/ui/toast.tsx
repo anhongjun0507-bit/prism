@@ -29,8 +29,8 @@ ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 const toastVariants = cva(
   [
     "group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden",
-    "rounded-2xl border p-5 pl-6 pr-8 shadow-glow-lg backdrop-blur-sm",
-    // Left accent stripe — variant별로 색만 다름
+    "rounded-lg border p-5 pl-6 pr-8 shadow-hairline",
+    // Left accent stripe — variant별 색
     "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:content-['']",
     // Swipe handlers
     "data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none",
@@ -38,14 +38,16 @@ const toastVariants = cva(
     "data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out",
     "data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full",
     "data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full",
-    "data-[state=open]:zoom-in-95 data-[state=open]:duration-300",
+    "data-[state=open]:zoom-in-95 data-[state=open]:duration-emph",
   ].join(" "),
   {
     variants: {
       variant: {
-        default: "border-border/60 bg-card text-foreground before:bg-primary",
-        destructive: "destructive group border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 text-red-900 dark:text-red-100 before:bg-red-500",
-        success: "border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-100 before:bg-emerald-500",
+        default: "border-border-subtle bg-card text-foreground before:bg-primary",
+        destructive:
+          "destructive group border-border-subtle bg-card text-foreground before:bg-destructive",
+        success:
+          "border-border-subtle bg-card text-foreground before:bg-success",
       },
     },
     defaultVariants: {
@@ -76,7 +78,7 @@ const ToastAction = React.forwardRef<
   <ToastPrimitives.Action
     ref={ref}
     className={cn(
-      "inline-flex h-8 shrink-0 items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 group-[.destructive]:border-muted/40 group-[.destructive]:hover:border-destructive/30 group-[.destructive]:hover:bg-destructive group-[.destructive]:hover:text-destructive-foreground group-[.destructive]:focus:ring-destructive",
+      "inline-flex h-8 shrink-0 items-center justify-center rounded-button border border-border-default bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors hover:border-border-strong focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
       className
     )}
     {...props}
@@ -92,7 +94,7 @@ const ToastClose = React.forwardRef<
     ref={ref}
     aria-label="알림 닫기"
     className={cn(
-      "absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 focus-visible:opacity-100 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
+      "absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 focus-visible:opacity-100 group-hover:opacity-100",
       className
     )}
     toast-close=""

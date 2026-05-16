@@ -49,8 +49,8 @@ const DialogContent = React.forwardRef<
         // 키보드 가림 방지 — dvh는 모바일 키보드를 visual viewport에서 자동 차감.
         // 자식이 max-h를 명시하면 그쪽이 우선되므로 default로만 설정.
         "max-h-[90dvh] overflow-y-auto",
-        // Surface — brand glow shadow 로 떠 있는 느낌
-        "gap-4 border-none bg-card p-6 shadow-glow-lg sm:rounded-2xl",
+        // Surface — hairline border, no glow shadow (v2 redesign)
+        "gap-4 border border-border-subtle bg-card p-6 shadow-hairline sm:rounded-lg",
         // Spring-in motion
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
@@ -114,7 +114,7 @@ const DialogTitle = React.forwardRef<
   <DialogPrimitive.Title
     ref={ref}
     className={cn(
-      "text-lg font-semibold leading-none tracking-tight",
+      "text-lg font-display font-semibold leading-none tracking-tightest",
       className
     )}
     {...props}

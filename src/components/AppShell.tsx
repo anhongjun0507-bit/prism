@@ -8,5 +8,5 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, loading } = useAuth();
   const sidebarVisible = shouldShowSidebar(pathname, !!user, loading);
-  return <div className={sidebarVisible ? "lg:pl-64" : ""}>{children}</div>;
+  return <div className={sidebarVisible ? "lg:pl-60" : ""}>{children}</div>;
 }

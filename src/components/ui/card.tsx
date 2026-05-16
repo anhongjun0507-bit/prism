@@ -4,30 +4,30 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 /**
- * Card variant scale.
- *   default  — 표준 카드 (현재 사용 패턴 유지)
- *   plain    — 테두리/그림자 없는 단순 surface (background 일치 영역)
- *   elevated — brand-tinted glow shadow (강조 카드)
- *   hero     — prismatic 또는 dark gradient hero (대시보드/구독)
- *   glass    — 반투명 + blur (overlay/floating)
- *   accent   — primary/5 배경 + primary 테두리 (추천/CTA 카드)
+ * Card variant scale — v2 redesign (잉크 1색·hairline·그라데이션 없음).
+ *   default  — hairline border + bg-surface (표준)
+ *   plain    — 테두리 없는 단순 surface
+ *   elevated — hairline shadow (강조)
+ *   hero     — bg-inverse(잉크) hero — 대시보드/구독 검정 카드
+ *   glass    — bg-surface + hairline border (legacy alias, 단순화)
+ *   accent   — accent-ink-soft 배경 + 잉크 hairline (추천/CTA 카드)
  *
- * interactive=true → hover lift 적용 (cursor-pointer 추가는 호출자 책임)
+ * interactive=true → border-strong hover (그림자 폐기)
  */
 const cardVariants = cva(
-  "text-card-foreground transition-shadow",
+  "text-card-foreground transition-[border-color,background-color] duration-micro ease-brand",
   {
     variants: {
       variant: {
-        default: "rounded-lg border bg-card shadow-sm",
-        plain: "rounded-2xl bg-card",
-        elevated: "rounded-2xl bg-card border-none shadow-glow-md",
-        hero: "rounded-2xl bg-card border-none shadow-glow-lg overflow-hidden relative isolate",
-        glass: "rounded-2xl glass-card",
-        accent: "rounded-2xl bg-primary/5 dark:bg-primary/10 border border-primary/20",
+        default: "rounded-lg border border-border-subtle bg-card",
+        plain: "rounded-lg bg-card",
+        elevated: "rounded-lg bg-card border border-border-subtle shadow-hairline",
+        hero: "rounded-lg bg-inverse border-none overflow-hidden relative isolate",
+        glass: "rounded-lg bg-card border border-border-subtle",
+        accent: "rounded-lg bg-accent border border-border-subtle",
       },
       interactive: {
-        true: "hover-lift cursor-pointer active:scale-[0.98] transition-transform",
+        true: "cursor-pointer hover:border-border-strong active:scale-[0.99]",
         false: "",
       },
     },
@@ -72,7 +72,7 @@ const CardTitle = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "text-2xl font-semibold leading-none tracking-tight",
+      "text-2xl font-display font-semibold leading-none tracking-tightest",
       className
     )}
     {...props}

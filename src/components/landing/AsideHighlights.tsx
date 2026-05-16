@@ -85,8 +85,8 @@ export function AsideHighlights() {
         className="w-full text-left rounded-2xl bg-card/70 dark:bg-card/40 backdrop-blur-md border border-border/60 p-5 hover-card group"
       >
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
-            <FileText className="w-5 h-5 text-violet-500" aria-hidden="true" />
+          <div className="w-10 h-10 rounded-md bg-accent flex items-center justify-center shrink-0">
+            <FileText className="w-5 h-5 text-foreground" aria-hidden="true" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-foreground">샘플 리포트 보기</p>

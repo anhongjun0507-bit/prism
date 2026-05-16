@@ -50,7 +50,7 @@ export function BottomNav() {
     <>
     <nav
       aria-label="주요 메뉴"
-      className="fixed bottom-0 left-0 right-0 bg-background/95 border-t border-border/50 px-1 sm:px-2 flex justify-between items-stretch z-50 max-w-md md:max-w-2xl lg:hidden mx-auto pb-safe pt-2"
+      className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t border-border-subtle px-1 sm:px-2 flex justify-between items-stretch z-50 max-w-md md:max-w-2xl lg:hidden mx-auto pb-safe pt-2"
     >
       {navItems.map((item) => {
         const isActive = pathname === item.href;
@@ -61,14 +61,14 @@ export function BottomNav() {
             onClick={() => trackPrismEvent("bottom_nav_clicked", { tab_id: item.id })}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "tap-press flex flex-col items-center justify-center gap-0.5 px-1 sm:px-2 min-h-[44px] flex-1 basis-0 min-w-0 rounded-xl transition-colors duration-200 ease-toss relative",
-              isActive ? "text-primary bg-primary/8" : "text-muted-foreground hover:text-foreground"
+              "tap-press flex flex-col items-center justify-center gap-0.5 px-1 sm:px-2 min-h-[44px] flex-1 basis-0 min-w-0 rounded-md transition-colors duration-micro ease-brand relative",
+              isActive ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground"
             )}
           >
             <item.icon className={cn("w-5 h-5 shrink-0", isActive && "stroke-[2.5px]")} aria-hidden="true" />
             {isActive && (
               <>
-                <span className="w-1 h-1 rounded-full bg-primary absolute top-1 right-1.5 animate-notification-pop" aria-hidden="true" />
+                <span className="w-1 h-1 rounded-pill bg-primary absolute top-1 right-1.5 animate-notification-pop" aria-hidden="true" />
                 <span className="sr-only">현재 페이지: </span>
               </>
             )}
@@ -89,18 +89,18 @@ export function BottomNav() {
         aria-expanded={moreOpen}
         aria-current={onMoreRoute ? "page" : undefined}
         className={cn(
-          "tap-press flex flex-col items-center justify-center gap-0.5 px-1 sm:px-2 min-h-[44px] flex-1 basis-0 min-w-0 rounded-xl transition-colors relative",
-          onMoreRoute ? "text-primary bg-primary/8" : "text-muted-foreground hover:text-foreground"
+          "tap-press flex flex-col items-center justify-center gap-0.5 px-1 sm:px-2 min-h-[44px] flex-1 basis-0 min-w-0 rounded-md transition-colors duration-micro ease-brand relative",
+          onMoreRoute ? "text-foreground bg-accent" : "text-muted-foreground hover:text-foreground"
         )}
       >
         <MoreHorizontal className={cn("w-5 h-5 shrink-0", onMoreRoute && "stroke-[2.5px]")} aria-hidden="true" />
-        {onMoreRoute && <span className="w-1 h-1 rounded-full bg-primary absolute top-1 right-1.5 animate-notification-pop" aria-hidden="true" />}
+        {onMoreRoute && <span className="w-1 h-1 rounded-pill bg-primary absolute top-1 right-1.5 animate-notification-pop" aria-hidden="true" />}
         <span className="text-[11px] sm:text-xs leading-tight font-medium max-w-full truncate">더보기</span>
       </button>
     </nav>
 
     <Dialog open={moreOpen} onOpenChange={setMoreOpen}>
-      <DialogContent className="max-w-md rounded-2xl p-0 overflow-hidden">
+      <DialogContent className="max-w-md rounded-lg p-0 overflow-hidden">
         <DialogHeader className="px-5 pt-5">
           <DialogTitle>더 많은 메뉴</DialogTitle>
           <DialogDescription>자주 쓰지 않는 페이지로 빠르게 이동하세요.</DialogDescription>
@@ -118,13 +118,13 @@ export function BottomNav() {
                 }}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-3 rounded-xl transition-colors min-h-[52px]",
-                  isActive ? "bg-primary/8 text-primary" : "hover:bg-muted/60 text-foreground"
+                  "flex items-center gap-3 px-3 py-3 rounded-md transition-colors duration-micro ease-brand min-h-[52px]",
+                  isActive ? "bg-accent text-foreground" : "hover:bg-muted/60 text-foreground"
                 )}
               >
                 <div className={cn(
-                  "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                  isActive ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+                  "w-10 h-10 rounded-md flex items-center justify-center shrink-0",
+                  isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 )}>
                   <item.icon className="w-[18px] h-[18px]" aria-hidden="true" />
                 </div>

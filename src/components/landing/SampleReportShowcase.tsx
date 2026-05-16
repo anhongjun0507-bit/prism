@@ -61,14 +61,7 @@ export function SampleReportShowcase() {
       </div>
 
       {/* Preview card — mimics report cover page visually */}
-      <div className="relative rounded-3xl border border-border/60 bg-card shadow-lg overflow-hidden">
-        {/* Gradient background matches report cover */}
-        <div
-          className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-background"
-          aria-hidden="true"
-        />
-        <div className="absolute -top-8 -right-6 w-32 h-32 bg-primary/20 rounded-full blur-3xl" aria-hidden="true" />
-
+      <div className="relative rounded-lg border border-border-subtle bg-card shadow-hairline overflow-hidden">
         <div className="relative p-5">
           {/* Header strip */}
           <div className="flex items-center justify-between mb-3">

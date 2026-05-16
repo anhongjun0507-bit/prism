@@ -136,10 +136,10 @@ export function PillButton({
     <button
       onClick={onClick}
       aria-pressed={active}
-      className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+      className={`px-3 py-1.5 rounded-pill text-xs font-semibold whitespace-nowrap duration-micro ease-brand transition-colors ${
         active
-          ? "bg-primary text-white shadow-glow-sm scale-105"
-          : "bg-card border text-foreground hover:bg-accent/50 hover:border-primary/30"
+          ? "bg-primary text-primary-foreground border border-primary"
+          : "bg-card border border-border-default text-foreground hover:border-border-strong"
       }`}
     >
       {children}

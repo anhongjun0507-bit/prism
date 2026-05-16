@@ -152,7 +152,7 @@ export function AnalysisResultView({ specs, onBack, toggleFavorite, isFavorite }
       />
       <div className="px-gutter-sm md:px-gutter pt-2 space-y-4">
         <Link href="/spec-analysis">
-          <Card className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 flex items-center gap-3 hover:shadow-md active:scale-[0.98] transition-all">
+          <Card className="p-4 bg-accent border border-border-subtle flex items-center gap-3 duration-micro ease-brand transition-colors hover:border-border-strong">
             <div className="w-11 h-11 rounded-xl bg-primary/12 flex items-center justify-center shrink-0">
               <Sparkles className="w-5 h-5 text-primary" />
             </div>

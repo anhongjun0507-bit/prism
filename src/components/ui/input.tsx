@@ -30,15 +30,15 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         type={type}
         aria-invalid={error || undefined}
         className={cn(
-          // Base
-          "flex w-full rounded-md border border-input bg-background px-3 py-2 ring-offset-background",
+          // Base · v2: rounded-input(10px), hairline border, no shadow.
+          "flex w-full rounded-input border border-border-default bg-background px-3 py-2 ring-offset-background",
           "file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground",
           "placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
-          // Brand focus glow
-          "outline-none transition-shadow duration-200 ease-toss",
-          "focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/20 focus-visible:shadow-glow-sm",
+          // Brand focus — 잉크 border + 2px ring (no glow shadow)
+          "outline-none transition-colors duration-micro ease-brand",
+          "focus-visible:border-border-strong focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
           // Error state
-          error && "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20",
+          error && "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/40",
           SIZE_CLASS[size],
           className
         )}

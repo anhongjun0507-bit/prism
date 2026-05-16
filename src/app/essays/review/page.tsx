@@ -807,13 +807,13 @@ function EssayReviewPageInner() {
               </button>
             </div>
             {canUseUniversityRubric && universityId !== "general" && (
-              <Badge variant="secondary" className="bg-gradient-to-r from-amber-100 to-violet-100 text-violet-700 dark:from-amber-900/30 dark:to-violet-900/30 dark:text-violet-300 text-[10px] px-2 py-0.5 rounded-full">
+              <Badge variant="goldSoft" className="text-[10px] px-2 py-0.5">
                 <Crown className="w-3 h-3 mr-1" /> Elite 맞춤 채점
               </Badge>
             )}
           </div>
           {rubricInfoOpen && (
-            <div className="rounded-xl border border-violet-200 dark:border-violet-900/50 bg-violet-50/60 dark:bg-violet-950/20 p-3 text-xs text-muted-foreground leading-relaxed space-y-1">
+            <div className="rounded-md border border-border-subtle bg-accent p-3 text-xs text-muted-foreground leading-relaxed space-y-1">
               <p>
                 <span className="font-semibold text-foreground">대학별 채점 기준(rubric):</span> Top 20 대학은 각 학교가 실제로 중시하는 역량(예: Harvard는 intellectual vitality, MIT는 technical rigor)에 맞춰 AI가 채점해요.
               </p>
@@ -1004,7 +1004,7 @@ function EssayReviewPageInner() {
               <span className={loadingElapsed >= 20 ? "text-primary font-semibold" : ""}>3/3 피드백 작성</span>
             </div>
             {canUseUniversityRubric && universityId !== "general" && (
-              <p className="text-xs text-violet-600 dark:text-violet-300 pt-2 border-t border-border/40">
+              <p className="text-xs text-gold-strong pt-2 border-t border-border-subtle">
                 이 대학 전용 기준으로 채점 중이에요
               </p>
             )}
@@ -1260,26 +1260,26 @@ function EssayReviewPageInner() {
             {result.isUniversityRubric && result.universitySpecificFeedback && (
               <div className="space-y-2">
                 <h3 className="font-headline text-base font-bold flex items-center gap-1.5">
-                  <GraduationCap className="w-4 h-4 text-violet-500" />
+                  <GraduationCap className="w-4 h-4 text-gold-strong" />
                   {result.universityName ?? "대학교"} 관점의 피드백
                 </h3>
-                <Card className="p-5 bg-gradient-to-br from-violet-50 to-amber-50 dark:from-violet-950/20 dark:to-amber-950/20 border-violet-200 dark:border-violet-800 rounded-2xl shadow-sm space-y-3">
-                  <p className="text-sm text-violet-900 dark:text-violet-100 leading-relaxed whitespace-pre-line">
+                <Card className="p-5 bg-gold-soft border-gold/30 rounded-md shadow-hairline space-y-3">
+                  <p className="text-sm text-gold-strong leading-relaxed whitespace-pre-line">
                     {result.universitySpecificFeedback}
                   </p>
                   {typeof result.universityFit === "number" && (
-                    <div className="flex items-center justify-between pt-3 border-t border-violet-200 dark:border-violet-800">
-                      <span className="text-xs font-semibold text-violet-700 dark:text-violet-300">
+                    <div className="flex items-center justify-between pt-3 border-t border-gold/30">
+                      <span className="text-xs font-semibold text-gold-strong">
                         이 대학과의 적합도
                       </span>
                       <div className="flex items-center gap-2">
-                        <div className="h-2 w-24 rounded-full bg-violet-200 dark:bg-violet-900 overflow-hidden">
+                        <div className="h-2 w-24 rounded-pill bg-gold/20 overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-violet-500 to-amber-500 transition-all"
+                            className="h-full bg-gold transition-all"
                             style={{ width: `${Math.max(0, Math.min(10, result.universityFit)) * 10}%` }}
                           />
                         </div>
-                        <span className="text-sm font-bold text-violet-900 dark:text-violet-100">
+                        <span className="text-sm font-bold text-gold-strong">
                           {result.universityFit}/10
                         </span>
                       </div>
@@ -1401,10 +1401,10 @@ function EssayReviewPageInner() {
             {result.admissionNote && (
             <div className="space-y-2">
               <h3 className="font-headline text-base font-bold flex items-center gap-1.5">
-                <MessageCircle className="w-4 h-4 text-violet-500" /> 입학사정관의 한마디
+                <MessageCircle className="w-4 h-4 text-primary" /> 입학사정관의 한마디
               </h3>
-              <Card className="p-4 bg-violet-50 dark:bg-violet-950/20 border-violet-200 dark:border-violet-800 rounded-2xl shadow-sm">
-                <p className="text-sm text-violet-800 dark:text-violet-200 leading-relaxed whitespace-pre-line">{result.admissionNote}</p>
+              <Card className="p-4 bg-accent border border-border-subtle rounded-md shadow-hairline">
+                <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{result.admissionNote}</p>
               </Card>
             </div>
             )}
@@ -1438,8 +1438,8 @@ function EssayReviewPageInner() {
       <Dialog open={upgradeModalOpen} onOpenChange={setUpgradeModalOpen}>
         <DialogContent className="max-w-sm p-8 text-center">
           <DialogHeader>
-            <div className="mx-auto mb-3 w-14 h-14 rounded-full bg-gradient-to-br from-amber-100 to-violet-100 dark:from-amber-900/40 dark:to-violet-900/40 flex items-center justify-center">
-              <Crown className="w-7 h-7 text-violet-600 dark:text-violet-300" />
+            <div className="mx-auto mb-3 w-14 h-14 rounded-pill bg-gold-soft border border-gold/30 flex items-center justify-center">
+              <Crown className="w-7 h-7 text-gold-strong" />
             </div>
             <DialogTitle className="text-lg">Elite 전용 기능이에요</DialogTitle>
             <DialogDescription className="text-sm leading-relaxed pt-2">

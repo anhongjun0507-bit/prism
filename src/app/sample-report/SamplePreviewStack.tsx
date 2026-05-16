@@ -7,11 +7,7 @@ import type { SampleReportData } from "@/lib/report/sample-data";
 export function SamplePreviewStack({ data }: { data: SampleReportData }) {
   return (
     <div className="space-y-4">
-      <PreviewPage
-        page={1}
-        title="표지 · 이번 주 요약"
-        accent="from-primary/10 to-primary/5"
-      >
+      <PreviewPage page={1} title="표지 · 이번 주 요약">
         <div className="flex items-center justify-between text-[10px] font-bold text-primary">
           <span>PRISM</span>
           <span className="text-muted-foreground/80">{data.weekLabel}</span>
@@ -36,11 +32,7 @@ export function SamplePreviewStack({ data }: { data: SampleReportData }) {
         </div>
       </PreviewPage>
 
-      <PreviewPage
-        page={2}
-        title="학업 진단 · 강점 · 우선순위"
-        accent="from-emerald-500/10 to-emerald-500/5"
-      >
+      <PreviewPage page={2} title="학업 진단 · 강점 · 우선순위">
         <div className="text-base font-bold">학업 진단</div>
         <div className="text-[10px] text-muted-foreground mb-3">
           합격자 평균 대비 민준님의 현재 위치
@@ -68,11 +60,7 @@ export function SamplePreviewStack({ data }: { data: SampleReportData }) {
         <p className="text-[10px] text-muted-foreground">{data.priorities[0]?.title} — {data.priorities[0]?.detail}</p>
       </PreviewPage>
 
-      <PreviewPage
-        page={3}
-        title="부모님께 · 대화 주제 · 응원 메시지"
-        accent="from-amber-500/10 to-amber-500/5"
-      >
+      <PreviewPage page={3} title="부모님께 · 대화 주제 · 응원 메시지">
         <div className="text-base font-bold">부모님께 드리는 제안</div>
         <div className="text-[10px] text-muted-foreground mb-3">이번 달 함께 나누면 좋은 대화</div>
         <ol className="space-y-1.5 list-decimal list-inside">
@@ -93,17 +81,14 @@ export function SamplePreviewStack({ data }: { data: SampleReportData }) {
 function PreviewPage({
   page,
   title,
-  accent,
   children,
 }: {
   page: number;
   title: string;
-  accent: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
-      <div className={`absolute inset-0 bg-gradient-to-br ${accent} pointer-events-none`} aria-hidden="true" />
+    <div className="relative rounded-md border border-border-subtle bg-card shadow-hairline overflow-hidden">
       <div className="relative p-4 md:p-5">
         <div className="flex items-center justify-between mb-2">
           <span className="text-[10px] font-bold text-muted-foreground tracking-wider">

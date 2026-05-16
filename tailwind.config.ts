@@ -12,35 +12,46 @@ export default {
   theme: {
     extend: {
       fontFamily: {
+        // 본문·기본: Pretendard Variable (한글), -apple-system fallback
         sans: ['Pretendard Variable', 'Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'sans-serif'],
         body: ['Pretendard Variable', 'Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'sans-serif'],
-        headline: ['Inter', 'Pretendard Variable', 'Pretendard', 'sans-serif'],
-        code: ['monospace'],
+        // Display·headline: Inter Tight (latin display, tight tracking), Pretendard fallback
+        // Inter Tight를 layout.tsx의 next/font로 self-host → --font-display variable
+        display: ['var(--font-display)', 'Inter Tight', 'Inter', 'Pretendard Variable', 'sans-serif'],
+        headline: ['var(--font-display)', 'Inter Tight', 'Inter', 'Pretendard Variable', 'sans-serif'],
+        code: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
-      // Typographic scale — refined modular ratio (~1.2-1.25 between adjacent tiers).
-      // 이전엔 xl == 2xl, 3xl == 4xl 가 collapse되어 시각적 위계 부재.
-      // 새 scale은 strictly monotonic + golden-feeling progression.
+      // Typographic scale — Toss·LinkedIn·Goldman 합성: 한글 가독성 + 디스플레이 위계.
       //
-      //   xs   12  body micro · captions
-      //   sm   13  body small · UI labels
-      //   base 15  body default
-      //   lg   18  emphasized body · sub-headlines
-      //   xl   21  card/section headlines (was 24, 살짝 줄여 2xl과 분리)
-      //   2xl  24  page-level title
-      //   3xl  30  hero secondary (was 36, 4xl과 분리)
-      //   4xl  36  hero primary
-      //   5xl  48  marketing hero
+      //   xs   12  caption · micro badge
+      //   sm   13  UI label · helper text
+      //   base 15  body default (한글 readable optimum)
+      //   lg   17  emphasized body
+      //   xl   20  sub-headline
+      //   2xl  24  card title
+      //   3xl  30  section h2
+      //   4xl  36  page h1
+      //   5xl  44  hero secondary
+      //   6xl  56  hero primary (display)
+      //   7xl  72  marketing display
       fontSize: {
-        '2xs': ['0.625rem', { lineHeight: '0.875rem' }],    // 10 / 14  micro badge·overline
-        xs: ['0.75rem', { lineHeight: '1rem' }],            // 12 / 16
-        sm: ['0.8125rem', { lineHeight: '1.15rem' }],       // 13 / 18.4
-        base: ['0.9375rem', { lineHeight: '1.45rem' }],     // 15 / 23.2
-        lg: ['1.125rem', { lineHeight: '1.65rem' }],        // 18 / 26.4
-        xl: ['1.3125rem', { lineHeight: '1.75rem' }],       // 21 / 28
-        '2xl': ['1.5rem', { lineHeight: '1.9rem' }],        // 24 / 30.4
-        '3xl': ['1.875rem', { lineHeight: '2.25rem' }],     // 30 / 36
-        '4xl': ['2.25rem', { lineHeight: '2.5rem' }],       // 36 / 40
-        '5xl': ['3rem', { lineHeight: '1' }],               // 48 / 48
+        '2xs':   ['0.625rem',   { lineHeight: '0.875rem' }],   // 10 / 14
+        xs:      ['0.75rem',    { lineHeight: '1rem' }],       // 12 / 16
+        sm:      ['0.8125rem',  { lineHeight: '1.15rem' }],    // 13 / 18.4
+        base:    ['0.9375rem',  { lineHeight: '1.5rem' }],     // 15 / 24
+        lg:      ['1.0625rem',  { lineHeight: '1.65rem' }],    // 17 / 26.4
+        xl:      ['1.25rem',    { lineHeight: '1.75rem' }],    // 20 / 28
+        '2xl':   ['1.5rem',     { lineHeight: '1.9rem' }],     // 24 / 30.4
+        '3xl':   ['1.875rem',   { lineHeight: '2.25rem' }],    // 30 / 36
+        '4xl':   ['2.25rem',    { lineHeight: '2.5rem' }],     // 36 / 40
+        '5xl':   ['2.75rem',    { lineHeight: '1.05' }],       // 44 / 46.2
+        '6xl':   ['3.5rem',     { lineHeight: '1.04' }],       // 56 / 58.2
+        '7xl':   ['4.5rem',     { lineHeight: '1.02' }],       // 72 / 73.4
+        // Semantic display tokens (alias)
+        'display-lg': ['2.75rem', { lineHeight: '1.05', letterSpacing: '-0.02em', fontWeight: '700' }],
+        'display-xl': ['3.5rem',  { lineHeight: '1.04', letterSpacing: '-0.022em', fontWeight: '700' }],
+        'display-2xl':['4.5rem',  { lineHeight: '1.02', letterSpacing: '-0.025em', fontWeight: '700' }],
       },
       colors: {
         background: 'hsl(var(--background))',
@@ -69,8 +80,28 @@ export default {
           DEFAULT: 'hsl(var(--accent))',
           foreground: 'hsl(var(--accent-foreground))',
         },
-        // Phase 5: 학생 친화 vivid violet — gamification, secondary CTA, achievement.
-        // primary terracotta와 hue 분리 (265 vs 19) → 충돌 없이 보조 강조 톤으로 사용.
+        // Ink — 단일 액센트 (v2 redesign).
+        // primary와 동일 token이나 의미가 다른 곳에 의도 명시용으로 사용.
+        ink: {
+          DEFAULT: 'hsl(var(--accent-ink))',
+          hover: 'hsl(var(--accent-ink-hover))',
+          soft: 'hsl(var(--accent-ink-soft))',
+          foreground: 'hsl(var(--text-on-accent))',
+        },
+        // Gold — Elite·학부모 전용·상위권 6곳 한정.
+        // 본문·일반 UI에 절대 사용 금지 (spec 위반).
+        gold: {
+          DEFAULT: 'hsl(var(--gold))',
+          strong: 'hsl(var(--gold-strong))',
+          soft: 'hsl(var(--gold-soft))',
+        },
+        // Inverse — bg-inverse(#0A0F1E) 위에 올라가는 hero 영역 텍스트·표면
+        inverse: {
+          DEFAULT: 'hsl(var(--bg-inverse))',
+          2: 'hsl(var(--bg-inverse-2))',
+          foreground: 'hsl(var(--text-inverse))',
+        },
+        // Legacy alias — v1 컴포넌트 빌드 보호 (STEP 4에서 사용처 제거 예정).
         'accent-vivid': {
           DEFAULT: 'hsl(var(--accent-vivid))',
           foreground: 'hsl(var(--accent-vivid-foreground))',
@@ -102,10 +133,21 @@ export default {
           muted: 'hsl(var(--hero-text-muted) / 0.75)',
           overlay: 'hsl(var(--hero-overlay) / 0.12)',
         },
-        border: 'hsl(var(--border))',
+        border: {
+          DEFAULT: 'hsl(var(--border))',
+          subtle:  'hsl(var(--border-subtle))',
+          strong:  'hsl(var(--border-strong))',
+        },
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
-        // chart 토큰 제거 — CSS 변수(--chart-1~5) 미정의, 사용처 없음
+        // Chart colors — 5톤 단색 시퀀스(잉크 명도 그라데이션 + 골드 1포인트).
+        chart: {
+          1: 'hsl(var(--chart-1))',
+          2: 'hsl(var(--chart-2))',
+          3: 'hsl(var(--chart-3))',
+          4: 'hsl(var(--chart-4))',
+          5: 'hsl(var(--chart-5))',
+        },
         sidebar: {
           DEFAULT: 'hsl(var(--sidebar-background))',
           foreground: 'hsl(var(--sidebar-foreground))',
@@ -177,14 +219,40 @@ export default {
       //
       // --radius CSS variable로 한 번에 조절 가능 (globals.css).
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        lg: 'var(--radius)',                       // 12px card
+        md: 'calc(var(--radius) - 2px)',           // 10px button·input
+        sm: 'calc(var(--radius) - 4px)',           // 8px micro
+        button: 'var(--radius-button)',
+        input: 'var(--radius-input)',
+        pill: 'var(--radius-pill)',
       },
-      // 토스 standard ease — 모든 마이크로 인터랙션의 기본 easing.
-      // bezier(0.22, 1, 0.36, 1) = ease-out, 끝에서 부드럽게 안착.
+      // Easing tokens:
+      //   brand = spec primary (v2): cubic-bezier(0.2, 0.8, 0.2, 1) — sharp anticipation + soft settle
+      //   toss  = legacy v1 standard ease — 호환 유지 (점진적으로 brand로 교체)
       transitionTimingFunction: {
-        toss: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        brand: 'var(--ease-brand)',
+        toss:  'cubic-bezier(0.22, 1, 0.36, 1)',
+      },
+      // Duration tokens (spec):
+      //   micro  120ms  hover·press
+      //   page   240ms  navigation·step
+      //   emph   480ms  number reveal·toast·hero
+      transitionDuration: {
+        micro: '120ms',
+        page: '240ms',
+        emph: '480ms',
+      },
+      // Hairline shadow only (spec: 그림자 거의 사용 금지)
+      boxShadow: {
+        hairline:
+          '0 1px 2px hsl(var(--text-primary) / 0.04), 0 1px 1px hsl(var(--text-primary) / 0.03)',
+        none: '0 0 #0000',
+      },
+      // Letter-spacing tokens — display(Inter Tight)는 -0.02em, 본문은 -0.011em.
+      letterSpacing: {
+        tightest: '-0.025em',
+        display: '-0.02em',
+        body: '-0.011em',
       },
       // Keyframes + animation utilities. 단일 source of truth.
       // (예전에 일부 keyframes가 globals.css에만 있어 drift 위험이 있었음.)

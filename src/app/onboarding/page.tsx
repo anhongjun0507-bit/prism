@@ -173,11 +173,8 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-dvh bg-background flex flex-col p-8 pt-12 relative overflow-hidden lg:max-w-content-narrow lg:mx-auto lg:w-full">
-      {/* Floating prismatic orbs background */}
-      <div className="brand-orb brand-orb-primary -top-20 -right-16 w-64 h-64 opacity-25" aria-hidden="true" />
-      <div className="brand-orb brand-orb-violet -bottom-24 -left-20 w-72 h-72 opacity-20" aria-hidden="true" />
 
-      {/* Step indicator — prismatic gradient line + dot tracker */}
+      {/* Step indicator — 잉크 단색 dot tracker */}
       <div className="relative space-y-3 mb-10">
         <div className="flex items-center justify-between gap-2">
           {[1, 2, 3].map((s) => {
@@ -186,27 +183,24 @@ export default function OnboardingPage() {
             return (
               <div key={s} className="flex items-center gap-2 flex-1 last:flex-none">
                 <div
-                  className={`relative flex items-center justify-center transition-all duration-500 shrink-0 ${
+                  className={`relative flex items-center justify-center duration-page ease-brand transition-all shrink-0 ${
                     current ? "w-8 h-8" : "w-6 h-6"
                   }`}
                 >
-                  {current && (
-                    <div className="absolute inset-0 rounded-full bg-prismatic blur-md opacity-50 animate-pulse" />
-                  )}
                   <div
-                    className={`relative rounded-full flex items-center justify-center text-2xs font-bold transition-all duration-300 ${
+                    className={`relative rounded-pill flex items-center justify-center text-2xs font-bold duration-micro ease-brand transition-colors ${
                       reached
-                        ? "bg-prismatic text-white shadow-glow-sm"
+                        ? "bg-primary text-primary-foreground"
                         : "bg-muted text-muted-foreground"
-                    } ${current ? "w-8 h-8 ring-4 ring-primary/15" : "w-6 h-6"}`}
+                    } ${current ? "w-8 h-8 ring-2 ring-primary/20" : "w-6 h-6"}`}
                   >
                     {s}
                   </div>
                 </div>
                 {s < 3 && (
-                  <div className="flex-1 h-0.5 rounded-full overflow-hidden bg-muted">
+                  <div className="flex-1 h-0.5 rounded-pill overflow-hidden bg-muted">
                     <div
-                      className="h-full bg-prismatic transition-all duration-500 ease-out"
+                      className="h-full bg-primary transition-all duration-page ease-brand"
                       style={{ width: step > s ? "100%" : "0%" }}
                     />
                   </div>

@@ -138,7 +138,7 @@ export function ReviewDetailDialog({ target, onClose }: ReviewDetailDialogProps)
           {review.admissionNote && (
             <div className="space-y-2">
               <h4 className="text-sm font-bold flex items-center gap-1.5">입학사정관의 한마디</h4>
-              <div className="p-3 rounded-xl bg-violet-50 dark:bg-violet-950/20 text-xs text-violet-800 dark:text-violet-200 leading-relaxed whitespace-pre-line">{review.admissionNote}</div>
+              <div className="p-3 rounded-md bg-accent text-xs text-foreground leading-relaxed whitespace-pre-line border border-border-subtle">{review.admissionNote}</div>
             </div>
           )}
         </div>

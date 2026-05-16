@@ -40,8 +40,8 @@ const SLIDES: Slide[] = [
   },
   {
     icon: Search,
-    iconBg: "bg-violet-500/10",
-    iconColor: "text-violet-500",
+    iconBg: "bg-accent",
+    iconColor: "text-foreground",
     eyebrow: "이렇게 작동해요",
     title: "성적 입력 → AI 분석\n→ 에세이 첨삭",
     body: "Common Data Set + 32+ 검증 합격 사례를 학습한 AI가 내 스펙에 맞는 학교와 전략을 제안해요.",

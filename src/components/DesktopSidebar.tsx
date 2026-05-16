@@ -20,7 +20,7 @@ import {
  *
  * 레이아웃 정책:
  *   - 모바일/태블릿(<lg): 숨김. BottomNav가 표시됨.
- *   - lg+: 좌측 고정. 컨텐츠는 lg:pl-64 으로 자체 보정.
+ *   - lg+: 좌측 고정 240px. 컨텐츠는 AppShell의 lg:pl-60 으로 자체 보정.
  *
  * IA: BottomNav와 동일 5탭 + "더보기" — MORE_NAV_ITEMS 공유.
  */
@@ -55,7 +55,7 @@ export function DesktopSidebar() {
     <>
       <aside
         aria-label="데스크톱 사이드 메뉴"
-        className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 flex-col bg-background border-r border-border/60 z-40"
+        className="hidden lg:flex fixed left-0 top-0 bottom-0 w-60 flex-col bg-background border-r border-border-subtle z-40"
       >
         {/* Brand mark */}
         <Link
@@ -64,7 +64,7 @@ export function DesktopSidebar() {
           aria-label="PRISM 홈"
         >
           <PrismLogo size={28} variant="compact" />
-          <span className="font-headline font-bold text-lg tracking-tight">PRISM</span>
+          <span className="font-display font-bold text-lg tracking-tightest">PRISM</span>
         </Link>
 
         {/* Nav list */}
@@ -77,15 +77,15 @@ export function DesktopSidebar() {
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors relative",
+                  "group flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors duration-micro ease-brand relative",
                   isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
+                    ? "bg-accent text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent/60"
                 )}
               >
                 {isActive && (
                   <span
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-primary"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-pill bg-primary"
                     aria-hidden="true"
                   />
                 )}
@@ -110,10 +110,10 @@ export function DesktopSidebar() {
             }}
             aria-current={onMoreRoute ? "page" : undefined}
             className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors relative",
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors duration-micro ease-brand relative",
               onMoreRoute
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
+                ? "bg-accent text-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent/60"
             )}
           >
             {onMoreRoute && (
@@ -131,13 +131,13 @@ export function DesktopSidebar() {
         </nav>
 
         {/* User card — 이름·플랜 뱃지·관리 CTA. Free는 업그레이드, Pro/Elite는 프로필. */}
-        <div className="border-t border-border/40 p-3">
+        <div className="border-t border-border-subtle p-3">
           <Link
             href={ctaHref}
             aria-label={`${displayName} — ${planInfo.displayName} 플랜, ${ctaLabel}`}
-            className="group flex items-center gap-3 p-2.5 rounded-xl hover:bg-accent/40 transition-colors"
+            className="group flex items-center gap-3 p-2.5 rounded-md hover:bg-accent/60 transition-colors duration-micro ease-brand"
           >
-            <div className="relative w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold overflow-hidden shrink-0 ring-1 ring-border/60">
+            <div className="relative w-9 h-9 rounded-pill bg-accent flex items-center justify-center text-foreground text-xs font-bold overflow-hidden shrink-0 ring-1 ring-border-subtle">
               {photoURL ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={photoURL} alt="" className="w-full h-full object-cover" />
@@ -153,8 +153,8 @@ export function DesktopSidebar() {
                     className={cn(
                       "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold leading-none shrink-0",
                       currentPlan === "elite"
-                        ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
-                        : "bg-primary/15 text-primary"
+                        ? "bg-gold-soft text-gold-strong border border-gold/30"
+                        : "bg-accent text-foreground"
                     )}
                   >
                     {currentPlan === "elite" && <Crown className="w-2.5 h-2.5" aria-hidden="true" />}
@@ -173,7 +173,7 @@ export function DesktopSidebar() {
       </aside>
 
       <Dialog open={moreOpen} onOpenChange={setMoreOpen}>
-        <DialogContent className="max-w-md rounded-2xl p-0 overflow-hidden">
+        <DialogContent className="max-w-md rounded-lg p-0 overflow-hidden">
           <DialogHeader className="px-5 pt-5">
             <DialogTitle>더 많은 메뉴</DialogTitle>
             <DialogDescription>자주 쓰지 않는 페이지로 빠르게 이동하세요.</DialogDescription>
@@ -191,13 +191,13 @@ export function DesktopSidebar() {
                   }}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-3 rounded-xl transition-colors min-h-[52px]",
-                    isActive ? "bg-primary/8 text-primary" : "hover:bg-muted/60 text-foreground"
+                    "flex items-center gap-3 px-3 py-3 rounded-md transition-colors duration-micro ease-brand min-h-[52px]",
+                    isActive ? "bg-accent text-foreground" : "hover:bg-muted/60 text-foreground"
                   )}
                 >
                   <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                    isActive ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+                    "w-10 h-10 rounded-md flex items-center justify-center shrink-0",
+                    isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                   )}>
                     <item.icon className="w-[18px] h-[18px]" aria-hidden="true" />
                   </div>

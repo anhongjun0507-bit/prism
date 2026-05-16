@@ -89,10 +89,10 @@ const SUGGESTION_STYLES: Record<SuggestedCategory, {
   },
   "에세이": {
     icon: PenLine,
-    gradient: "from-purple-500/5 to-transparent dark:from-purple-500/10",
-    iconBg: "bg-purple-500/15 dark:bg-purple-500/25",
-    iconColor: "text-purple-600 dark:text-purple-400",
-    accent: "border-border hover:border-purple-500/40",
+    gradient: "from-accent to-transparent",
+    iconBg: "bg-accent",
+    iconColor: "text-foreground",
+    accent: "border-border-subtle hover:border-border-strong",
     label: "에세이",
   },
   "시험": {
@@ -578,16 +578,12 @@ function ChatPageInner() {
       }}
     >
       {/* ── Header ── */}
-      <header className="relative shrink-0 overflow-hidden border-b border-border/60">
-        {/* Decorative gradient + blurred orb */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-background to-background dark:from-primary/15" aria-hidden="true" />
-        <div className="absolute -top-10 -right-6 w-40 h-40 bg-primary/20 rounded-full blur-3xl opacity-60" aria-hidden="true" />
+      <header className="relative shrink-0 overflow-hidden border-b border-border-subtle bg-accent">
         <div className="relative p-4 px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="absolute inset-0 rounded-2xl bg-primary/30 blur-md animate-pulse" aria-hidden="true" />
-              <div className="relative w-11 h-11 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/30 ring-1 ring-white/20">
-                <Sparkles className="w-5 h-5 text-white" aria-hidden="true" />
+              <div className="relative w-11 h-11 rounded-md bg-primary flex items-center justify-center shadow-hairline">
+                <Sparkles className="w-5 h-5 text-primary-foreground" aria-hidden="true" />
               </div>
             </div>
             <div>
@@ -697,9 +693,8 @@ function ChatPageInner() {
                 <div className="shrink-0 pt-0.5">
                   {isAi ? (
                     <div className="relative w-8 h-8">
-                      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-primary/60 blur-[2px] opacity-40" aria-hidden="true" />
-                      <div className="relative w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center ring-2 ring-background shadow-sm">
-                        <Bot size={15} className="text-white" aria-hidden="true" />
+                      <div className="relative w-8 h-8 rounded-pill bg-primary flex items-center justify-center ring-2 ring-background shadow-hairline">
+                        <Bot size={15} className="text-primary-foreground" aria-hidden="true" />
                       </div>
                     </div>
                   ) : (
@@ -716,9 +711,9 @@ function ChatPageInner() {
                       (!isAi || m.error || i === 0) && "whitespace-pre-wrap",
                       isAi
                         ? m.error
-                          ? "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 rounded-2xl rounded-tl-md border border-red-200 dark:border-red-900"
-                          : "bg-card text-foreground rounded-2xl rounded-tl-md shadow-sm ring-1 ring-border/50"
-                        : "bg-gradient-to-br from-primary to-primary/85 text-white rounded-2xl rounded-tr-md shadow-md shadow-primary/20"
+                          ? "bg-destructive-soft text-destructive rounded-md rounded-tl-sm border border-destructive/30"
+                          : "bg-card text-foreground rounded-md rounded-tl-sm shadow-hairline border border-border-subtle"
+                        : "bg-primary text-primary-foreground rounded-md rounded-tr-sm shadow-hairline"
                     )}
                   >
                     {isAi && i === 0 ? (
@@ -848,13 +843,12 @@ function ChatPageInner() {
             <div className="flex gap-2.5 animate-msg-ai" role="status" aria-label="AI 응답 대기 중">
               <div className="shrink-0 pt-0.5">
                 <div className="relative w-8 h-8">
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-primary/60 blur-[2px] opacity-40 animate-pulse" aria-hidden="true" />
-                  <div className="relative w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center ring-2 ring-background shadow-sm">
-                    <Bot size={15} className="text-white" aria-hidden="true" />
+                  <div className="relative w-8 h-8 rounded-pill bg-primary flex items-center justify-center ring-2 ring-background shadow-hairline">
+                    <Bot size={15} className="text-primary-foreground" aria-hidden="true" />
                   </div>
                 </div>
               </div>
-              <div className="bg-card px-4 py-3 rounded-2xl rounded-tl-md shadow-sm ring-1 ring-border/50 flex items-center gap-2">
+              <div className="bg-card px-4 py-3 rounded-md rounded-tl-sm shadow-hairline border border-border-subtle flex items-center gap-2">
                 <div className="flex gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary/70 animate-bounce" style={{ animationDelay: "0ms" }} />
                   <span className="w-1.5 h-1.5 rounded-full bg-primary/70 animate-bounce" style={{ animationDelay: "150ms" }} />
@@ -892,11 +886,8 @@ function ChatPageInner() {
                     sendMessage(q.text);
                   }}
                   className={cn(
-                    "group relative text-left p-2.5 rounded-2xl border bg-gradient-to-br transition-all",
-                    "hover:shadow-md active:scale-[0.98]",
-                    style.gradient,
-                    style.accent,
-                    "bg-card"
+                    "group relative text-left p-2.5 rounded-md border bg-card duration-micro ease-brand transition-colors",
+                    style.accent
                   )}
                 >
                   <div className="flex items-center gap-2 mb-1">
@@ -918,8 +909,8 @@ function ChatPageInner() {
       {/* ── Input ── */}
       <div className="shrink-0 px-4 pt-1 pb-1 bg-background lg:max-w-content lg:mx-auto lg:w-full">
         <div className={cn(
-          "relative flex items-end gap-2 p-2 pl-4 rounded-2xl bg-card shadow-glow-sm ring-1 transition-all",
-          "ring-border/60 focus-within:ring-primary/40 focus-within:shadow-glow-md"
+          "relative flex items-end gap-2 p-2 pl-4 rounded-md bg-card shadow-hairline border duration-micro ease-brand transition-colors",
+          "border-border-default focus-within:border-border-strong"
         )}>
           {/* Remaining-count pill — floats in top-right of the input shell */}
           {dailyLimit !== Infinity && (
@@ -954,9 +945,8 @@ function ChatPageInner() {
             disabled={loading || !input.trim() || remaining <= 0}
             aria-label="메시지 전송"
             className={cn(
-              "shrink-0 w-11 h-11 rounded-2xl p-0 bg-gradient-to-br from-primary to-primary/80 shadow-md shadow-primary/30",
-              "hover:shadow-lg hover:shadow-primary/40 hover:brightness-110 transition-all",
-              "disabled:from-muted disabled:to-muted disabled:shadow-none disabled:opacity-50"
+              "shrink-0 w-11 h-11 rounded-md p-0 bg-primary text-primary-foreground shadow-hairline duration-micro ease-brand transition-colors",
+              "hover:bg-ink-hover disabled:bg-muted disabled:opacity-50"
             )}
           >
             {loading ? (

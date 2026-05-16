@@ -365,7 +365,7 @@ export function EssayEditor({
               { key: "past" as const, icon: <Clock className="w-4 h-4" />, color: "bg-blue-50 border-blue-100 text-blue-700", iconBg: "bg-blue-100" },
               { key: "turning" as const, icon: <Zap className="w-4 h-4" />, color: "bg-amber-50 border-amber-100 text-amber-700", iconBg: "bg-amber-100" },
               { key: "growth" as const, icon: <TrendingUp className="w-4 h-4" />, color: "bg-emerald-50 border-emerald-100 text-emerald-700", iconBg: "bg-emerald-100" },
-              { key: "connection" as const, icon: <GraduationCap className="w-4 h-4" />, color: "bg-violet-50 border-violet-100 text-violet-700", iconBg: "bg-violet-100" },
+              { key: "connection" as const, icon: <GraduationCap className="w-4 h-4" />, color: "bg-accent border-border-subtle text-foreground", iconBg: "bg-muted" },
             ] as const).filter(({ key }) => outline[key]).map(({ key, icon, color, iconBg }) => {
               const section = outline[key]!;
               const guide = getKoreanGuide(section);

@@ -143,7 +143,7 @@ export function SimilarAdmissionCard() {
 
   return (
     <>
-      <Card className="p-4 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+      <Card className="p-4 rounded-md border border-border-subtle bg-accent">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center">
@@ -251,8 +251,8 @@ function UpgradeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm p-8 text-center">
         <DialogHeader>
-          <div className="mx-auto mb-3 w-14 h-14 rounded-full bg-gradient-to-br from-amber-100 to-violet-100 dark:from-amber-900/40 dark:to-violet-900/40 flex items-center justify-center">
-            <Crown className="w-7 h-7 text-violet-600 dark:text-violet-300" />
+          <div className="mx-auto mb-3 w-14 h-14 rounded-pill bg-gold-soft border border-gold/30 flex items-center justify-center">
+            <Crown className="w-7 h-7 text-gold-strong" />
           </div>
           <DialogTitle className="text-lg">Elite 전용 기능이에요</DialogTitle>
           <DialogDescription className="text-sm leading-relaxed pt-2">

@@ -38,7 +38,7 @@ export function StreamingResultView({ content, complete, parseError }: Streaming
           </span>
         </div>
       ) : (
-        <div className="rounded-xl border border-violet-200 dark:border-violet-800 bg-violet-50/70 dark:bg-violet-950/30 px-3 py-2.5 text-xs text-violet-800 dark:text-violet-200 leading-relaxed flex items-start gap-2">
+        <div className="rounded-md border border-border-subtle bg-accent px-3 py-2.5 text-xs text-foreground leading-relaxed flex items-start gap-2">
           <Sparkles className="w-3.5 h-3.5 shrink-0 mt-0.5" />
           <span>
             🧪 SSE 스트리밍 모드입니다. 분석이 끝나면 자동으로 결과 카드로 전환돼요.

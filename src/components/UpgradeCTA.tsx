@@ -46,7 +46,7 @@ export function UpgradeCTA({
 
   if (variant === "value") {
     return (
-      <Card className="relative overflow-hidden border-primary/40 shadow-glow-sm p-5 space-y-3">
+      <Card className="relative overflow-hidden border-primary shadow-hairline p-5 space-y-3">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-primary" aria-hidden="true" />
           <h3 className="font-bold text-sm">{title}</h3>
@@ -63,7 +63,7 @@ export function UpgradeCTA({
   }
 
   return (
-    <Card className="relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 p-6 text-center">
+    <Card className="relative overflow-hidden border-border-subtle bg-accent p-6 text-center">
       <Crown className="w-10 h-10 text-primary mx-auto mb-3" aria-hidden="true" />
       <h3 className="font-bold text-base mb-1">{title}</h3>
       <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{description}</p>

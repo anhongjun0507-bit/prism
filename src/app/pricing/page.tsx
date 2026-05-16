@@ -121,9 +121,9 @@ export default function PricingPage() {
             Why: 한국 앱스토어 정책(인앱결제 강제) + 가족결제·복원 기능. 사용자가 "왜 웹 결제는 없나"
             의문을 갖지 않도록 사유를 명시. iOS/Android 분기 시 해당 스토어 버튼만 노출해 행동 단축. */}
         {!isMaster && (
-          <div className="rounded-2xl border border-primary/30 bg-gradient-to-b from-primary/[0.07] to-primary/[0.03] p-4 sm:p-5 space-y-3">
+          <div className="rounded-md border border-border-subtle bg-accent p-4 sm:p-5 space-y-3">
             <div className="flex items-start gap-3">
-              <div className="shrink-0 w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center">
+              <div className="shrink-0 w-9 h-9 rounded-md bg-primary/15 flex items-center justify-center">
                 <Smartphone className="w-4.5 h-4.5 text-primary" aria-hidden="true" />
               </div>
               <div className="flex-1 min-w-0">
@@ -191,21 +191,21 @@ export default function PricingPage() {
             <Card
               key={plan.id}
               variant={isRecommended ? "elevated" : "default"}
-              className={`relative p-6 border-2 transition-all hover-lift flex flex-col ${
+              className={`relative p-6 border-2 duration-micro ease-brand transition-colors flex flex-col ${
                 isRecommended
-                  ? "border-primary shadow-glow-lg bg-gradient-to-b from-primary/[0.04] to-transparent"
+                  ? "border-primary shadow-hairline bg-accent"
                   : isElite
-                  ? "border-amber-300 dark:border-amber-700 shadow-sm bg-gradient-to-b from-amber-50/40 to-transparent dark:from-amber-950/10"
-                  : "border-transparent shadow-sm"
+                  ? "border-gold/40 shadow-hairline bg-gold-soft/40"
+                  : "border-border-subtle shadow-hairline"
               }`}
             >
               {isRecommended && (
-                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white px-3">
+                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-3">
                   <Sparkles className="w-3 h-3 mr-1" aria-hidden="true" /> 추천
                 </Badge>
               )}
               {isElite && (
-                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white px-3">
+                <Badge variant="gold" className="absolute -top-3 left-1/2 -translate-x-1/2 px-3">
                   <Users className="w-3 h-3 mr-1" aria-hidden="true" /> 학부모가 선택
                 </Badge>
               )}

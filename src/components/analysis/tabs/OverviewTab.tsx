@@ -147,7 +147,7 @@ export function OverviewTab({
       {aiDetail && !isFreeUser && (
         <div className="space-y-3">
           {/* AI Probability Card */}
-          <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-4">
+          <div className="bg-accent border border-border-subtle rounded-md p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-semibold text-primary flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" /> AI 정밀 분석
@@ -221,7 +221,7 @@ export function OverviewTab({
 
       {/* Free user upsell for AI detail */}
       {aiDetail && isFreeUser && (
-        <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-4 text-center">
+        <div className="bg-accent border border-border-subtle rounded-md p-4 text-center">
           <Sparkles className="w-6 h-6 text-primary mx-auto mb-2" />
           <p className="text-sm font-bold mb-1">AI 정밀 합격 분석</p>
           <p className="text-xs text-muted-foreground mb-3">
@@ -258,7 +258,7 @@ export function OverviewTab({
                 <p className="text-sm leading-relaxed text-foreground blur-[5px] select-none" aria-hidden>
                   {story.split(/[.!?]/).slice(1).join(".")}
                 </p>
-                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-card/40 to-card rounded-lg">
+                <div className="absolute inset-0 flex items-center justify-center bg-card/90 rounded-md">
                   <button onClick={() => window.location.href = "/pricing"} className="text-xs font-semibold text-primary bg-primary/10 rounded-full px-3 py-1.5 hover:bg-primary/20 transition-colors">
                     Pro 플랜 알아보기
                   </button>

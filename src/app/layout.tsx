@@ -1,14 +1,21 @@
 
 import type {Metadata, Viewport} from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Inter_Tight } from 'next/font/google';
 import './globals.css';
 
-// next/font로 self-host: 외부 폰트 CDN round-trip 제거 + layout shift 방지 (font-display: swap 대신 size-adjust 자동)
+// next/font로 self-host: 외부 폰트 CDN round-trip 제거 + layout shift 방지.
+// Inter: 본문·UI fallback (라틴), Inter Tight: display·hero (Toss·Goldman 톤의 tight tracking)
 const inter = Inter({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700', '800'],
   display: 'swap',
   variable: '--font-inter',
+});
+const interTight = Inter_Tight({
+  subsets: ['latin'],
+  weight: ['500', '600', '700', '800'],
+  display: 'swap',
+  variable: '--font-display',
 });
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/lib/auth-context";
@@ -81,10 +88,10 @@ export const viewport: Viewport = {
   interactiveWidget: 'resizes-content',
   viewportFit: 'cover', // enable env(safe-area-inset-*) on iOS
   // Light/dark별 theme-color → 모바일 status bar 색 자동.
-  // Toss 리브랜딩 후: light는 화이트 캔버스(#FFFFFF), dark는 slate canvas(#0F1320).
+  // v2 redesign: light = #FAFAFA(--bg-canvas), dark = #07090F(--bg-canvas dark).
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
-    { media: "(prefers-color-scheme: dark)", color: "#0F1320" },
+    { media: "(prefers-color-scheme: light)", color: "#FAFAFA" },
+    { media: "(prefers-color-scheme: dark)", color: "#07090F" },
   ],
 };
 
@@ -94,7 +101,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" suppressHydrationWarning className={inter.variable}>
+    <html lang="ko" suppressHydrationWarning className={`${inter.variable} ${interTight.variable}`}>
       <head>
         {/*
           Pretendard 한글 폰트 — CDN 사용. (L009 재검토 결론: CDN 유지)

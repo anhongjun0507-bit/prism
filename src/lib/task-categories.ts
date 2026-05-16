@@ -26,18 +26,18 @@ export const TASK_CATEGORIES: readonly TaskCategory[] = [
 ] as const;
 
 /**
- * 50-level bg는 globals.css에 dark override 있음. text는 light/dark 둘 다 명시.
- * icon은 lucide-react 컴포넌트 이름(문자열 참조는 x → 아이콘은 소비처에서 매핑).
+ * v2 redesign: 모든 카테고리 칩 — 카테고리 시맨틱 토큰(--cat-*) 또는 잉크 단색.
+ * 보라/푸크시아/장미 색조 폐기 — 잉크 chip + 텍스트 hue로 구분.
  */
 export const CATEGORY_COLORS: Record<TaskCategory, string> = {
-  "시험":      "bg-blue-50 text-blue-600 dark:text-blue-300",
-  "행정":      "bg-emerald-50 text-emerald-600 dark:text-emerald-300",
-  "에세이":    "bg-amber-50 text-amber-600 dark:text-amber-300",
-  "추천서":    "bg-violet-50 dark:bg-violet-950/20 text-violet-600 dark:text-violet-300",
-  "지원":      "bg-red-50 text-red-600 dark:text-red-300",
-  "과외활동":  "bg-fuchsia-50 dark:bg-fuchsia-950/20 text-fuchsia-600 dark:text-fuchsia-300",
-  "학부모 미팅": "bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-300",
-  "기타":      "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300",
+  "시험":      "bg-cat-target-soft text-cat-target-fg",
+  "행정":      "bg-cat-safety-soft text-cat-safety-fg",
+  "에세이":    "bg-cat-hard-soft text-cat-hard-fg",
+  "추천서":    "bg-accent text-foreground",
+  "지원":      "bg-cat-reach-soft text-cat-reach-fg",
+  "과외활동":  "bg-accent text-foreground",
+  "학부모 미팅": "bg-muted text-foreground",
+  "기타":      "bg-muted text-muted-foreground",
 };
 
 export function isTaskCategory(v: unknown): v is TaskCategory {

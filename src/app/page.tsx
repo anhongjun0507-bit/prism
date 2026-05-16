@@ -79,7 +79,7 @@ const jsonLd = {
 
 export default function LandingPage() {
   return (
-    <div className="relative min-h-dvh bg-gradient-to-b from-muted/40 to-accent/30 dark:from-background dark:to-background flex flex-col items-center justify-start overflow-x-hidden">
+    <div className="relative min-h-dvh bg-background flex flex-col items-center justify-start overflow-x-hidden">
       {/* SEO: 구조화 데이터. Server Component에서 렌더되므로 검색 엔진이 SSR HTML에서 즉시 발견. */}
       <script
         type="application/ld+json"
@@ -87,40 +87,19 @@ export default function LandingPage() {
       />
       {/* 첫 진입 시 1회 노출되는 4-슬라이드 온보딩 (localStorage 게이팅, 우측 aside의 "더 알아보기"로 재호출). */}
       <OnboardingSlides />
-      {/* Floating prismatic orbs — Phase 6: mesh radial gradient (Linear/Vercel pattern).
-          단색 blur보다 가장자리가 자연스럽게 페이드되어 "디스크" 느낌 제거. */}
-      <div
-        className="brand-orb brand-orb-mesh brand-orb-primary -top-24 -left-24 w-72 h-72 opacity-30 dark:opacity-20"
-        aria-hidden="true"
-      />
-      <div
-        className="brand-orb brand-orb-mesh brand-orb-violet top-1/3 -right-32 w-80 h-80 opacity-25 dark:opacity-15"
-        aria-hidden="true"
-      />
-      {/* 하단 orb — 푸터 가독성 저하 방지로 amber → indigo/primary tint, opacity 더 낮춤. */}
-      <div
-        className="brand-orb brand-orb-mesh brand-orb-primary -bottom-20 left-1/4 w-72 h-72 opacity-10 dark:opacity-8"
-        aria-hidden="true"
-      />
-
       <div className="relative w-full max-w-[380px] lg:max-w-6xl mx-auto py-12 lg:py-16 px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-12 lg:items-start">
         {/* ═══ Left column on lg+: hero + content ═══ */}
         <div className="flex flex-col items-center lg:items-start lg:text-left min-w-0">
         {/* ═══ SEO-friendly Hero Section (Server-rendered) ═══ */}
         <header className="flex flex-col items-center lg:items-start text-center lg:text-left mb-10 w-full">
-          {/* Prism Logo — solid terracotta with subtle primary glow halo. */}
+          {/* Prism Logo — 단색 잉크. v2: blur halo 폐기. */}
           <div className="animate-welcome-logo mb-7 relative" style={{ animationDelay: "0.1s" }}>
-            <div
-              className="absolute inset-0 rounded-full bg-primary/30 blur-2xl scale-150"
-              aria-hidden="true"
-            />
             <PrismLogo size={68} variant="full" className="relative" title="PRISM" />
           </div>
 
           <h1
-            className="animate-welcome-item text-4xl font-extrabold text-foreground tracking-tight"
+            className="animate-welcome-item text-5xl font-display font-extrabold text-foreground tracking-tightest"
             style={{
-              fontFamily: "'Outfit', 'Plus Jakarta Sans', sans-serif",
               animationDelay: "0.2s",
             }}
           >
@@ -146,13 +125,13 @@ export default function LandingPage() {
 
           {/* Feature tags — crawlable by search engines */}
           <div className="animate-welcome-item flex gap-2 mt-5" style={{ animationDelay: "0.5s" }}>
-            <span className="text-xs font-semibold rounded-full px-3 py-1 bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300">
+            <span className="text-xs font-semibold rounded-pill px-3 py-1 bg-accent text-foreground">
               합격 예측
             </span>
-            <span className="text-xs font-semibold rounded-full px-3 py-1 bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-300">
+            <span className="text-xs font-semibold rounded-pill px-3 py-1 bg-accent text-foreground">
               AI 상담
             </span>
-            <span className="text-xs font-semibold rounded-full px-3 py-1 bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
+            <span className="text-xs font-semibold rounded-pill px-3 py-1 bg-accent text-foreground">
               에세이 코칭
             </span>
           </div>
@@ -232,9 +211,9 @@ export default function LandingPage() {
             ].map((s) => (
               <li
                 key={s.step}
-                className="flex md:flex-col gap-3 p-4 md:p-5 rounded-2xl bg-card/70 dark:bg-card/40 border border-border/50 backdrop-blur-sm"
+                className="flex md:flex-col gap-3 p-4 md:p-5 rounded-md bg-card border border-border-subtle"
               >
-                <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary font-bold flex items-center justify-center shrink-0 text-sm">
+                <div className="w-9 h-9 rounded-md bg-accent text-foreground font-bold flex items-center justify-center shrink-0 text-sm">
                   {s.step}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -265,7 +244,7 @@ export default function LandingPage() {
           aria-label="로그인"
           className="hidden lg:block lg:sticky lg:top-20 lg:self-start w-full scroll-mt-20"
         >
-          <div className="rounded-3xl bg-card/70 dark:bg-card/40 backdrop-blur-md border border-border/60 shadow-xl shadow-primary/5 p-6">
+          <div className="rounded-lg bg-card border border-border-subtle shadow-hairline p-6">
             <p className="text-sm font-semibold text-foreground mb-1">3초 안에 시작</p>
             <p className="text-xs text-muted-foreground mb-5">
               GPA·SAT만 있으면 1,001개 대학 합격 확률이 열려요.

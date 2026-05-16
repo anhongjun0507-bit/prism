@@ -93,7 +93,7 @@ export function SpecAnalysisPanel({ profile, hasAccess }: SpecAnalysisPanelProps
       <div className="px-gutter-sm md:px-gutter mt-5">
         <Card
           interactive
-          className="p-card bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20"
+          className="p-card bg-accent border border-border-subtle"
           onClick={runAnalysis}
         >
           <div className="flex items-center gap-3">

@@ -21,9 +21,9 @@ interface AdmissionResult {
 export function AdmissionResultBanner({ onOpen }: { onOpen: () => void }) {
   return (
     <button onClick={onOpen} className="w-full">
-      <Card className="p-4 bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-500/10 dark:to-blue-500/10 border border-emerald-200 dark:border-emerald-500/20 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center shrink-0">
-          <Trophy className="w-5 h-5 text-emerald-600" aria-hidden="true" />
+      <Card className="p-4 bg-accent border border-border-subtle flex items-center gap-3">
+        <div className="w-10 h-10 rounded-md bg-success-soft flex items-center justify-center shrink-0">
+          <Trophy className="w-5 h-5 text-success" aria-hidden="true" />
         </div>
         <div className="flex-1 text-left">
           <p className="text-sm font-bold text-foreground">합격 결과를 공유해주세요</p>

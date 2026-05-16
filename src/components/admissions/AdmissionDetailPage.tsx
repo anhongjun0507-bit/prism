@@ -122,7 +122,7 @@ export function AdmissionDetailPage({ admission }: { admission: AdmissionDetail 
   // 좌:요약+스펙 / 우:활동·에세이·hook·AI 분석 — lg 이상에서 2-column.
   // sticky 좌측 패널은 분석을 스크롤하면서 학생 컨텍스트를 잃지 않게 함.
   const summaryCard = (
-    <Card className="p-4 rounded-2xl bg-gradient-to-br from-primary/5 to-transparent border border-primary/20">
+    <Card className="p-4 rounded-md bg-accent border border-border-subtle">
       <div className="flex items-start gap-3">
         <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
           <Sparkles className="w-5 h-5 text-primary" />

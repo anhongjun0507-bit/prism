@@ -3,284 +3,219 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer utilities {
-  /* Native-feeling tap feedback for all clickable elements */
-  a, button:not([disabled]) {
-    -webkit-tap-highlight-color: transparent;
-    transition: transform 0.12s ease-out;
-  }
-  @media (hover: none) {
-    a:active, button:not([disabled]):active {
-      transform: scale(0.97);
-    }
+/* ═══════════════════════════════════════════════════════════════════════════
+   PRISM Design Tokens · v2 (2026-05-16 redesign)
+   ─────────────────────────────────────────────────────────────────────────
+   단일 진실: docs/redesign-spec.md
+   - 액센트: 잉크 네이비 1색 (#0A0F1E)
+   - 프리미엄 강조: 골드 1색 (#B89968, 6곳 한정 사용)
+   - 보라/살구/테라코타·그라데이션·그림자 표면 폐기
+   - HSL 컴포넌트 형태로 저장(shadcn `hsl(var(--x))` 호환)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@layer base {
+  :root {
+    /* ── Surface ─────────────────────────────────────────────────────── */
+    --bg-canvas:     0 0% 98%;          /* #FAFAFA */
+    --bg-surface:    0 0% 100%;         /* #FFFFFF */
+    --bg-muted:      220 13% 96%;       /* #F4F5F7 */
+    --bg-inverse:    225 51% 8%;        /* #0A0F1E 잉크 네이비 */
+    --bg-inverse-2:  224 41% 13%;       /* #131A2E */
+
+    /* ── Text ────────────────────────────────────────────────────────── */
+    --text-primary:    225 51% 8%;      /* #0A0F1E */
+    --text-secondary:  221 12% 34%;     /* #4B5260 */
+    --text-tertiary:   218 12% 59%;     /* #8A93A4 */
+    --text-inverse:    0 0% 100%;
+    --text-on-accent:  0 0% 100%;
+
+    /* ── Border ──────────────────────────────────────────────────────── */
+    --border-subtle:   220 17% 94%;     /* #EDEFF3 hairline */
+    --border-default:  220 14% 87%;     /* #D7DBE3 */
+    --border-strong:   225 51% 8%;      /* #0A0F1E focus·active */
+
+    /* ── Accent (잉크 1색) ───────────────────────────────────────────── */
+    --accent-ink:        225 51% 8%;    /* #0A0F1E primary CTA bg */
+    --accent-ink-hover:  225 37% 16%;   /* #1A2238 */
+    --accent-ink-soft:   220 22% 95%;   /* #EEF0F5 라이트 칩·배지 */
+
+    /* ── Gold (Elite·학부모 전용·6곳 한정) ───────────────────────────── */
+    --gold:        35 36% 56%;          /* #B89968 */
+    --gold-strong: 34 34% 41%;          /* #8E7045 */
+    --gold-soft:   43 56% 93%;          /* #F7F1E3 */
+
+    /* ── Semantic ────────────────────────────────────────────────────── */
+    --success:        142 71% 29%;      /* #15803D */
+    --success-soft:   141 84% 93%;      /* #DCFCE7 */
+    --warning:        26 90% 37%;       /* #B45309 */
+    --warning-soft:   48 96% 89%;       /* #FEF3C7 */
+    --danger:         0 74% 42%;        /* #B91C1C */
+    --danger-soft:    0 93% 94%;        /* #FEE2E2 */
+    --info:           225 76% 48%;      /* #1D4ED8 */
+    --info-soft:      225 70% 95%;
+
+    /* ── Charts (이외 색 금지) ──────────────────────────────────────── */
+    --chart-1: 225 51% 8%;              /* #0A0F1E 메인 */
+    --chart-2: 222 33% 27%;             /* #2E3A5C */
+    --chart-3: 225 16% 49%;             /* #6A7392 */
+    --chart-4: 35 36% 56%;              /* #B89968 골드 */
+    --chart-5: 220 12% 81%;             /* #C8CCD6 보조 그레이 */
+
+    /* ── Admission category (Reach/Hard/Target/Safety) ──────────────── */
+    --cat-reach:       0 74% 42%;       /* #B91C1C */
+    --cat-reach-fg:    0 75% 35%;
+    --cat-reach-soft:  0 93% 94%;
+    --cat-hard:        26 90% 37%;      /* #B45309 */
+    --cat-hard-fg:     32 90% 32%;
+    --cat-hard-soft:   48 96% 89%;
+    --cat-target:      225 76% 48%;     /* #1D4ED8 */
+    --cat-target-fg:   217 80% 30%;
+    --cat-target-soft: 217 70% 95%;
+    --cat-safety:      142 71% 29%;     /* #15803D */
+    --cat-safety-fg:   160 70% 24%;
+    --cat-safety-soft: 141 84% 93%;
+
+    /* ── Motion ──────────────────────────────────────────────────────── */
+    --ease-brand: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --dur-micro:  120ms;
+    --dur-page:   240ms;
+    --dur-emph:   480ms;
+
+    /* ── Radius ──────────────────────────────────────────────────────── */
+    --radius:        12px;  /* card */
+    --radius-button: 10px;
+    --radius-input:  10px;
+    --radius-pill:   9999px;
+
+    /* ── shadcn role aliases (기존 컴포넌트 호환) ─────────────────── */
+    --background:           var(--bg-canvas);
+    --foreground:           var(--text-primary);
+    --card:                 var(--bg-surface);
+    --card-foreground:      var(--text-primary);
+    --popover:              var(--bg-surface);
+    --popover-foreground:   var(--text-primary);
+    --primary:              var(--accent-ink);
+    --primary-foreground:   var(--text-on-accent);
+    --secondary:            var(--bg-muted);
+    --secondary-foreground: var(--text-primary);
+    --muted:                var(--bg-muted);
+    --muted-foreground:     var(--text-secondary);
+    --accent:               var(--accent-ink-soft);
+    --accent-foreground:    var(--accent-ink);
+    --destructive:          var(--danger);
+    --destructive-foreground: 0 0% 100%;
+    --success-foreground:   0 0% 100%;
+    --warning-foreground:   0 0% 100%;
+    --info-foreground:      0 0% 100%;
+    --border:               var(--border-subtle);
+    --input:                var(--border-default);
+    --ring:                 var(--accent-ink);
+
+    /* ── Hero card text ─────────────────────────────────────────────── */
+    --hero-text:        0 0% 100%;
+    --hero-text-muted:  0 0% 100%;
+    --hero-overlay:     0 0% 100%;
+
+    /* ── PrismLogo beams (스펙 — 무지개 금지, 단색 잉크 1색) ────────── */
+    --logo-beam-1: var(--accent-ink);
+    --logo-beam-2: var(--accent-ink);
+    --logo-beam-3: var(--accent-ink);
+
+    /* ── Legacy aliases (v1 토큰 호환, 기존 컴포넌트 빌드 보호) ─────── */
+    --accent-vivid:             var(--accent-ink);
+    --accent-vivid-foreground:  var(--text-on-accent);
+    --accent-vivid-soft:        var(--accent-ink-soft);
   }
 
-  /* ── Safe-area utilities ── */
-  /* BottomNav 내부: 하단에 safe-area 만큼 패딩 추가 */
-  .pb-safe {
-    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
-  }
+  .dark {
+    --bg-canvas:     225 36% 5%;        /* #07090F */
+    --bg-surface:    222 42% 9%;        /* #0E1422 */
+    --bg-muted:      223 38% 13%;       /* #131A2C */
+    --bg-inverse:    225 51% 8%;
+    --bg-inverse-2:  224 41% 13%;
 
-  /* 페이지 콘텐츠: BottomNav(64px) + safe-area 영역 확보 */
-  .pb-nav {
-    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-  }
+    --text-primary:    225 23% 97%;     /* #F5F6FA */
+    --text-secondary:  220 17% 76%;     /* #B5BCCB */
+    --text-tertiary:   222 10% 48%;     /* #6E7587 */
+    --text-inverse:    0 0% 100%;
+    --text-on-accent:  225 51% 8%;      /* 다크에서 CTA는 화이트 BG → 잉크 텍스트 */
 
-  /* 상단 safe-area: Safari 주소창/노치와 페이지 헤더 사이 여유 확보 */
-  .pt-safe {
-    padding-top: max(1rem, env(safe-area-inset-top, 0px));
+    --border-subtle:   224 35% 17%;     /* #1B2238 */
+    --border-default:  222 27% 23%;     /* #2A334B */
+    --border-strong:   225 23% 97%;     /* #F5F6FA */
+
+    --accent-ink:        225 23% 97%;   /* 다크에서 primary CTA = 화이트 */
+    --accent-ink-hover:  220 18% 92%;   /* #E6E8F0 */
+    --accent-ink-soft:   224 35% 17%;   /* #1B2238 */
+
+    /* gold·semantic·category — 다크모드에서도 동일 톤 유지 (스펙) */
+    --gold:        35 40% 60%;
+    --gold-strong: 34 34% 45%;
+    --gold-soft:   223 38% 15%;         /* 다크 카드 위 골드 텍스트 받침용 */
+
+    --success-soft:   142 40% 14%;
+    --warning-soft:   38 50% 14%;
+    --danger-soft:    0 50% 14%;
+    --info-soft:      217 50% 14%;
+
+    --chart-1: 225 23% 97%;
+    --chart-2: 220 17% 76%;
+    --chart-3: 222 10% 48%;
+    --chart-4: 35 40% 60%;
+    --chart-5: 222 27% 23%;
+
+    --cat-reach:       0 75% 60%;
+    --cat-reach-fg:    0 80% 78%;
+    --cat-reach-soft:  0 50% 14%;
+    --cat-hard:        38 92% 55%;
+    --cat-hard-fg:     38 95% 75%;
+    --cat-hard-soft:   38 50% 13%;
+    --cat-target:      217 80% 60%;
+    --cat-target-fg:   217 85% 78%;
+    --cat-target-soft: 217 50% 14%;
+    --cat-safety:      160 60% 50%;
+    --cat-safety-fg:   160 70% 75%;
+    --cat-safety-soft: 160 45% 12%;
+
+    --logo-beam-1: var(--accent-ink);
+    --logo-beam-2: var(--accent-ink);
+    --logo-beam-3: var(--accent-ink);
   }
 }
 
-/* Dark mode shadow boost — make cards stand out on dark background */
-.dark .shadow-sm {
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04);
-}
-.dark .shadow-md {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04);
-}
-.dark .shadow-lg {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04);
-}
-.dark .shadow-2xl {
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
+/* ═══════════════════════════════════════════════════════════════════════════
+   Base reset + 한글 타이포
+   ═══════════════════════════════════════════════════════════════════════ */
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; }
+
+  *:focus-visible {
+    outline: 2px solid hsl(var(--border-strong));
+    outline-offset: 2px;
+    border-radius: inherit;
+  }
 }
 
-/* Font loading optimization — prevent flash */
 html {
   font-display: swap;
   -webkit-text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: none;
 }
 body {
-  /* kern: pair kerning, liga: 표준 합자, calt: contextual alternates */
-  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "ss06" 1;
   text-rendering: optimizeLegibility;
-  /* Pretendard 권장 자간 — 한글 본문에서 자연스러운 호흡감.
-     -0.011em ≈ -0.18px @15px 본문, ≈ -0.36px @30px hero 헤딩.
-     영문 단독에서는 거의 영향 없음(< 0.5px), 한글은 글자 간 압축감 ↓. */
   letter-spacing: -0.011em;
-  /* 한글-라틴 혼용 시 자동 word-break, 영문 hyphen 방지 */
   word-break: keep-all;
   overflow-wrap: break-word;
-  /* iOS Safari pull-to-refresh + 가로 rubber-band 차단.
-     앱 같은 단일 화면 경험을 위해 root scroll의 chain/refresh를 모두 끔.
-     내부 스크롤 컨테이너는 자체적으로 overflow-auto/scroll로 동작. */
   overscroll-behavior-y: contain;
   overscroll-behavior-x: none;
 }
-html {
-  /* iOS Safari가 스크롤 끝에서 페이지 자체를 들썩이는 rubber-band 효과 차단. */
-  overscroll-behavior-y: none;
-}
-/* 숫자에 tabular-nums 기본 (UI 일관성). 콘텐츠 본문은 명시적 lining-nums로 override 가능 */
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-}
+.tabular-nums { font-variant-numeric: tabular-nums; }
 
-/* Print styles for PDF export */
-@media print {
-  body {
-    background: white !important;
-    color: black !important;
-  }
-  .print\:hidden, nav, header button, .bottom-nav {
-    display: none !important;
-  }
-  .dark-hero-gradient {
-    background: linear-gradient(135deg, #1a1714 0%, #2c2620 100%) !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  .hero-navy-gradient {
-    background: linear-gradient(135deg, #1a2436 0%, #2c3850 100%) !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  main, .max-w-md, .max-w-2xl, .max-w-4xl {
-    max-width: 100% !important;
-    padding: 0 !important;
-  }
-  * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-}
-
-@layer base {
-  :root {
-    /* Phase 12 — Toss-style 리브랜딩 (감사 리포트 2-1).
-       기존: 베이지(#f5f3f0) + 테라코타 브라운(#9a3c12) + 오렌지 블롭.
-       문제: "카페·북카페" 톤이 입시 서비스 신뢰감과 충돌 / 베이지 위 베이지 카드의 분리감 부족.
-       신규: 화이트 캔버스 + PRISM Indigo(#4F46E5 Indigo-600) + slate 계열 텍스트.
-       Toss의 명료한 정보 위계 + Linear/Vercel·Discord 류의 클린 SaaS 룩.
-
-       2차 검수 P2-1: Indigo-600(#4F46E5)으로 통일. 기존 #3B5BFF(231°)는 약간 더 cyan 쪽이라
-       hover/border tint에서 비균질하게 보였다. Indigo-600은 Tailwind 표준 + 토스/Linear와
-       동일 hue family라 디자인 시스템과 호환성 ↑. */
-
-    /* bg.canvas — pure white. 카드(#fff)와 미세 회색 elevated(#F9FAFB)로 위계 형성. */
-    --background: 0 0% 100%;
-    /* text.strong — #111827 (slate-900). 헤드라인·핵심 본문. */
-    --foreground: 220 39% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 220 39% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 39% 11%;
-    /* brand.primary — #4F46E5 (Tailwind Indigo-600). 라이트 흰 배경 위 7.1:1 (AA Large + AAA Normal). */
-    --primary: 244 76% 58%;
-    --primary-foreground: 0 0% 100%;
-    /* secondary — bg.elevated 톤(#F3F4F6) 근처. 보조 surface. */
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 39% 11%;
-    /* muted bg — #F3F4F6 / muted-fg — #6B7280 (slate-500, light 위 4.6:1+). */
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
-    /* accent — Indigo-50 (#EEF2FF). primary와 같은 hue family. */
-    --accent: 226 100% 97%;
-    --accent-foreground: 244 76% 50%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 98%;
-    --success-soft: 142 70% 94%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 98%;
-    --warning-soft: 38 85% 94%;
-    /* info — 정보성 강조 (success도 warning도 아닌 중립적 안내).
-       cat-target과 동일 hue(217)로 시각 일관성. light 위 5.4:1 (AA 통과). */
-    --info: 217 71% 48%;
-    --info-foreground: 0 0% 98%;
-    --info-soft: 217 70% 95%;
-    /* border — #EEF0F4 (subtle separation). 카드 분리감 강화. */
-    --border: 220 17% 94%;
-    --input: 220 17% 94%;
-    --ring: 244 76% 58%;
-    /* shadcn radius base — lg=var(--radius), md=lg-2, sm=lg-4. xl/2xl는 Tailwind 기본(12/16). */
-    --radius: 12px;
-
-    /* Hero card — 어두운 배경 위 텍스트 토큰 */
-    --hero-text: 0 0% 100%;
-    --hero-text-muted: 0 0% 100%;
-    --hero-overlay: 0 0% 100%;
-
-    /* ─── Semantic category colors (admission category) ───
-       Safety / Target / Hard Target / Reach.
-       사용처: 확률 바, 카테고리 배지, 차트. CSS 변수라 다크모드 자동 대응. */
-    --cat-safety: 160 60% 38%;
-    --cat-safety-fg: 160 70% 24%;
-    --cat-safety-soft: 160 50% 95%;
-    --cat-target: 217 71% 48%;
-    --cat-target-fg: 217 80% 30%;
-    --cat-target-soft: 217 70% 95%;
-    --cat-hard: 38 92% 45%;
-    --cat-hard-fg: 32 90% 32%;
-    --cat-hard-soft: 38 80% 95%;
-    --cat-reach: 0 72% 48%;
-    --cat-reach-fg: 0 75% 35%;
-    --cat-reach-soft: 0 70% 96%;
-
-    /* PrismLogo beams — Toss 리브랜딩 후 indigo→violet 톤으로 통일.
-       prism의 spectral refraction 메타포는 유지하되, 메인 컬러(PRISM Indigo)와
-       시각 충돌 없도록 blue→indigo→violet 한 계열 안에서만 변주. */
-    --logo-beam-1: 217 91% 55%;
-    --logo-beam-2: 244 76% 58%;
-    --logo-beam-3: 265 87% 65%;
-
-    /* ─── Accent vivid (Phase 5) — 학생 친화 secondary accent ───
-       Discord blurple / Linear violet 계열. terracotta primary와 hue 분리되어 충돌 X.
-       사용처: 게이미피케이션 배지, 보조 CTA, 학생 친화 강조 (스트릭, 업적, hover lift glow).
-       대비: hsl(265 75% 50%) on white = 6.4:1 (AA Large/Normal 모두 통과).
-       prismatic 그라디언트의 violet stop과 동일 계열 — 시각적 일관성 유지. */
-    --accent-vivid: 265 75% 50%;
-    --accent-vivid-foreground: 0 0% 100%;
-    --accent-vivid-soft: 265 80% 96%;
-  }
-
-  .dark {
-    /* Toss-style dark — Zinc 계열 neutral 그레이 + Indigo brand.
-       2-8 audit: #18181B 배경 / #27272A 카드 / #3F3F46 border / #E4E4E7 텍스트.
-       기존 cool-slate(222 hue)는 살짝 푸른 기가 보여 토스 톤과 어긋남 → 240 hue Zinc로 정렬. */
-    --background: 240 6% 10%;     /* #18181B */
-    --foreground: 240 5% 90%;     /* #E4E4E7 */
-    --card: 240 4% 16%;           /* #27272A */
-    --card-foreground: 240 5% 90%;
-    --popover: 240 4% 16%;
-    --popover-foreground: 240 5% 90%;
-    /* PRISM Indigo — 다크 위에선 Indigo-500(#6366F1) 톤으로 명도 ↑ (가독성 확보). */
-    --primary: 239 84% 67%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 20%;
-    --secondary-foreground: 240 5% 90%;
-    --muted: 240 5% 20%;
-    /* zinc-400: 다크 카드 위 4.5:1+ 보장 (AA Normal). */
-    --muted-foreground: 240 5% 65%;
-    --accent: 244 50% 22%;
-    --accent-foreground: 239 100% 82%;
-    --destructive: 0 62% 50%;
-    --destructive-foreground: 0 0% 98%;
-    --success: 142 60% 50%;
-    --success-foreground: 0 0% 98%;
-    --success-soft: 142 40% 14%;
-    --warning: 38 85% 55%;
-    --warning-foreground: 0 0% 98%;
-    --warning-soft: 38 50% 14%;
-    /* info — 다크모드: 명도 ↑ 채도 유지 (near-black 카드 위 6:1+). */
-    --info: 217 80% 60%;
-    --info-foreground: 0 0% 98%;
-    --info-soft: 217 50% 14%;
-    --border: 240 5% 26%;         /* #3F3F46 */
-    --input: 240 5% 26%;
-    --ring: 239 84% 67%;
-
-    /* Dark mode: soft 배경은 더 깊고 채도 낮게, fg는 더 밝게 */
-    --cat-safety: 160 60% 50%;
-    --cat-safety-fg: 160 70% 75%;
-    --cat-safety-soft: 160 45% 12%;
-    --cat-target: 217 80% 60%;
-    --cat-target-fg: 217 85% 78%;
-    --cat-target-soft: 217 50% 14%;
-    --cat-hard: 38 92% 55%;
-    --cat-hard-fg: 38 95% 75%;
-    --cat-hard-soft: 38 50% 13%;
-    --cat-reach: 0 75% 60%;
-    --cat-reach-fg: 0 80% 78%;
-    --cat-reach-soft: 0 50% 14%;
-
-    /* PrismLogo beams — dark: 명도 ↑ 채도 유지로 near-black 위에서 살아나게. */
-    --logo-beam-1: 217 91% 68%;
-    --logo-beam-2: 244 80% 72%;
-    --logo-beam-3: 265 87% 76%;
-
-    /* Accent vivid (Phase 5) — dark mode: 명도 ↑ 채도 유지로 near-black 배경에서 잘 보이게.
-       대비: hsl(265 85% 65%) on hsl(30 10% 7%) = 6.1:1 (AA Normal 통과). */
-    --accent-vivid: 265 85% 65%;
-    --accent-vivid-foreground: 0 0% 100%;
-    --accent-vivid-soft: 265 50% 18%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-
-  /* Global focus ring — brand-tinted halo. Outline + soft shadow extension. */
-  *:focus-visible {
-    outline: 2px solid hsl(var(--ring));
-    outline-offset: 2px;
-    border-radius: inherit;
-    box-shadow: 0 0 0 4px hsl(var(--primary) / 0.15);
-  }
-}
-
-/* Reduced motion: disable all animations for motion-sensitive users.
-   animation-delay도 0으로 덮어써야 함 — 그렇지 않으면 duration은 0이지만
-   delay(ex. 0.55s) 동안 요소가 초기 상태(opacity:0 등)에서 멈춰 "빈 화면"처럼 보임. */
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -292,608 +227,281 @@ html {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   BRAND DESIGN TOKENS — shadows · gradients · focus
-   ─────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Tap feedback */
+  a, button:not([disabled]) {
+    -webkit-tap-highlight-color: transparent;
+    transition: transform var(--dur-micro) var(--ease-brand);
+  }
+  @media (hover: none) {
+    a:active, button:not([disabled]):active { transform: scale(0.97); }
+  }
 
-/* Brand-tinted shadow scale — primary 색조의 부드러운 글로우.
-   neutral 그림자(black) 대신 사용해 카드가 단순히 "떠있다"가 아니라 "빛난다" 느낌.
-   다크모드는 더 강한 alpha + glow 확장. */
-.shadow-glow-sm {
-  box-shadow: 0 2px 8px -2px hsl(var(--primary) / 0.12), 0 1px 3px -1px hsl(var(--primary) / 0.08);
-}
-.shadow-glow-md {
-  box-shadow: 0 8px 24px -8px hsl(var(--primary) / 0.20), 0 4px 8px -4px hsl(var(--primary) / 0.10);
-}
-.shadow-glow-lg {
-  box-shadow: 0 16px 40px -12px hsl(var(--primary) / 0.28), 0 6px 16px -6px hsl(var(--primary) / 0.14);
-}
-.dark .shadow-glow-sm {
-  box-shadow: 0 2px 12px -2px hsl(var(--primary) / 0.30), 0 0 0 1px rgba(255, 255, 255, 0.04);
-}
-.dark .shadow-glow-md {
-  box-shadow: 0 8px 32px -8px hsl(var(--primary) / 0.40), 0 0 0 1px rgba(255, 255, 255, 0.05);
-}
-.dark .shadow-glow-lg {
-  box-shadow: 0 20px 50px -12px hsl(var(--primary) / 0.50), 0 0 0 1px rgba(255, 255, 255, 0.06);
-}
+  /* Safe-area */
+  .pb-safe { padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px)); }
+  .pb-nav  { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+  .pt-safe { padding-top: max(1rem, env(safe-area-inset-top, 0px)); }
 
-/* Brand gradient — Toss 리브랜딩 후 indigo→violet. 클래스명은 호환 위해 유지(.bg-brand-warm).
-   hero 카드/배지/CTA 등에 사용. */
-.bg-brand-warm {
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(245, 85%, 60%) 50%, hsl(265, 84%, 65%) 100%);
-}
-.bg-brand-warm-soft {
-  background: linear-gradient(135deg, hsl(var(--primary) / 0.10) 0%, hsl(265, 84%, 65% / 0.06) 100%);
-}
-.dark .bg-brand-warm-soft {
-  background: linear-gradient(135deg, hsl(var(--primary) / 0.20) 0%, hsl(265, 84%, 65% / 0.10) 100%);
-}
-
-/* Prismatic — 입시 브랜드 메타포 (빛이 굴절되어 spectrum이 되는 PRISM) */
-.bg-prismatic {
-  background: linear-gradient(135deg,
-    hsl(217, 91%, 60%) 0%,
-    hsl(265, 84%, 65%) 25%,
-    hsl(330, 81%, 60%) 50%,
-    hsl(19, 79%, 50%) 75%,
-    hsl(38, 92%, 52%) 100%);
-}
-.bg-prismatic-soft {
-  background: linear-gradient(135deg,
-    hsl(217, 91%, 60% / 0.10) 0%,
-    hsl(265, 84%, 65% / 0.08) 25%,
-    hsl(330, 81%, 60% / 0.10) 50%,
-    hsl(19, 79%, 50% / 0.10) 75%,
-    hsl(38, 92%, 52% / 0.08) 100%);
-}
-
-/* Floating gradient orbs — hero 배경 장식.
-   부모는 relative + overflow-hidden 필요. */
-.brand-orb {
-  position: absolute;
-  border-radius: 9999px;
-  filter: blur(40px);
-  pointer-events: none;
-  opacity: 0.4;
-}
-.brand-orb-primary { background: hsl(var(--primary)); }
-.brand-orb-violet { background: hsl(265, 84%, 65%); }
-.brand-orb-amber { background: hsl(38, 92%, 52%); }
-.dark .brand-orb { opacity: 0.25; }
-
-/* Phase 5: orb mesh — radial gradient로 단색 blur보다 더 자연스러운 빛 번짐.
-   기존 .brand-orb-* 단색은 가장자리가 너무 균일해 "디스크"처럼 보임.
-   .brand-orb-mesh + variant 조합 시 내부→외부 그라디언트로 진짜 "빛 구름" 느낌. */
-.brand-orb-mesh.brand-orb-primary {
-  background: radial-gradient(circle at 30% 30%,
-    hsl(var(--primary)) 0%,
-    hsl(var(--primary) / 0.6) 40%,
-    hsl(var(--primary) / 0) 70%);
-}
-.brand-orb-mesh.brand-orb-violet {
-  background: radial-gradient(circle at 30% 30%,
-    hsl(265, 84%, 70%) 0%,
-    hsl(265, 84%, 65% / 0.6) 40%,
-    hsl(265, 84%, 65% / 0) 70%);
-}
-.brand-orb-mesh.brand-orb-amber {
-  background: radial-gradient(circle at 30% 30%,
-    hsl(38, 92%, 60%) 0%,
-    hsl(38, 92%, 52% / 0.6) 40%,
-    hsl(38, 92%, 52% / 0) 70%);
-}
-
-/* Focus glow — 입력창/버튼 focus-visible 시 brand-tinted halo.
-   기본 outline은 globals @layer base에 정의됨; 이 클래스는 추가 글로우. */
-.focus-glow:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px hsl(var(--background)),
-    0 0 0 4px hsl(var(--primary) / 0.40),
-    0 4px 16px -4px hsl(var(--primary) / 0.30);
-  border-color: hsl(var(--primary));
-}
-
-/* Hover lift — 카드/버튼이 들어올린 듯한 미세 움직임.
-   토스 ease + shadow lift로 클릭 가능 여부를 시각적으로 hint. */
-.hover-lift {
-  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
-              box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform;
-}
-@media (hover: hover) {
-  .hover-lift:hover {
-    transform: translateY(-2px);
+  /* Hairline shadow (스펙: 그림자 거의 없음, 필요 시 1px hairline) */
+  .shadow-hairline {
     box-shadow:
-      0 6px 16px -4px hsl(var(--foreground) / 0.08),
-      0 2px 4px -2px hsl(var(--foreground) / 0.06);
+      0 1px 2px hsl(var(--text-primary) / 0.04),
+      0 1px 1px hsl(var(--text-primary) / 0.03);
+  }
+
+  /* Inverse hero — bg-inverse + 흰 텍스트 */
+  .bg-inverse    { background-color: hsl(var(--bg-inverse)); color: hsl(var(--text-inverse)); }
+  .bg-inverse-2  { background-color: hsl(var(--bg-inverse-2)); color: hsl(var(--text-inverse)); }
+
+  /* Skeleton shimmer (단색 톤, 무지개·brand-tint 폐기) */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--bg-muted)) 0%,
+      hsl(var(--bg-muted)) 40%,
+      hsl(var(--text-tertiary) / 0.12) 50%,
+      hsl(var(--bg-muted)) 60%,
+      hsl(var(--bg-muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer-sweep 1.4s var(--ease-brand) infinite;
+  }
+  @keyframes shimmer-sweep {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  /* Horizontal scroll fade hint */
+  .scroll-fade-right {
+    -webkit-mask-image: linear-gradient(to right, black 88%, transparent 100%);
+    mask-image: linear-gradient(to right, black 88%, transparent 100%);
+  }
+
+  /* Skip link */
+  .focus\:skip-link:focus {
+    position: fixed; top: 1rem; left: 1rem; z-index: 200;
+    background: hsl(var(--accent-ink)); color: hsl(var(--text-on-accent));
+    padding: 0.5rem 1rem; border-radius: var(--radius-button);
   }
 }
 
-/* Card tinted (Phase 5) — accent-vivid soft 배경 + violet border. 게이미피케이션·achievement·
-   학생 친화 secondary surface. neutral card과 구분되어 보상/장려 카드임을 시각적으로 hint.
-   사용처: 스트릭 카드, 업적 unlocked, 학생 가이드 팁. */
-.card-tinted {
-  background: hsl(var(--accent-vivid-soft));
-  border: 1px solid hsl(var(--accent-vivid) / 0.20);
-}
-.dark .card-tinted {
-  background: hsl(var(--accent-vivid-soft));
-  border-color: hsl(var(--accent-vivid) / 0.30);
-}
+/* ═══════════════════════════════════════════════════════════════════════════
+   Animations · keyframes (toss easing 유지, brand easing은 var로 컴포넌트가 사용)
+   ═══════════════════════════════════════════════════════════════════════ */
+@keyframes fade-up   { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fade-in   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scale-in  { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+@keyframes slide-right { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes count-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+@keyframes page-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Card emphasis (Phase 5) — primary tint + 좌측 accent bar. 행동 유도 강조 카드.
-   inline ::before로 좌측 4px primary bar — "주목할 것" hint.
-   사용처: 추천 도구 카드, primary CTA card, "지금 가장 도움 될" 추천. */
-.card-emphasis {
-  position: relative;
-  background: hsl(var(--primary) / 0.04);
-  border: 1px solid hsl(var(--primary) / 0.20);
-}
-.card-emphasis::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 12px;
-  bottom: 12px;
-  width: 3px;
-  background: linear-gradient(180deg, hsl(var(--primary)), hsl(var(--accent-vivid)));
-  border-radius: 0 2px 2px 0;
-}
-.dark .card-emphasis {
-  background: hsl(var(--primary) / 0.10);
-  border-color: hsl(var(--primary) / 0.35);
-}
+.animate-page-in { animation: page-in var(--dur-micro) var(--ease-brand) both; }
 
-/* Tap press (Phase 5) — 모바일 터치 피드백. native app 같은 즉각적 scale.
-   hover-card는 hover 위주 (PC), tap-press는 tap 즉시 (mobile)에 최적화.
-   하단의 generic a/button :active scale(0.97)보다 더 명시적인 카드용 press. */
-.tap-press {
-  transition: transform 0.12s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform;
-}
-.tap-press:active {
-  transform: scale(0.96);
-}
-
-/* Hover glow (Phase 5) — accent-vivid halo on hover. card-tinted/achievement 카드용.
-   hover-card는 primary tint, hover-glow는 accent-vivid tint — secondary 강조. */
-.hover-glow {
-  transition: box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-              transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
-}
-@media (hover: hover) {
-  .hover-glow:hover {
-    transform: translateY(-1px);
-    box-shadow:
-      0 4px 16px -4px hsl(var(--accent-vivid) / 0.30),
-      0 0 0 1px hsl(var(--accent-vivid) / 0.20);
-  }
-}
-.dark .hover-glow:hover {
-  box-shadow:
-    0 6px 20px -4px hsl(var(--accent-vivid) / 0.45),
-    0 0 0 1px hsl(var(--accent-vivid) / 0.30);
-}
-
-/* Hover card — 클릭 가능 surface 카드 전용. translateY + brand-tinted glow + border tint.
-   hover-lift가 generic motion이라면, hover-card는 카드의 affordance 강화 (border가 살짝
-   primary로 물들어 "누를 수 있는 패널"임을 더 명확히 hint).
-   사용처: 학교 카드, 페이지 entry CTA 카드, 가격 플랜 카드, sample list item. */
-.hover-card {
-  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
-              box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1),
-              border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform;
-}
-@media (hover: hover) {
-  .hover-card:hover {
-    transform: translateY(-2px);
-    box-shadow:
-      0 8px 20px -6px hsl(var(--primary) / 0.18),
-      0 3px 6px -3px hsl(var(--primary) / 0.10);
-    border-color: hsl(var(--primary) / 0.35);
-  }
-}
-.hover-card:active {
-  transform: translateY(0) scale(0.985);
-  transition-duration: 0.1s;
-}
-
-/* Focus ring (primary tint) — 명시적 focus-visible 링. 글로벌 *:focus-visible과 별개로,
-   내부에서 ring outline을 끄거나 스타일을 덮어쓰는 컴포넌트(Tabs, SegmentedControl 등)에
-   재적용할 수 있도록 분리된 클래스. */
-.focus-ring-primary:focus-visible {
-  outline: 2px solid hsl(var(--primary));
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px hsl(var(--primary) / 0.18);
-}
-
-/* Stagger entry — CSS variable로 delay 조절. inline style로 --i 설정.
-   사용: <div className="animate-stagger" style={{"--i": index}} /> */
+/* Stagger entry — CSS variable로 delay 조절 */
 .animate-stagger {
-  animation: fade-up 0.45s ease-out both;
+  animation: fade-up var(--dur-emph) var(--ease-brand) both;
   animation-delay: calc(var(--i, 0) * 60ms);
 }
 
-/* ─── Probability reveal particle burst — ProbabilityReveal 컴포넌트 전용.
-   링 채움이 끝나는 순간 12개 점이 방사형으로 뻗어나감.
-   CSS 변수(--angle, --delay, --color)로 각 입자별 방향·타이밍·색 제어. */
+/* Chat msg enter */
+@keyframes msg-enter-left  { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes msg-enter-right { from { opacity: 0; transform: translateX(8px); }  to { opacity: 1; transform: translateX(0); } }
+.animate-msg-ai   { animation: msg-enter-left  var(--dur-page) var(--ease-brand) both; }
+.animate-msg-user { animation: msg-enter-right var(--dur-page) var(--ease-brand) both; }
+
+/* Welcome/view enter */
+@keyframes welcome-fade-up   { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes welcome-scale-in  { from { opacity: 0; transform: scale(0.8); }      to { opacity: 1; transform: scale(1); } }
+@keyframes welcome-view-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.animate-welcome-item { animation: welcome-fade-up var(--dur-emph) var(--ease-brand) both; }
+.animate-welcome-logo { animation: welcome-scale-in var(--dur-emph) var(--ease-brand) both; }
+.animate-view-enter   { animation: welcome-view-enter var(--dur-page) var(--ease-brand) both; }
+
+/* Step transition */
+@keyframes step-slide-left  { from { opacity: 0; transform: translateX(24px); }  to { opacity: 1; transform: translateX(0); } }
+@keyframes step-slide-right { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: translateX(0); } }
+.animate-step-forward { animation: step-slide-left  var(--dur-page) var(--ease-brand) both; }
+.animate-step-back    { animation: step-slide-right var(--dur-page) var(--ease-brand) both; }
+
+/* Probability reveal particle burst — 잉크 단색 */
 @keyframes prob-particle-burst {
   0%   { transform: translate(-50%, -50%) rotate(var(--angle)) translateY(0)    scale(0.4); opacity: 0; }
   20%  { opacity: 1; }
   100% { transform: translate(-50%, -50%) rotate(var(--angle)) translateY(-28px) scale(0); opacity: 0; }
 }
 .prob-particle {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 6px;
-  height: 6px;
-  border-radius: 9999px;
-  background: var(--color, hsl(var(--primary)));
+  position: absolute; top: 50%; left: 50%;
+  width: 6px; height: 6px; border-radius: var(--radius-pill);
+  background: var(--color, hsl(var(--accent-ink)));
   transform-origin: center;
-  animation: prob-particle-burst 0.9s cubic-bezier(0.22, 1, 0.36, 1) var(--delay, 0ms) both;
+  animation: prob-particle-burst 0.9s var(--ease-brand) var(--delay, 0ms) both;
   will-change: transform, opacity;
 }
 
-/* ─── Illustration micro-motion (lottie-like, no library) ─── */
-@keyframes illust-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
-}
-@keyframes illust-bob {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-2px) rotate(2deg); }
-}
-@keyframes illust-twinkle {
-  0%, 100% { opacity: 0.4; transform: scale(0.85); }
-  50% { opacity: 1; transform: scale(1.1); }
-}
-@keyframes illust-write {
-  0% { transform: rotate(35deg) translateX(0); }
-  25% { transform: rotate(38deg) translateX(-1px); }
-  50% { transform: rotate(35deg) translateX(0); }
-  75% { transform: rotate(32deg) translateX(1px); }
-  100% { transform: rotate(35deg) translateX(0); }
-}
-@keyframes illust-ping {
-  0% { transform: scale(0.6); opacity: 0.9; }
-  100% { transform: scale(1.6); opacity: 0; }
-}
-.illust-float    { animation: illust-float 3s ease-in-out infinite; transform-origin: center; }
-.illust-bob      { animation: illust-bob 2.6s ease-in-out infinite; transform-origin: center; }
-.illust-twinkle  { animation: illust-twinkle 2s ease-in-out infinite; transform-origin: center; }
+/* Illustration micro-motion (모노톤, 1색) */
+@keyframes illust-float    { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes illust-bob      { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-2px) rotate(2deg); } }
+@keyframes illust-twinkle  { 0%,100% { opacity: 0.4; transform: scale(0.85); } 50% { opacity: 1; transform: scale(1.1); } }
+@keyframes illust-write    { 0% { transform: rotate(35deg); } 50% { transform: rotate(35deg) translateX(-1px); } 100% { transform: rotate(35deg); } }
+@keyframes illust-ping     { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(1.6); opacity: 0; } }
+.illust-float        { animation: illust-float 3s ease-in-out infinite; transform-origin: center; }
+.illust-bob          { animation: illust-bob 2.6s ease-in-out infinite; transform-origin: center; }
+.illust-twinkle      { animation: illust-twinkle 2s ease-in-out infinite; transform-origin: center; }
 .illust-twinkle-delay { animation: illust-twinkle 2s ease-in-out 0.7s infinite; transform-origin: center; }
-.illust-write    { animation: illust-write 4s ease-in-out infinite; transform-origin: 50% 100%; }
-.illust-ping     { animation: illust-ping 2.4s ease-out infinite; transform-origin: center; }
+.illust-write        { animation: illust-write 4s ease-in-out infinite; transform-origin: 50% 100%; }
+.illust-ping         { animation: illust-ping 2.4s ease-out infinite; transform-origin: center; }
 
-/* Brand shimmer — skeleton/loading 표면에 brand-tinted sweep.
-   기본 muted 배경 위에 70deg primary 그라디언트가 좌→우로 흐름.
-   animate-pulse보다 "premium loading" 느낌. */
-@keyframes shimmer-sweep {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-.shimmer {
-  background: linear-gradient(
-    90deg,
-    hsl(var(--muted)) 0%,
-    hsl(var(--muted)) 40%,
-    hsl(var(--primary) / 0.12) 50%,
-    hsl(var(--muted)) 60%,
-    hsl(var(--muted)) 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer-sweep 1.8s ease-in-out infinite;
-}
-.dark .shimmer {
-  background: linear-gradient(
-    90deg,
-    hsl(var(--muted)) 0%,
-    hsl(var(--muted)) 40%,
-    hsl(var(--primary) / 0.20) 50%,
-    hsl(var(--muted)) 60%,
-    hsl(var(--muted)) 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer-sweep 1.8s ease-in-out infinite;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
-   PARENT TRACK — 학부모 view-only 페이지 전용 디자인 토큰
-   ─────────────────────────────────────────────────────────────────────── */
-/* 학부모(P1·P3)는 앱 기본 15px 본문이 작게 느껴진다. 디자인 감사
-   "큰 글자, 단순 네비, 요약 중심" 권고에 맞춰 본문 17px + 줄간격 1.65로 1단계 키움.
-   모바일은 추가로 18px까지 — 시니어 가독성 우선. */
+/* ═══════════════════════════════════════════════════════════════════════════
+   Parent track typography (학부모 view-only — 큰 글자 유지)
+   ═══════════════════════════════════════════════════════════════════════ */
 .parent-track {
-  font-size: 1.125rem; /* 18px on mobile */
+  font-size: 1.125rem;
   line-height: 1.7;
 }
 @media (min-width: 640px) {
-  .parent-track {
-    font-size: 1.0625rem; /* 17px on tablet+ */
-    line-height: 1.65;
-  }
+  .parent-track { font-size: 1.0625rem; line-height: 1.65; }
 }
 .parent-track h1 { font-size: 1.875rem; line-height: 1.3; }
 .parent-track h2 { font-size: 1.375rem; line-height: 1.4; }
 .parent-track h3 { font-size: 1.125rem; line-height: 1.5; }
-.parent-track p  { font-size: inherit; line-height: inherit; }
-/* 시니어 친화 — 모든 인터랙티브 요소 48px 터치 타겟 보장. */
-.parent-track :where(button, a[href], [role="button"]) {
-  min-height: 44px;
+.parent-track :where(button, a[href], [role="button"]) { min-height: 44px; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Print styles · PDF export
+   ═══════════════════════════════════════════════════════════════════════ */
+@media print {
+  body { background: white !important; color: black !important; }
+  .print\:hidden, nav, header button, .bottom-nav { display: none !important; }
+  .dark-hero-gradient,
+  .hero-navy-gradient,
+  .parent-hero-gradient {
+    background: #0A0F1E !important;
+    color: #FFFFFF !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  main, .max-w-md, .max-w-2xl, .max-w-4xl {
+    max-width: 100% !important; padding: 0 !important;
+  }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   PAGE-SPECIFIC LEGACY
-   ─────────────────────────────────────────────────────────────────────── */
-.dark-hero-gradient {
-  background: linear-gradient(135deg, hsl(30 10% 10%) 0%, hsl(30 12% 18%) 100%);
-}
-
-.dark .dark-hero-gradient {
-  background: linear-gradient(135deg, hsl(30 10% 4%) 0%, hsl(30 10% 10%) 100%);
-}
-
-/* Hero — navy gradient for trust signal (Stage 3 #12 phase 2).
-   warm-brown(.dark-hero-gradient)는 학부모 리포트·SplashScreen 등 brand 친근감용으로 유지하고,
-   Dashboard·Spec Analysis 등 신뢰가 핵심인 Hero에는 이 navy 톤을 사용한다.
-   white text 전제(WCAG AA 4.5:1+ for hsl(220 60% 25%) 위 #fff). */
-.hero-navy-gradient {
-  background: linear-gradient(135deg, hsl(220 60% 25%) 0%, hsl(215 65% 18%) 100%);
-}
-
-.dark .hero-navy-gradient {
-  background: linear-gradient(135deg, hsl(220 55% 15%) 0%, hsl(215 60% 10%) 100%);
-}
-
-/* 학부모 리포트 hero (2-7 audit) — 신뢰감 navy + 가족 친근감 coral 두 톤을 한 화면에서 결합.
-   navy(좌상)에서 coral(우하)로 흐르는 대각 그라디언트 + 추가 coral blur로 따뜻함 강조. */
+/* ═══════════════════════════════════════════════════════════════════════════
+   LEGACY · v1 호환 alias (STEP 4 페이지 리라이트 시 사용처 제거 예정)
+   - 잔재 클래스 이름은 유지하되 내용은 잉크 단색으로 치환
+   - 무지개 prismatic·violet orb·brand-warm 그라데이션 제거
+   ═══════════════════════════════════════════════════════════════════════ */
+.bg-brand-warm,
+.bg-brand-warm-soft,
+.bg-prismatic,
+.bg-prismatic-soft,
+.dark-hero-gradient,
+.hero-navy-gradient,
 .parent-hero-gradient {
-  background:
-    radial-gradient(circle at 95% 110%, hsl(8 75% 60% / 0.55) 0%, transparent 55%),
-    linear-gradient(135deg, hsl(220 60% 22%) 0%, hsl(232 55% 28%) 60%, hsl(8 70% 45%) 100%);
+  background: hsl(var(--bg-inverse));
+  color: hsl(var(--text-inverse));
 }
-
+.dark .bg-brand-warm,
+.dark .bg-brand-warm-soft,
+.dark .bg-prismatic,
+.dark .bg-prismatic-soft,
+.dark .dark-hero-gradient,
+.dark .hero-navy-gradient,
 .dark .parent-hero-gradient {
-  background:
-    radial-gradient(circle at 95% 110%, hsl(8 70% 50% / 0.5) 0%, transparent 55%),
-    linear-gradient(135deg, hsl(220 55% 14%) 0%, hsl(232 50% 18%) 60%, hsl(8 60% 28%) 100%);
+  background: hsl(var(--bg-inverse));
+  color: hsl(var(--text-inverse));
 }
 
-.dark .glass-card {
-  background: rgba(30, 26, 22, 0.8);
-  border-color: rgba(255, 255, 255, 0.08);
+/* Orb 장식 — 모두 잉크 1색 (보라/앰버 폐기) */
+.brand-orb { display: none; }
+.brand-orb-primary,
+.brand-orb-violet,
+.brand-orb-amber,
+.brand-orb-mesh { display: none; }
+
+/* card-tinted / card-emphasis — 잉크 hairline 카드로 치환 */
+.card-tinted,
+.card-emphasis {
+  background: hsl(var(--bg-surface));
+  border: 1px solid hsl(var(--border-subtle));
+}
+.dark .card-tinted,
+.dark .card-emphasis {
+  background: hsl(var(--bg-surface));
+  border-color: hsl(var(--border-subtle));
+}
+.card-emphasis::before { display: none; }
+
+/* hover-card / hover-lift / hover-glow — 그림자 호버 폐기 → 보더 강화만 */
+.hover-card,
+.hover-lift,
+.hover-glow {
+  transition: border-color var(--dur-micro) var(--ease-brand);
+}
+@media (hover: hover) {
+  .hover-card:hover,
+  .hover-lift:hover,
+  .hover-glow:hover {
+    border-color: hsl(var(--border-strong));
+  }
+}
+.tap-press {
+  transition: transform var(--dur-micro) var(--ease-brand);
+  will-change: transform;
+}
+.tap-press:active { transform: scale(0.97); }
+
+/* Brand-tinted shadow utilities — 그림자 폐기, hairline으로 치환 */
+.shadow-glow-sm,
+.shadow-glow-md,
+.shadow-glow-lg {
+  box-shadow:
+    0 1px 2px hsl(var(--text-primary) / 0.04),
+    0 1px 1px hsl(var(--text-primary) / 0.03);
 }
 
-/* Dark mode: semantic color overrides for 50-level backgrounds */
-.dark .bg-emerald-50 { background-color: hsl(160, 60%, 10%); }
-.dark .bg-blue-50 { background-color: hsl(217, 50%, 12%); }
-.dark .bg-amber-50 { background-color: hsl(38, 50%, 12%); }
-.dark .bg-red-50 { background-color: hsl(0, 50%, 12%); }
-.dark .bg-orange-50 { background-color: hsl(25, 50%, 12%); }
-.dark .bg-emerald-100 { background-color: hsl(160, 50%, 15%); }
-.dark .bg-blue-100 { background-color: hsl(217, 40%, 18%); }
-.dark .bg-amber-100 { background-color: hsl(38, 40%, 15%); }
-.dark .bg-red-100 { background-color: hsl(0, 40%, 15%); }
-
-/* Horizontal scroll fade hint */
-.scroll-fade-right {
-  -webkit-mask-image: linear-gradient(to right, black 88%, transparent 100%);
-  mask-image: linear-gradient(to right, black 88%, transparent 100%);
+/* Focus glow — 잉크 outline halo */
+.focus-glow:focus-visible,
+.focus-ring-primary:focus-visible {
+  outline: 2px solid hsl(var(--border-strong));
+  outline-offset: 2px;
+  box-shadow: none;
 }
 
-.glass-card {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-/* Entrance animations: fade-up, fade-in, scale-in, slide-right, count-pulse 는
-   tailwind.config.ts의 keyframes/animation에 정의됨 (animate-fade-up 등으로 사용). */
-
-/* Step transition animations */
-@keyframes step-slide-left {
-  from { opacity: 0; transform: translateX(24px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes step-slide-right {
-  from { opacity: 0; transform: translateX(-24px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-.animate-step-forward {
-  animation: step-slide-left 0.3s ease-out both;
-}
-
-.animate-step-back {
-  animation: step-slide-right 0.3s ease-out both;
-}
-
-/* Chat message enter animations */
-@keyframes msg-enter-left {
-  from { opacity: 0; transform: translateX(-8px) scale(0.97); }
-  to { opacity: 1; transform: translateX(0) scale(1); }
-}
-
-@keyframes msg-enter-right {
-  from { opacity: 0; transform: translateX(8px) scale(0.97); }
-  to { opacity: 1; transform: translateX(0) scale(1); }
-}
-
-.animate-msg-ai {
-  animation: msg-enter-left 0.25s ease-out both;
-}
-
-.animate-msg-user {
-  animation: msg-enter-right 0.25s ease-out both;
-}
-
-/* Welcome page animations */
-@keyframes welcome-fade-up {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes welcome-scale-in {
-  from { opacity: 0; transform: scale(0.8); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes welcome-view-enter {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-welcome-item {
-  animation: welcome-fade-up 0.6s ease-out both;
-}
-
-.animate-welcome-logo {
-  animation: welcome-scale-in 0.5s ease-out both;
-}
-
-.animate-view-enter {
-  animation: welcome-view-enter 0.35s ease-out both;
-}
-
-/* Page transition — framer-motion 대체, GPU 가속 opacity+transform만 사용 */
-@keyframes page-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.animate-page-in {
-  /* Toss 스펙 — 120ms + signature easeOutExpo curve (2-11 audit) */
-  animation: page-in 0.12s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-@media (prefers-reduced-motion: reduce) {
-  .animate-page-in { animation: none; }
-}
-
-/* Prism Light Strip */
-@property --strip-pos {
-  syntax: '<percentage>';
-  initial-value: -100%;
-  inherits: false;
-}
-
-@keyframes light-strip-slide {
-  0% { --strip-pos: -100%; }
-  100% { --strip-pos: 200%; }
-}
-
-.prism-strip {
-  position: relative;
-  overflow: hidden;
-}
-
-.prism-strip::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    hsl(160, 60%, 45%) 20%,
-    hsl(217, 71%, 53%) 40%,
-    hsl(38, 92%, 50%) 60%,
-    hsl(19, 79%, 50%) 80%,
-    transparent 100%
-  );
-  background-size: 50% 100%;
-  background-position: var(--strip-pos) 0;
-  animation: light-strip-slide 3.5s ease-in-out infinite;
-  z-index: 20;
-  border-radius: inherit;
-}
-
-/* Data-reactive Light Strip — color ratios driven by CSS vars */
-.prism-strip-reactive {
-  position: relative;
-  overflow: hidden;
-}
-
-.prism-strip-reactive::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    hsl(0, 72%, 51%) var(--reach-stop, 20%),
-    hsl(38, 92%, 50%) var(--amber-stop, 40%),
-    hsl(217, 71%, 53%) var(--target-stop, 60%),
-    hsl(160, 60%, 45%) var(--safety-stop, 80%),
-    transparent 100%
-  );
-  background-size: 50% 100%;
-  background-position: var(--strip-pos) 0;
-  animation: light-strip-slide 3.5s ease-in-out infinite;
-  z-index: 20;
-  border-radius: inherit;
-  transition: background 0.6s ease;
-}
-
-/* One-shot celebration strip (plays once) */
-@keyframes light-strip-once {
-  0% { --strip-pos: -100%; opacity: 0; }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { --strip-pos: 200%; opacity: 0; }
-}
-
+/* Prism light strip — 무지개 폐기, 잉크 단색 strip */
+.prism-strip,
+.prism-strip-reactive,
+.prism-strip-once { position: relative; overflow: hidden; }
+.prism-strip::before,
+.prism-strip-reactive::before,
 .prism-strip-once::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    hsl(160, 60%, 45%) 20%,
-    hsl(217, 71%, 53%) 40%,
-    hsl(38, 92%, 50%) 60%,
-    hsl(19, 79%, 50%) 80%,
-    transparent 100%
-  );
-  background-size: 50% 100%;
-  background-position: var(--strip-pos) 0;
-  animation: light-strip-once 1.2s ease-out both;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: hsl(var(--accent-ink));
   z-index: 20;
   border-radius: inherit;
 }
 
-/* Fallback for browsers without @property support (Samsung Internet < 14, older WebView) */
-@keyframes light-strip-slide-fallback {
-  0% { background-position: -50% 0; }
-  100% { background-position: 150% 0; }
+/* Glass card — 단순 흰 카드 + hairline */
+.glass-card {
+  background: hsl(var(--bg-surface));
+  border: 1px solid hsl(var(--border-subtle));
+  backdrop-filter: none;
+}
+.dark .glass-card {
+  background: hsl(var(--bg-surface));
+  border-color: hsl(var(--border-subtle));
 }
 
-@keyframes light-strip-once-fallback {
-  0% { background-position: -50% 0; opacity: 0; }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { background-position: 150% 0; opacity: 0; }
-}
-
-@supports not (font-tech(color-COLRv1)) {
-  /* Heuristic: browsers lacking @property also lack color-COLRv1 */
-  .prism-strip::before,
-  .prism-strip-reactive::before {
-    animation: light-strip-slide-fallback 3.5s linear infinite;
-  }
-  .prism-strip-once::before {
-    animation: light-strip-once-fallback 1.2s ease-out both;
-  }
-}
+/* Dark mode color-50 backgrounds — 카테고리 soft 토큰으로 치환 */
+.dark .bg-emerald-50,
+.dark .bg-emerald-100 { background-color: hsl(var(--cat-safety-soft)); }
+.dark .bg-blue-50,
+.dark .bg-blue-100    { background-color: hsl(var(--cat-target-soft)); }
+.dark .bg-amber-50,
+.dark .bg-amber-100   { background-color: hsl(var(--cat-hard-soft)); }
+.dark .bg-red-50,
+.dark .bg-red-100     { background-color: hsl(var(--cat-reach-soft)); }
+.dark .bg-orange-50   { background-color: hsl(var(--cat-hard-soft)); }

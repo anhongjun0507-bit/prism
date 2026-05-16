@@ -56,7 +56,7 @@ export function DashboardTipCard() {
     <Card
       role="region"
       aria-label="대시보드 안내"
-      className="p-4 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/[0.06] to-primary/[0.02] relative animate-fade-up"
+      className="p-4 rounded-md border border-border-subtle bg-accent relative animate-fade-up"
     >
       <button
         type="button"

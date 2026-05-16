@@ -98,8 +98,7 @@ export function InstallPrompt() {
       aria-labelledby="install-prompt-title"
       className="fixed bottom-24 left-4 right-4 md:left-auto md:right-6 md:bottom-6 md:max-w-sm z-50 animate-fade-up"
     >
-      <div className="relative rounded-2xl bg-card border border-primary/20 shadow-glow-lg p-4 pr-10 overflow-hidden">
-        <div className="brand-orb brand-orb-primary -top-8 -right-6 w-24 h-24 opacity-30" aria-hidden="true" />
+      <div className="relative rounded-md bg-card border border-border-subtle shadow-hairline p-4 pr-10 overflow-hidden">
         <button
           onClick={handleDismiss}
           aria-label="설치 안내 닫기"
