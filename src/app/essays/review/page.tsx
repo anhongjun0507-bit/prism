@@ -5,16 +5,17 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
 import { normalizePlan, canUseFeature } from "@/lib/plans";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui-v2/card";
+import { Button } from "@/components/ui-v2/button";
+import { Badge } from "@/components/ui-v2/badge";
+import { Input, Textarea } from "@/components/ui-v2/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui-v2/dialog";
 import { listAvailableRubrics } from "@/lib/university-rubric";
 import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui-v2/page-header";
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { PrismLoader } from "@/components/PrismLoader";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import { db } from "@/lib/firebase";
@@ -724,18 +725,40 @@ function EssayReviewPageInner() {
   const isLinkedLoading = essayId && !linkedEssay;
 
   return (
-    <div className="min-h-dvh bg-background pb-nav">
-      <PageHeader
-        title="AI 에세이 첨삭"
-        subtitle={
-          hasEssayPrefill
-            ? "선택한 에세이의 내용이 자동으로 채워져 있어요."
-            : "작성한 에세이를 바로 첨삭받고, 저장도 가능해요."
-        }
-        backHref="/essays"
-      />
+    <div
+      className="min-h-dvh pb-nav"
+      style={{ background: "var(--ds-bg-canvas)" }}
+    >
+      <div className="px-6 lg:px-8 pt-safe pt-6 lg:pt-10 mx-auto max-w-[1120px]">
+        <PageHeader
+          title={
+            <span className="inline-flex items-center gap-2">
+              <Sparkles
+                className="size-6 shrink-0"
+                style={{ color: "var(--ds-brand-primary)" }}
+                aria-hidden="true"
+              />
+              AI 에세이 첨삭
+            </span>
+          }
+          subtitle={
+            hasEssayPrefill
+              ? "선택한 에세이의 내용이 자동으로 채워져 있어요."
+              : "작성한 에세이를 바로 첨삭받고, 저장도 가능해요."
+          }
+          eyebrow={
+            <Link
+              href="/essays"
+              className="inline-flex items-center gap-1 text-ds-body-sm hover:underline underline-offset-2"
+              style={{ color: "var(--ds-text-tertiary)" }}
+            >
+              <ChevronLeft className="size-4" aria-hidden="true" />
+              에세이 목록
+            </Link>
+          }
+        />
 
-      <div className="px-gutter-sm md:px-gutter space-y-4 lg:max-w-content-wide lg:mx-auto">
+      <div className="space-y-4">
         {/* Phase indicator — 3-step breadcrumb */}
         <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground" aria-label="진행 단계">
           <span className={phase === "input" ? "text-primary font-semibold" : ""}>1. 입력</span>
@@ -760,7 +783,7 @@ function EssayReviewPageInner() {
                 <Button size="sm" className="h-8 rounded-lg text-xs" onClick={handleLoadDraft}>
                   불러오기
                 </Button>
-                <Button size="sm" variant="outline" className="h-8 rounded-lg text-xs" onClick={handleDiscardDraft}>
+                <Button size="sm" variant="secondary" className="h-8 rounded-lg text-xs" onClick={handleDiscardDraft}>
                   버리기
                 </Button>
               </div>
@@ -807,7 +830,7 @@ function EssayReviewPageInner() {
               </button>
             </div>
             {canUseUniversityRubric && universityId !== "general" && (
-              <Badge variant="goldSoft" className="text-[10px] px-2 py-0.5">
+              <Badge variant="accent" className="text-[10px] px-2 py-0.5">
                 <Crown className="w-3 h-3 mr-1" /> Elite 맞춤 채점
               </Badge>
             )}
@@ -944,16 +967,16 @@ function EssayReviewPageInner() {
           <div className="space-y-2">
             {canUseReview && !canReview && (
               <div className="flex justify-center">
-                <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-3 py-1 text-xs rounded-full">
+                <Badge variant="neutral" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-3 py-1 text-xs rounded-full">
                   무료 체험 1회
                 </Badge>
               </div>
             )}
             <Button
-              size="xl"
+              size="lg"
               onClick={useSSE ? handleReviewStreaming : handleReview}
               disabled={loading || !essay.trim()}
-              className="w-full rounded-xl gap-2"
+              className="w-full"
             >
               {loading ? (
                 <>
@@ -974,7 +997,7 @@ function EssayReviewPageInner() {
         {error && (
           <Card className="p-4 border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800 space-y-3">
             <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
-            <Button variant="outline" size="sm" onClick={handleReview} disabled={!essay.trim()}>
+            <Button variant="secondary" size="sm" onClick={handleReview} disabled={!essay.trim()}>
               다시 시도
             </Button>
           </Card>
@@ -984,7 +1007,7 @@ function EssayReviewPageInner() {
 
         {/* ═══ Loading Phase — PrismLoader + 시간 안내 + 3-stage progress ═══ */}
         {phase === "loading" && (
-          <Card variant="elevated" className="p-8 text-center space-y-3">
+          <Card variant="default" className="p-8 text-center space-y-3">
             <div className="flex justify-center">
               <PrismLoader size={56} />
             </div>
@@ -1042,7 +1065,7 @@ function EssayReviewPageInner() {
                   </Button>
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="secondary"
                     onClick={() => {
                       try {
                         const fileName = `essay-review-${(university || "untitled").replace(/[^\w가-힣-]+/g, "_")}-${new Date().toISOString().slice(0, 10)}.md`;
@@ -1084,7 +1107,7 @@ function EssayReviewPageInner() {
                   </Button>
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="secondary"
                     onClick={async () => {
                       try {
                         await navigator.clipboard.writeText(streamedContent);
@@ -1122,7 +1145,7 @@ function EssayReviewPageInner() {
                   다른 에세이 첨삭하기
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="lg"
                   onClick={() => router.push("/essays")}
                   className="flex-1 rounded-xl gap-2"
@@ -1161,7 +1184,7 @@ function EssayReviewPageInner() {
             {/* Export actions — PDF(브라우저 print dialog) / DOC(Word 호환) */}
             <div className="flex gap-2">
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={() => exportReviewToPDF({
                   university: university || linkedEssay?.university,
@@ -1174,7 +1197,7 @@ function EssayReviewPageInner() {
                 <Download className="w-4 h-4" /> PDF 저장
               </Button>
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={() => exportReviewToDoc({
                   university: university || linkedEssay?.university,
@@ -1200,12 +1223,12 @@ function EssayReviewPageInner() {
                 </p>
               )}
               {essayId && linkedEssay && (
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="neutral" className="text-xs">
                   ✓ {linkedEssay.university} 에세이에 저장됨
                 </Badge>
               )}
               {!essayId && savedAsNew && (
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="neutral" className="text-xs">
                   ✓ 새 에세이로 저장됨 · {savedAsNew.university}
                 </Badge>
               )}
@@ -1249,7 +1272,7 @@ function EssayReviewPageInner() {
             {/* Tone */}
             {result.tone && (
               <div className="flex justify-center">
-                <Badge variant="secondary" className="px-4 py-1.5 text-sm rounded-full">
+                <Badge variant="neutral" className="px-4 py-1.5 text-sm rounded-full">
                   톤: {result.tone}
                 </Badge>
               </div>
@@ -1372,7 +1395,7 @@ function EssayReviewPageInner() {
                   <Sparkles className="w-4 h-4 text-emerald-500" />
                   10점짜리 에세이 예문
                 </h3>
-                <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 text-xs">
+                <Badge variant="neutral" className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 text-xs">
                   참고용
                 </Badge>
               </div>
@@ -1420,7 +1443,7 @@ function EssayReviewPageInner() {
                 다른 에세이 첨삭하기
               </Button>
               <Button
-                variant="outline"
+                variant="secondary"
                 size="lg"
                 onClick={() => router.push("/essays")}
                 className="flex-1 rounded-xl gap-2"
@@ -1432,6 +1455,7 @@ function EssayReviewPageInner() {
           </div>
         )}
         {/* ═══ /Result Phase ═══ */}
+      </div>
       </div>
 
       {/* Elite 업그레이드 유도 Modal — Free/Pro 유저가 대학별 rubric으로 제출 시 */}
@@ -1458,7 +1482,7 @@ function EssayReviewPageInner() {
               Elite 플랜 알아보기
             </Button>
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={() => {
                 setUpgradeModalOpen(false);
                 setUniversityId("general");

@@ -5,9 +5,9 @@ import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { BottomNav, BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 import { streamWithAuth, consumeSSE } from "@/lib/api-client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui-v2/button";
+import { Input } from "@/components/ui-v2/input";
+import { Badge } from "@/components/ui-v2/badge";
 import { Send, Sparkles, Loader2, Bot, User, RotateCcw, GraduationCap, PenLine, TrendingUp, Trophy, ArrowRight, BookOpen, FileText, UserCircle2, Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
@@ -568,9 +568,10 @@ function ChatPageInner() {
   return (
     <>
     <div
-      className="flex flex-col bg-background"
+      className="flex flex-col"
       style={{
         height: "100dvh",
+        background: "var(--ds-bg-canvas)",
         // BottomNav + iOS 안전 영역 만큼 내부 padding으로 확보.
         // 이전엔 body에 pb-20이 있어 chat이 double-padding으로 오버플로 나던 문제가 있었으나,
         // body의 전역 pb를 제거한 뒤부턴 chat 자체가 자기 영역 clearance를 책임짐.
@@ -578,25 +579,41 @@ function ChatPageInner() {
       }}
     >
       {/* ── Header ── */}
-      <header className="relative shrink-0 overflow-hidden border-b border-border-subtle bg-accent">
+      <header
+        className="relative shrink-0 overflow-hidden border-b"
+        style={{
+          background: "var(--ds-bg-surface)",
+          borderColor: "var(--ds-border-subtle)",
+        }}
+      >
         <div className="relative p-4 px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="relative w-11 h-11 rounded-md bg-primary flex items-center justify-center shadow-hairline">
-                <Sparkles className="w-5 h-5 text-primary-foreground" aria-hidden="true" />
-              </div>
+            <div
+              className="relative w-11 h-11 rounded-ds-input flex items-center justify-center"
+              style={{ background: "var(--ds-brand-primary)" }}
+            >
+              <Sparkles className="w-5 h-5 text-white" aria-hidden="true" />
             </div>
             <div>
-              <h1 className="font-headline font-bold text-lg flex items-center gap-1.5">
+              <h1 className="font-bold text-ds-heading-md flex items-center gap-1.5 text-[color:var(--ds-text-primary)]">
                 AI 카운슬러
-                <Badge variant="secondary" className="text-2xs px-1.5 py-0 h-4 bg-primary/10 text-primary border-none font-bold tracking-wide">
+                <Badge variant="brand" className="text-2xs px-1.5 py-0 h-4 font-bold tracking-wide">
                   PRO
                 </Badge>
               </h1>
-              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <p
+                className="text-ds-body-sm flex items-center gap-1.5 mt-0.5"
+                style={{ color: "var(--ds-text-tertiary)" }}
+              >
                 <span className="relative inline-flex w-1.5 h-1.5">
-                  <span className="absolute inset-0 rounded-full bg-emerald-500" />
-                  <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-75" />
+                  <span
+                    className="absolute inset-0 rounded-full"
+                    style={{ background: "var(--ds-safety)" }}
+                  />
+                  <span
+                    className="absolute inset-0 rounded-full animate-ping opacity-75"
+                    style={{ background: "var(--ds-safety)" }}
+                  />
                 </span>
                 실시간 상담 중
               </p>
@@ -607,7 +624,7 @@ function ChatPageInner() {
             size="sm"
             onClick={() => setShowResetConfirm(true)}
             aria-label="대화 초기화"
-            className="gap-1.5 text-xs text-muted-foreground hover:text-foreground rounded-full"
+            className="gap-1.5 text-xs"
           >
             <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
             초기화
@@ -653,7 +670,7 @@ function ChatPageInner() {
         {hasMoreOlder && (
           <div className="mb-4 flex justify-center">
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={loadOlderMessages}
               disabled={loadingOlder}
@@ -907,11 +924,17 @@ function ChatPageInner() {
       )}
 
       {/* ── Input ── */}
-      <div className="shrink-0 px-4 pt-1 pb-1 bg-background lg:max-w-content lg:mx-auto lg:w-full">
-        <div className={cn(
-          "relative flex items-end gap-2 p-2 pl-4 rounded-md bg-card shadow-hairline border duration-micro ease-brand transition-colors",
-          "border-border-default focus-within:border-border-strong"
-        )}>
+      <div
+        className="shrink-0 px-4 pt-1 pb-1 lg:max-w-content lg:mx-auto lg:w-full"
+        style={{ background: "var(--ds-bg-canvas)" }}
+      >
+        <div
+          className="relative flex items-end gap-2 p-2 pl-4 rounded-ds-input border transition-colors duration-[120ms]"
+          style={{
+            background: "var(--ds-bg-surface)",
+            borderColor: "var(--ds-border-subtle)",
+          }}
+        >
           {/* Remaining-count pill — floats in top-right of the input shell */}
           {dailyLimit !== Infinity && (
             <div className={cn(
@@ -944,10 +967,8 @@ function ChatPageInner() {
             onClick={handleSend}
             disabled={loading || !input.trim() || remaining <= 0}
             aria-label="메시지 전송"
-            className={cn(
-              "shrink-0 w-11 h-11 rounded-md p-0 bg-primary text-primary-foreground shadow-hairline duration-micro ease-brand transition-colors",
-              "hover:bg-ink-hover disabled:bg-muted disabled:opacity-50"
-            )}
+            size="icon"
+            className="shrink-0 w-11 h-11"
           >
             {loading ? (
               <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />

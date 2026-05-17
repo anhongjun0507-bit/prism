@@ -4,17 +4,16 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui-v2/page-header";
+import { Card } from "@/components/ui-v2/card";
+import { Button } from "@/components/ui-v2/button";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+} from "@/components/ui-v2/dialog";
+import { Input, Textarea } from "@/components/ui-v2/input";
+import { Badge } from "@/components/ui-v2/badge";
 import {
-  Plus, Sparkles, ChevronRight, Trash2, PenLine,
+  Plus, Sparkles, ChevronRight, Trash2, PenLine, FileText as FileTextIcon,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
@@ -32,7 +31,7 @@ import type { Essay, EssayReview, EssayVersion, EssayOutline, OutlineSection } f
 import { slimEssaysForCache, normalizeOutline } from "@/types/essay";
 import { readJSON, writeJSON, removeKey } from "@/lib/storage";
 import { EmptyState } from "@/components/EmptyState";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/ui-v2/skeleton";
 import { EssayEditor } from "@/components/essays/EssayEditor";
 import { EssayPicker } from "@/components/essays/EssayPicker";
 import { ReviewSubCard, ReviewDetailDialog } from "@/components/essays/EssayHelpers";
@@ -695,7 +694,7 @@ function EssaysPageInner() {
             </div>
             <div className="flex gap-2 mt-2">
               <Button
-                variant="outline"
+                variant="secondary"
                 className="flex-1 rounded-xl"
                 onClick={() => setShowGeneralDialog(false)}
               >
@@ -722,87 +721,135 @@ function EssaysPageInner() {
 
   // List View
   return (
-    <div className="min-h-dvh bg-background pb-nav">
-      <PageHeader
-        title="에세이 관리"
-        subtitle="대학교별 프롬프트로 에세이를 작성하세요."
-        hideBack
-        action={
-          <Button onClick={() => setView("picker")} size="icon" className="rounded-full w-12 h-12 shadow-lg" aria-label="새 에세이 추가">
-            <Plus />
-          </Button>
-        }
-      />
+    <div
+      className="min-h-dvh pb-nav"
+      style={{ background: "var(--ds-bg-canvas)" }}
+    >
+      <div className="px-6 lg:px-8 pt-safe pt-6 lg:pt-10 mx-auto max-w-[1120px]">
+        <PageHeader
+          title={
+            <span className="inline-flex items-center gap-2">
+              <PenLine
+                className="size-6 shrink-0"
+                style={{ color: "var(--ds-brand-primary)" }}
+                aria-hidden="true"
+              />
+              에세이
+            </span>
+          }
+          subtitle="대학교별 프롬프트로 에세이를 작성하세요."
+          actions={
+            <Button
+              onClick={() => setView("picker")}
+              size="icon"
+              aria-label="새 에세이 추가"
+            >
+              <Plus />
+            </Button>
+          }
+        />
 
-      <div className="px-gutter-sm md:px-gutter mb-3 lg:max-w-content-wide lg:mx-auto">
-        <Link href="/essays/review">
-          <Card className="p-4 bg-primary/5 border border-primary/20 flex items-center gap-3 transition-all active:scale-[0.98]">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-              <Sparkles className="w-5 h-5 text-primary" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold text-foreground">AI 에세이 리뷰</p>
-              <p className="text-xs text-muted-foreground">AI가 에세이를 분석하고 피드백을 드려요</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-primary" />
-          </Card>
-        </Link>
-      </div>
-
-      {/* 상태 필터 칩 — 전체·AI 첨삭 완료·작성 중·보관함 */}
-      {(filterCounts.all > 0 || filterCounts.archived > 0) && (
-        <div
-          className="px-gutter-sm md:px-gutter mb-3 lg:max-w-content-wide lg:mx-auto flex gap-1.5 overflow-x-auto scrollbar-none"
-          role="tablist"
-          aria-label="에세이 상태 필터"
-        >
-          {[
-            { id: "all" as const, label: "전체", count: filterCounts.all },
-            { id: "reviewed" as const, label: "AI 첨삭 완료", count: filterCounts.reviewed },
-            { id: "draft" as const, label: "작성 중", count: filterCounts.draft },
-            { id: "archived" as const, label: "보관함", count: filterCounts.archived },
-          ].map((c) => {
-            const active = listFilter === c.id;
-            if (c.id === "archived" && c.count === 0) return null;
-            return (
-              <button
-                key={c.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setListFilter(c.id)}
-                className={`shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-3 h-8 rounded-full border transition-colors ${
-                  active
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background text-muted-foreground border-border/60 hover:border-primary/40 hover:text-foreground"
-                }`}
+        <main className="space-y-5">
+          <Link href="/essays/review">
+            <Card
+              variant="subtle"
+              padding="md"
+              className="flex items-center gap-3 transition-transform active:scale-[0.99] cursor-pointer"
+              style={{ background: "var(--ds-brand-primary-soft)" }}
+            >
+              <div
+                className="size-10 rounded-ds-input flex items-center justify-center shrink-0"
+                style={{ background: "var(--ds-bg-surface)" }}
               >
-                {c.label}
-                <span className={`tabular-nums text-2xs ${active ? "text-primary-foreground/80" : "text-muted-foreground/70"}`}>
-                  {c.count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+                <Sparkles
+                  className="size-5"
+                  style={{ color: "var(--ds-brand-primary)" }}
+                  aria-hidden="true"
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-ds-body-md font-semibold text-[color:var(--ds-text-primary)]">
+                  AI 에세이 첨삭
+                </p>
+                <p
+                  className="text-ds-body-sm"
+                  style={{ color: "var(--ds-text-secondary)" }}
+                >
+                  AI가 에세이를 분석하고 피드백을 드려요
+                </p>
+              </div>
+              <ChevronRight
+                className="size-4 shrink-0"
+                style={{ color: "var(--ds-brand-primary)" }}
+                aria-hidden="true"
+              />
+            </Card>
+          </Link>
 
-      <div ref={essayListRef} className="px-6 space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-3 md:items-start md:space-y-0 lg:max-w-content-wide lg:mx-auto">
+          {/* 상태 필터 칩 — 전체·AI 첨삭 완료·작성 중·보관함 */}
+          {(filterCounts.all > 0 || filterCounts.archived > 0) && (
+            <div
+              className="flex gap-1.5 overflow-x-auto scrollbar-none"
+              role="tablist"
+              aria-label="에세이 상태 필터"
+            >
+              {[
+                { id: "all" as const, label: "전체", count: filterCounts.all },
+                { id: "reviewed" as const, label: "AI 첨삭 완료", count: filterCounts.reviewed },
+                { id: "draft" as const, label: "작성 중", count: filterCounts.draft },
+                { id: "archived" as const, label: "보관함", count: filterCounts.archived },
+              ].map((c) => {
+                const active = listFilter === c.id;
+                if (c.id === "archived" && c.count === 0) return null;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setListFilter(c.id)}
+                    className="shrink-0 inline-flex items-center gap-1.5 text-ds-body-sm font-medium px-3 h-9 rounded-ds-input border transition-colors"
+                    style={
+                      active
+                        ? {
+                            background: "var(--ds-brand-primary)",
+                            borderColor: "var(--ds-brand-primary)",
+                            color: "#fff",
+                          }
+                        : {
+                            background: "var(--ds-bg-surface)",
+                            borderColor: "var(--ds-border-subtle)",
+                            color: "var(--ds-text-secondary)",
+                          }
+                    }
+                  >
+                    {c.label}
+                    <span
+                      className="tabular-nums text-xs"
+                      style={{ opacity: active ? 0.85 : 0.7 }}
+                    >
+                      {c.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <div ref={essayListRef} className="space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-3 md:items-start md:space-y-0">
         {essaysLoading && essays.length === 0 ? (
           Array.from({ length: 2 }).map((_, i) => (
-            <Card key={i} variant="elevated" className="h-full">
-              <CardContent className="p-5 flex flex-col gap-2 min-h-[180px]">
-                <Skeleton className="h-4 w-3/5" />
-                <Skeleton className="h-3 w-4/5" />
-                <Skeleton className="h-3 w-2/5" />
-                <div className="mt-auto pt-2">
-                  <Skeleton className="h-5 w-16 rounded-full" />
-                </div>
-              </CardContent>
+            <Card key={i} padding="md" className="h-full flex flex-col gap-2 min-h-[180px]">
+              <Skeleton className="h-4 w-3/5" />
+              <Skeleton className="h-3 w-4/5" />
+              <Skeleton className="h-3 w-2/5" />
+              <div className="mt-auto pt-2">
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
             </Card>
           ))
         ) : visibleEssays.length === 0 ? (
-          <Card variant="elevated" className="md:col-span-2">
+          <Card variant="default" className="md:col-span-2">
             <EmptyState
               illustration="essay"
               title={
@@ -827,7 +874,7 @@ function EssaysPageInner() {
                     에세이 시작하기 <ChevronRight className="w-4 h-4 ml-1" />
                   </Button>
                 ) : (
-                  <Button variant="outline" onClick={() => setListFilter("all")} size="sm">
+                  <Button variant="secondary" onClick={() => setListFilter("all")} size="sm">
                     전체 보기
                   </Button>
                 )
@@ -842,12 +889,12 @@ function EssaysPageInner() {
             return (
               <div key={essay.id} className="space-y-2">
                 <Card
-                  variant="elevated"
+                  variant="default"
                   interactive
-                  className="group h-full"
+                  padding="md"
+                  className="group h-full flex flex-col gap-2 min-h-[180px]"
                   onClick={() => { setActiveEssay(essay); setView("editor"); }}
                 >
-                  <CardContent className="p-5 flex flex-col gap-2 min-h-[180px]">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="font-bold text-sm flex-1 min-w-0 truncate">{essay.university}</h3>
                       <div className="flex items-center gap-1.5 shrink-0">
@@ -906,7 +953,7 @@ function EssaysPageInner() {
                       <p className="text-xs text-muted-foreground">최종 수정: {essay.lastSaved}</p>
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="secondary"
                         asChild
                         className="h-8 rounded-lg px-3 gap-1.5 text-xs border-primary/30 text-primary hover:bg-primary/10"
                       >
@@ -918,7 +965,6 @@ function EssaysPageInner() {
                         </Link>
                       </Button>
                     </div>
-                  </CardContent>
                 </Card>
 
                 {isExpanded && reviews.map(review => (
@@ -933,6 +979,8 @@ function EssaysPageInner() {
             );
           })
         )}
+          </div>
+        </main>
       </div>
 
       <Dialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
@@ -944,7 +992,7 @@ function EssaysPageInner() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-2 mt-2">
-            <Button variant="outline" className="flex-1" onClick={() => setDeleteTarget(null)}>
+            <Button variant="secondary" className="flex-1" onClick={() => setDeleteTarget(null)}>
               취소
             </Button>
             <Button variant="destructive" className="flex-1" onClick={confirmDeleteEssay}>
@@ -961,7 +1009,7 @@ function EssaysPageInner() {
             <DialogDescription>첨삭 결과가 영구적으로 삭제됩니다.</DialogDescription>
           </DialogHeader>
           <div className="flex gap-2 mt-2">
-            <Button variant="outline" className="flex-1" onClick={() => setReviewDeleteTarget(null)}>
+            <Button variant="secondary" className="flex-1" onClick={() => setReviewDeleteTarget(null)}>
               취소
             </Button>
             <Button
@@ -998,7 +1046,7 @@ function EssaysPageInner() {
 function EssayWordCounter({ words, limit }: { words: number; limit?: number }) {
   if (!limit || limit <= 0) {
     return (
-      <Badge variant="secondary" className="text-xs">
+      <Badge variant="neutral" className="text-xs">
         {words} 단어
       </Badge>
     );
