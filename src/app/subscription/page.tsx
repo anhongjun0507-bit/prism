@@ -276,7 +276,8 @@ function SubscriptionPageInner() {
                 onClick={() => setCancelDialogOpen(true)}
                 disabled={cancelling}
                 size="lg"
-                className="w-full rounded-xl text-red-500 border-red-200 hover:bg-red-50"
+                className="w-full rounded-xl hover:bg-[color:var(--ds-reach-soft)]"
+                style={{ color: "var(--ds-reach)", borderColor: "color-mix(in srgb, var(--ds-reach) 25%, transparent)" }}
               >
                 {cancelling ? "해지 처리 중..." : "구독 해지"}
               </Button>

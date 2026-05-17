@@ -535,14 +535,30 @@ function PlannerPageInner() {
 
           {/* Urgent deadlines banner */}
           {urgent.length > 0 && (
-            <Card className="p-4 bg-red-50 border-red-200 space-y-2">
-              <p className="text-xs font-bold text-red-700">다가오는 마감 ({urgent.length}개)</p>
+            <Card
+              className="p-4 space-y-2"
+              style={{
+                background: "var(--ds-reach-soft)",
+                borderColor: "color-mix(in srgb, var(--ds-reach) 30%, transparent)",
+              }}
+            >
+              <p className="text-xs font-bold" style={{ color: "var(--ds-reach)" }}>
+                다가오는 마감 ({urgent.length}개)
+              </p>
               {urgent.slice(0, 3).map(t => {
                 const dday = getDDay(t.dueDate);
                 return (
                   <div key={t.id} className="flex items-center justify-between">
-                    <p className="text-sm text-red-900 font-medium truncate flex-1">{t.title}</p>
-                    <Badge className="bg-red-100 text-red-700 border-none text-xs shrink-0 ml-2">
+                    <p
+                      className="text-sm font-medium truncate flex-1"
+                      style={{ color: "var(--ds-text-primary)" }}
+                    >
+                      {t.title}
+                    </p>
+                    <Badge
+                      variant="danger"
+                      className="text-xs shrink-0 ml-2"
+                    >
                       {dday === 0 ? "D-Day" : `D-${dday}`}
                     </Badge>
                   </div>
@@ -794,7 +810,8 @@ function PlannerPageInner() {
                   closeDialog();
                 }
               }}
-              className="bg-red-500 hover:bg-red-600 text-white"
+              className="text-white hover:opacity-90"
+              style={{ background: "var(--ds-reach)" }}
             >
               삭제
             </AlertDialogAction>
@@ -954,7 +971,8 @@ function TaskDialog({
             <Button
               variant="secondary"
               onClick={onRequestDelete}
-              className="rounded-xl text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+              className="rounded-xl hover:bg-[color:var(--ds-reach-soft)]"
+              style={{ color: "var(--ds-reach)", borderColor: "color-mix(in srgb, var(--ds-reach) 25%, transparent)" }}
             >
               <Trash2 className="w-4 h-4 mr-1" /> 삭제
             </Button>
