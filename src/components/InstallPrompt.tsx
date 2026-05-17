@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Sparkles, X, Download, Share, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui-v2/button";
 import { readJSON, writeJSON } from "@/lib/storage";
 
 /**

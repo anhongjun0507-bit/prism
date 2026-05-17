@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui-v2/button";
 import { Download, Share2, Link2, Check, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { trackPrismEvent } from "@/lib/analytics/events";
@@ -67,7 +67,7 @@ export function SampleReportActions() {
   return (
     <div className="flex flex-col gap-2 max-w-sm mx-auto">
       <Button
-        size="xl"
+        size="lg"
         className="w-full rounded-2xl font-bold text-base"
         onClick={handleDownload}
         disabled={downloading}
@@ -85,10 +85,10 @@ export function SampleReportActions() {
         )}
       </Button>
       <div className="flex gap-2">
-        <Button variant="outline" className="flex-1 gap-1.5" onClick={handleShare}>
+        <Button variant="secondary" className="flex-1 gap-1.5" onClick={handleShare}>
           <Share2 className="w-4 h-4" aria-hidden="true" /> 공유
         </Button>
-        <Button variant="outline" className="flex-1 gap-1.5" onClick={copyLink}>
+        <Button variant="secondary" className="flex-1 gap-1.5" onClick={copyLink}>
           {copied ? (
             <>
               <Check className="w-4 h-4 text-emerald-600" aria-hidden="true" /> 복사됨

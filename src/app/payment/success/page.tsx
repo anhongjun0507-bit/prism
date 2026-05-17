@@ -3,8 +3,8 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui-v2/button";
+import { Card } from "@/components/ui-v2/card";
 import { CheckCircle2, Copy, Check, Mail, Sparkles, FileText, Receipt } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PrismLoader } from "@/components/PrismLoader";
@@ -260,7 +260,7 @@ function PaymentSuccessContent() {
         )}
 
         <div className="space-y-2">
-          <Button size="xl" onClick={() => router.push("/dashboard")} className="w-full font-bold">
+          <Button size="lg" onClick={() => router.push("/dashboard")} className="w-full font-bold">
             대시보드로 이동
           </Button>
           <Button

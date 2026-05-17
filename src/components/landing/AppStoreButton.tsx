@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { Apple, Play } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui-v2/button";
 import { APP_STORE_URLS } from "@/lib/app-stores";
 import { trackPrismEvent } from "@/lib/analytics/events";
 
 type Source = "cta_button" | "bottom_section";
-type Size = "default" | "lg";
+type Size = "md" | "lg";
 
 interface StoreButtonProps {
   size?: Size;
@@ -35,7 +35,7 @@ function ComingSoonButton({
   return (
     <Button
       type="button"
-      variant="outline"
+      variant="secondary"
       size={size}
       className={`relative cursor-default opacity-90 ${className ?? ""}`}
       disabled
@@ -52,12 +52,12 @@ function ComingSoonButton({
   );
 }
 
-export function AppStoreButton({ size = "default", source = "cta_button", className }: StoreButtonProps) {
+export function AppStoreButton({ size = "md", source = "cta_button", className }: StoreButtonProps) {
   if (isPlaceholder(APP_STORE_URLS.ios)) {
     return <ComingSoonButton icon={Apple} label="App Store" size={size} className={className} />;
   }
   return (
-    <Button asChild variant="default" size={size} className={className}>
+    <Button asChild variant="primary" size={size} className={className}>
       <Link
         href={APP_STORE_URLS.ios}
         target="_blank"
@@ -72,12 +72,12 @@ export function AppStoreButton({ size = "default", source = "cta_button", classN
   );
 }
 
-export function PlayStoreButton({ size = "default", source = "cta_button", className }: StoreButtonProps) {
+export function PlayStoreButton({ size = "md", source = "cta_button", className }: StoreButtonProps) {
   if (isPlaceholder(APP_STORE_URLS.android)) {
     return <ComingSoonButton icon={Play} label="Google Play" size={size} className={className} />;
   }
   return (
-    <Button asChild variant="default" size={size} className={className}>
+    <Button asChild variant="primary" size={size} className={className}>
       <Link
         href={APP_STORE_URLS.android}
         target="_blank"

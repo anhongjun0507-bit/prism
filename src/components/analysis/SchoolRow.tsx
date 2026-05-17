@@ -1,7 +1,7 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui-v2/card";
+import { Badge } from "@/components/ui-v2/badge";
 import { ExternalLink, Heart } from "lucide-react";
 import type { School } from "@/lib/matching";
 import { SchoolLogo } from "@/components/SchoolLogo";
@@ -33,7 +33,7 @@ export const SchoolRow = ({
     <div style={style} className="px-gutter-sm md:px-gutter pb-2.5">
       <button className="w-full text-left" onClick={() => onSelect(school)} aria-label={`${school.n} 상세 보기`}>
         <Card
-          variant="elevated"
+          variant="default"
           interactive
           className="p-0 overflow-hidden group relative"
         >

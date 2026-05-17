@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui-v2/card";
+import { Button } from "@/components/ui-v2/button";
+import { Badge } from "@/components/ui-v2/badge";
 import { Progress } from "@/components/ui/progress";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
 import { PrismLoader } from "@/components/PrismLoader";
@@ -125,22 +125,22 @@ export function SpecAnalysisView({ profile, hasAccess }: SpecAnalysisViewProps) 
           {hasMinSpecs && (
             <div className="flex flex-wrap justify-center gap-2 mb-5">
               {(profile as Record<string, string>)?.gpa && (
-                <Badge variant="secondary" className="text-xs">GPA {(profile as Record<string, string>).gpa}</Badge>
+                <Badge variant="neutral" className="text-xs">GPA {(profile as Record<string, string>).gpa}</Badge>
               )}
               {(profile as Record<string, string>)?.sat && (
-                <Badge variant="secondary" className="text-xs">SAT {(profile as Record<string, string>).sat}</Badge>
+                <Badge variant="neutral" className="text-xs">SAT {(profile as Record<string, string>).sat}</Badge>
               )}
               {(profile as Record<string, string>)?.toefl && (
-                <Badge variant="secondary" className="text-xs">TOEFL {(profile as Record<string, string>).toefl}</Badge>
+                <Badge variant="neutral" className="text-xs">TOEFL {(profile as Record<string, string>).toefl}</Badge>
               )}
               {(profile as Record<string, string>)?.dreamSchool && (
-                <Badge variant="secondary" className="text-xs">{(profile as Record<string, string>).dreamSchool}</Badge>
+                <Badge variant="neutral" className="text-xs">{(profile as Record<string, string>).dreamSchool}</Badge>
               )}
             </div>
           )}
 
           {hasMinSpecs ? (
-            <Button onClick={runAnalysis} size="xl" className="gap-2">
+            <Button onClick={runAnalysis} size="lg" className="gap-2">
               <Sparkles className="w-4 h-4" /> 내 스펙 분석하기
             </Button>
           ) : (
@@ -164,7 +164,7 @@ export function SpecAnalysisView({ profile, hasAccess }: SpecAnalysisViewProps) 
     <div className="px-gutter-sm md:px-gutter space-y-5">
       {/* Loading */}
       {loading && (
-        <Card variant="elevated" className="p-12 text-center">
+        <Card variant="default" className="p-12 text-center">
           <div className="flex justify-center mb-4">
             <PrismLoader size={56} />
           </div>
@@ -177,7 +177,7 @@ export function SpecAnalysisView({ profile, hasAccess }: SpecAnalysisViewProps) 
       {error && (
         <Card className="p-4 border-red-200 bg-red-50 dark:bg-red-950/20">
           <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-          <Button variant="outline" size="sm" onClick={runAnalysis} className="mt-3">다시 시도</Button>
+          <Button variant="secondary" size="sm" onClick={runAnalysis} className="mt-3">다시 시도</Button>
         </Card>
       )}
 
@@ -313,7 +313,7 @@ export function SpecAnalysisView({ profile, hasAccess }: SpecAnalysisViewProps) 
 
           {/* Action buttons */}
           <div className="flex gap-2">
-            <Button onClick={runAnalysis} variant="outline" className="flex-1 gap-2">
+            <Button onClick={runAnalysis} variant="secondary" className="flex-1 gap-2">
               <Sparkles className="w-4 h-4" /> 다시 분석
             </Button>
             <Button onClick={() => window.print()} className="flex-1 gap-2">

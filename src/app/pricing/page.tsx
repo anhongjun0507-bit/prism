@@ -10,7 +10,7 @@ import { Card } from "@/components/ui-v2/card";
 import { Badge } from "@/components/ui-v2/badge";
 import { Check, Sparkles, Users, Loader2, Crown, Smartphone } from "lucide-react";
 import { PageHeader } from "@/components/ui-v2/page-header";
-import { SegmentedControl, SegmentedControlItem } from "@/components/ui/segmented-control";
+import { SegmentedControl } from "@/components/ui-v2/segmented-control";
 import { fetchWithAuth } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import { detectPlatform, type AppPlatform, APP_STORE_URLS } from "@/lib/app-stores";
@@ -143,9 +143,9 @@ export default function PricingPage() {
             </div>
             {/* 플랫폼 별 단축 — desktop이면 둘 다 표시, ios/android면 해당 스토어만. */}
             {platform === "ios" ? (
-              <AppStoreButton size="default" source="cta_button" className="w-full rounded-xl" />
+              <AppStoreButton size="md" source="cta_button" className="w-full rounded-xl" />
             ) : platform === "android" ? (
-              <PlayStoreButton size="default" source="cta_button" className="w-full rounded-xl" />
+              <PlayStoreButton size="md" source="cta_button" className="w-full rounded-xl" />
             ) : (
               <div className="grid grid-cols-2 gap-2">
                 <AppStoreButton source="cta_button" className="w-full rounded-xl" />
@@ -159,20 +159,22 @@ export default function PricingPage() {
         <SegmentedControl
           value={billing}
           onValueChange={(v) => setBilling(v as BillingCycle)}
-          aria-label="결제 주기"
-        >
-          <SegmentedControlItem value="monthly">월간</SegmentedControlItem>
-          <SegmentedControlItem
-            value="yearly"
-            trailing={
-              <Badge className="absolute -top-2 -right-1 bg-emerald-500 text-white border-none text-xs px-1.5 py-0">
-                최대 45%
-              </Badge>
-            }
-          >
-            연간
-          </SegmentedControlItem>
-        </SegmentedControl>
+          ariaLabel="결제 주기"
+          segments={[
+            { value: "monthly", label: "월간" },
+            {
+              value: "yearly",
+              label: (
+                <span className="inline-flex items-center gap-1.5">
+                  연간
+                  <Badge className="bg-emerald-500 text-white border-none text-xs px-1.5 py-0">
+                    최대 45%
+                  </Badge>
+                </span>
+              ),
+            },
+          ]}
+        />
 
         {/* Plan cards — PC에서 3열 비교 (md+). Pro 강조는 border + shadow-glow + 추천 badge로 통일.
             과거 md:-translate-y-2를 사용했으나 (a) items-stretch와 결합 시 CTA가 시각적으로 misalign,

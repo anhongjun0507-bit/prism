@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChevronLeft, Sparkles, BookOpen, Target, Lock, RefreshCw } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui-v2/card";
+import { Badge } from "@/components/ui-v2/badge";
+import { Button } from "@/components/ui-v2/button";
 import { CardSkeleton } from "@/components/Skeleton";
 import { useAuth } from "@/lib/auth-context";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
@@ -255,7 +255,7 @@ export function AdmissionDetailPage({ admission }: { admission: AdmissionDetail 
                 {analysisError && (
                   <div className="text-xs text-destructive space-y-2">
                     <p>{analysisError}</p>
-                    <Button size="sm" variant="outline" onClick={runAnalysis}>다시 시도</Button>
+                    <Button size="sm" variant="secondary" onClick={runAnalysis}>다시 시도</Button>
                   </div>
                 )}
                 {analysis && !loadingAnalysis && !analysisError && (

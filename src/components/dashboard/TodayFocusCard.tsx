@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { collection, limit, onSnapshot, query } from "firebase/firestore";
 import { CalendarClock, ChevronRight } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui-v2/card";
 import { useAuth } from "@/lib/auth-context";
 import { db } from "@/lib/firebase";
 import { trackPrismEvent, type TodayFocusType } from "@/lib/analytics/events";

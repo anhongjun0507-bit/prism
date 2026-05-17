@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Component, ReactNode } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui-v2/button";
 import { AlertTriangle, AlertCircle, RotateCw, Home } from "lucide-react";
 import Link from "next/link";
 import { SUPPORT_EMAIL } from "@/lib/business-info";
@@ -105,12 +105,12 @@ export class ErrorBoundary extends Component<Props, State> {
             )}
 
             <div className="flex flex-col gap-2">
-              <Button onClick={this.handleReset} size="xl" className="w-full gap-2">
+              <Button onClick={this.handleReset} size="lg" className="w-full gap-2">
                 <RotateCw className="w-4 h-4" />
                 다시 시도
               </Button>
               <Link href="/dashboard">
-                <Button variant="outline" size="xl" className="w-full gap-2">
+                <Button variant="secondary" size="lg" className="w-full gap-2">
                   <Home className="w-4 h-4" />
                   홈으로
                 </Button>

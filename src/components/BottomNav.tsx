@@ -10,7 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
+} from "@/components/ui-v2/dialog";
 import { trackPrismEvent } from "@/lib/analytics/events";
 import { MORE_NAV_ITEMS } from "@/lib/nav-more-items";
 

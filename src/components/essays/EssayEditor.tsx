@@ -1,9 +1,9 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui-v2/card";
+import { Button } from "@/components/ui-v2/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui-v2/badge";
 import {
   Save, Plus, FileText, ChevronDown,
   Sparkles, Loader2, Clock, Zap, TrendingUp, GraduationCap, History, RotateCcw,
@@ -115,7 +115,7 @@ export function EssayEditor({
             )}
             {canUseOutline && (
               <Button
-                variant={!hasPlanAccess ? "default" : "outline"}
+                variant={!hasPlanAccess ? "primary" : "secondary"}
                 size="sm"
                 onClick={onGenerateOutline}
                 disabled={outlineLoading}
@@ -172,7 +172,7 @@ export function EssayEditor({
                   <p className="text-xs leading-relaxed whitespace-pre-wrap text-muted-foreground">{viewingVersion.content}</p>
                 </div>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   className="w-full rounded-xl gap-1.5 text-xs"
                   onClick={() => onRestoreVersion(viewingVersion)}
@@ -204,7 +204,7 @@ export function EssayEditor({
                   <p className="text-sm font-bold">AI 첨삭을 받아보세요</p>
                   <p className="text-xs text-muted-foreground">점수·강점·약점·10점 예문을 즉시 확인할 수 있어요</p>
                 </div>
-                <Button asChild size="sm" variant="outline" className="rounded-lg h-8 gap-1 text-xs border-primary/30 text-primary shrink-0">
+                <Button asChild size="sm" variant="secondary" className="rounded-lg h-8 gap-1 text-xs border-primary/30 text-primary shrink-0">
                   <Link href={`/essays/review?essayId=${activeEssay.id}`}>
                     <Sparkles className="w-3.5 h-3.5" /> 첨삭 받기
                   </Link>
@@ -325,7 +325,7 @@ export function EssayEditor({
 
                   <div className="flex items-center gap-2 pt-1">
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={() => onViewReview({ essay: activeEssay, review: current })}
                       className="flex-1 rounded-lg h-8 text-xs gap-1"
@@ -503,11 +503,11 @@ export function EssayEditor({
                 );
               })()
             ) : (
-              <Badge variant="secondary" className="px-2.5 py-1 text-xs">
+              <Badge variant="neutral" className="px-2.5 py-1 text-xs">
                 {wordCount} 단어
               </Badge>
             )}
-            <Badge variant="secondary" className="px-2.5 py-1 text-xs">
+            <Badge variant="neutral" className="px-2.5 py-1 text-xs">
               {charCount}자
             </Badge>
           </div>

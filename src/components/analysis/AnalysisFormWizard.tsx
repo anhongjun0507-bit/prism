@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui-v2/card";
+import { Button } from "@/components/ui-v2/button";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { type Specs } from "@/lib/matching";
@@ -289,7 +289,7 @@ export function AnalysisFormWizard({ specs, updateSpec, onSubmit }: Props) {
           <div className="flex gap-3 pt-2">
             {formStep > 1 && (
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={() => setFormStep((s) => s - 1)}
                 className="h-14 flex-1 rounded-2xl text-base font-bold"
               >
@@ -307,7 +307,7 @@ export function AnalysisFormWizard({ specs, updateSpec, onSubmit }: Props) {
         {formStep === 4 && (
           <div className="flex gap-3 pt-2">
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={() => setFormStep((s) => s - 1)}
               className="h-14 flex-1 rounded-2xl text-base font-bold"
             >

@@ -1,11 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui-v2/card";
+import { Button } from "@/components/ui-v2/button";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
+} from "@/components/ui-v2/dialog";
 import { Crown, Sparkles } from "lucide-react";
 import { PLANS, type Plan } from "@/lib/plans";
 import { trackPrismEvent, type UpgradeSource } from "@/lib/analytics/events";

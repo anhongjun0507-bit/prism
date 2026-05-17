@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui-v2/badge";
 import {
   DollarSign, Search, MapPin, Users, Trophy, ExternalLink,
 } from "lucide-react";
@@ -127,7 +127,7 @@ export function MajorTab({ school }: MajorTabProps) {
           <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">학교 특성</h4>
           <div className="flex flex-wrap gap-1.5">
             {school.tg.map((t) => (
-              <Badge key={t} variant="secondary" className="text-xs rounded-lg px-3 py-1">{t}</Badge>
+              <Badge key={t} variant="neutral" className="text-xs rounded-lg px-3 py-1">{t}</Badge>
             ))}
           </div>
         </div>

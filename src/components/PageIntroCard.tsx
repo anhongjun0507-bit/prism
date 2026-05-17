@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { X, Lightbulb, type LucideIcon } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui-v2/card";
 import { STORAGE_PREFIXES } from "@/lib/storage-keys";
 import { cn } from "@/lib/utils";
 

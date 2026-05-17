@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui-v2/card";
+import { Button } from "@/components/ui-v2/button";
+import { Badge } from "@/components/ui-v2/badge";
 import { Progress } from "@/components/ui/progress";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
 import { PrismLoader } from "@/components/PrismLoader";
@@ -134,7 +134,7 @@ export function SpecAnalysisPanel({ profile, hasAccess }: SpecAnalysisPanelProps
         <div className="space-y-4 animate-fade-up">
           {/* Loading */}
           {loading && (
-            <Card variant="elevated" className="p-8 text-center">
+            <Card variant="default" className="p-8 text-center">
               <PrismLoader size={48} className="mx-auto mb-3" />
               <p className="text-sm font-bold">스펙을 분석하고 있어요</p>
               <p className="text-xs text-muted-foreground mt-1">10-15초 정도 걸려요</p>
@@ -145,7 +145,7 @@ export function SpecAnalysisPanel({ profile, hasAccess }: SpecAnalysisPanelProps
           {error && (
             <Card className="p-4 border-red-200 bg-red-50 dark:bg-red-950/20">
               <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
-              <Button variant="outline" size="sm" onClick={runAnalysis} className="mt-3">다시 시도</Button>
+              <Button variant="secondary" size="sm" onClick={runAnalysis} className="mt-3">다시 시도</Button>
             </Card>
           )}
 
@@ -258,7 +258,7 @@ export function SpecAnalysisPanel({ profile, hasAccess }: SpecAnalysisPanelProps
               </Card>
 
               {/* Re-analyze */}
-              <Button variant="outline" size="sm" onClick={runAnalysis} className="w-full gap-1.5">
+              <Button variant="secondary" size="sm" onClick={runAnalysis} className="w-full gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" /> 다시 분석
               </Button>
             </>

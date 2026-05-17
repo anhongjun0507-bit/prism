@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui-v2/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui-v2/tabs";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
+} from "@/components/ui-v2/dialog";
 import { MapPin, X } from "lucide-react";
 import { OverviewTab } from "@/components/analysis/tabs/OverviewTab";
 import { CostTab } from "@/components/analysis/tabs/CostTab";

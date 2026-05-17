@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui-v2/badge";
 import {
   TrendingUp, DollarSign,
   MapPin, Users, GraduationCap, Trophy,
@@ -152,7 +152,7 @@ export function OverviewTab({
               <p className="text-xs font-semibold text-primary flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" /> AI 정밀 분석
               </p>
-              <Badge variant="secondary" className="text-xs">신뢰도 {aiDetail.confidence}</Badge>
+              <Badge variant="neutral" className="text-xs">신뢰도 {aiDetail.confidence}</Badge>
             </div>
             <div className="flex items-baseline gap-2 mb-2">
               <span className="text-3xl font-bold font-headline text-primary">{aiDetail.aiProbability}%</span>

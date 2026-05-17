@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui-v2/card";
 import { Sparkles, AlertTriangle } from "lucide-react";
 
 interface StreamingResultViewProps {

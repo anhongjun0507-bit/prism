@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Sparkles, Search, FileCheck2, ArrowRight, X, ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui-v2/button";
 import { PrismLogo } from "@/components/brand/PrismLogo";
 import { trackPrismEvent } from "@/lib/analytics/events";
 import { STORAGE_KEYS } from "@/lib/storage-keys";

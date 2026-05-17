@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { X, Compass } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui-v2/card";
+import { Button } from "@/components/ui-v2/button";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 
 /**

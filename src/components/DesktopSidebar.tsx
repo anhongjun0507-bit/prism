@@ -13,7 +13,7 @@ import { trackPrismEvent } from "@/lib/analytics/events";
 import { normalizePlan, PLANS } from "@/lib/plans";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
+} from "@/components/ui-v2/dialog";
 
 /**
  * DesktopSidebar — lg+ 화면에서 BottomNav 대신 표시되는 사이드 네비.

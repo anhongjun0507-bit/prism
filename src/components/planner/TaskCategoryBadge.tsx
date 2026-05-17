@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui-v2/badge";
 import { cn } from "@/lib/utils";
 import { CATEGORY_COLORS, type TaskCategory } from "@/lib/task-categories";
 import {

@@ -2,8 +2,8 @@
 
 import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui-v2/button";
+import { Card } from "@/components/ui-v2/card";
 import { XCircle, Mail } from "lucide-react";
 import { PrismLoader } from "@/components/PrismLoader";
 import { SUPPORT_EMAIL } from "@/lib/business-info";

@@ -5,15 +5,15 @@ import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { Copy, Share2, Trash2, Plus, AlertCircle, Send, Mail, MessageCircle } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-} from "@/components/ui/dialog";
+} from "@/components/ui-v2/dialog";
 import { fetchWithAuth, ApiError } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { trackPrismEvent } from "@/lib/analytics/events";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui-v2/card";
+import { Button } from "@/components/ui-v2/button";
 import { SkeletonWrapper } from "@/components/ui/skeleton-wrapper";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/ui-v2/skeleton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import type { ParentViewTokenLike } from "@/lib/parent/types";
 
@@ -218,7 +218,6 @@ export function ParentShareSection() {
           type="button"
           className="w-full gap-2"
           onClick={handleIssue}
-          isLoading={issuing}
           disabled={issuing}
         >
           <Plus className="w-4 h-4" aria-hidden="true" />새 학부모 링크 발급
@@ -272,7 +271,7 @@ export function ParentShareSection() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   className="h-11 gap-1.5 bg-[#FEE500] hover:bg-[#FEE500]/90 text-[#3C1E1E] border-[#FEE500] hover:border-[#FEE500]"
                   onClick={() => {
                     sendKakao(sendModal);
@@ -284,7 +283,7 @@ export function ParentShareSection() {
                 </Button>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   className="h-11 gap-1.5"
                   onClick={() => {
                     sendEmail(sendModal);
@@ -296,7 +295,7 @@ export function ParentShareSection() {
                 </Button>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   className="h-11 gap-1.5"
                   onClick={() => {
                     void handleCopy(sendModal.token);
@@ -355,7 +354,6 @@ function TokenCard({
           size="icon"
           className="h-11 w-11 shrink-0"
           onClick={onRevoke}
-          isLoading={busy}
           disabled={busy}
           aria-label="링크 취소"
         >
@@ -374,7 +372,7 @@ function TokenCard({
         </Button>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           className="gap-1.5"
           onClick={onCopy}
@@ -384,7 +382,7 @@ function TokenCard({
         </Button>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           className="gap-1.5"
           onClick={onShare}

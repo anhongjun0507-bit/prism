@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/ui-v2/page-header";
 import { BottomNav } from "@/components/BottomNav";
-import { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui-v2/card";
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";

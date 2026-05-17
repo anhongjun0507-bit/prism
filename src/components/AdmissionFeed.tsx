@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui-v2/card";
+import { Badge } from "@/components/ui-v2/badge";
+import { Button } from "@/components/ui-v2/button";
 import { CheckCircle2, XCircle, Clock, Lock } from "lucide-react";
 import { CardSkeleton } from "./Skeleton";
 import { collection, query, orderBy, limit, getDocs, where } from "firebase/firestore";
@@ -103,7 +103,7 @@ export function AdmissionFeed() {
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           합격 실황
         </h3>
-        <Badge variant="secondary" className="text-xs">{new Date().getFullYear()}시즌</Badge>
+        <Badge variant="neutral" className="text-xs">{new Date().getFullYear()}시즌</Badge>
       </div>
 
       <div ref={feedRef} className="space-y-2 max-h-48 overflow-y-auto">
@@ -151,7 +151,7 @@ export function AdmissionFeed() {
             "나와 비슷한 스펙" 필터는 Pro 플랜부터 가능해요
           </div>
           <Link href="/pricing">
-            <Button variant="outline" size="sm" className="w-full text-xs">
+            <Button variant="secondary" size="sm" className="w-full text-xs">
               전체 피드 + 스펙 필터 잠금 해제
             </Button>
           </Link>

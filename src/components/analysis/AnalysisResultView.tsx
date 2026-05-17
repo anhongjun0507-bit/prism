@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/ui-v2/page-header";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from "@/components/ui-v2/card";
+import { Button } from "@/components/ui-v2/button";
+import { Input } from "@/components/ui-v2/input";
+import { Skeleton } from "@/components/ui-v2/skeleton";
 import { type Specs, type School } from "@/lib/matching";
 import { schoolMatchesQuery } from "@/lib/school-search";
 import { Search, Sparkles, TrendingUp, Share2, ChevronRight } from "lucide-react";
@@ -312,7 +312,7 @@ export function AnalysisResultView({ specs, onBack, toggleFavorite, isFavorite }
       ) : matchError ? (
         <div className="text-center py-12 px-6">
           <p className="text-sm text-destructive mb-3">{matchError}</p>
-          <Button variant="outline" size="sm" onClick={onBack}>다시 시도</Button>
+          <Button variant="secondary" size="sm" onClick={onBack}>다시 시도</Button>
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">

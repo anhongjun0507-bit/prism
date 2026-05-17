@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import * as Sentry from "@sentry/nextjs";
 import { AlertTriangle, RotateCw, Home } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui-v2/button";
 import { SUPPORT_EMAIL } from "@/lib/business-info";
 
 export default function Error({
@@ -47,12 +47,12 @@ export default function Error({
         )}
 
         <div className="flex flex-col gap-2">
-          <Button onClick={() => reset()} size="xl" className="w-full gap-2">
+          <Button onClick={() => reset()} size="lg" className="w-full gap-2">
             <RotateCw className="w-4 h-4" />
             다시 시도
           </Button>
           <Link href="/dashboard">
-            <Button variant="outline" size="xl" className="w-full gap-2">
+            <Button variant="secondary" size="lg" className="w-full gap-2">
               <Home className="w-4 h-4" />
               홈으로
             </Button>

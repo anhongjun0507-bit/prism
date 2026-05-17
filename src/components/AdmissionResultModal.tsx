@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui-v2/card";
+import { Button } from "@/components/ui-v2/button";
+import { Badge } from "@/components/ui-v2/badge";
+import { Input } from "@/components/ui-v2/input";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
+} from "@/components/ui-v2/dialog";
 import { CheckCircle2, XCircle, Clock, Trophy, ChevronRight } from "lucide-react";
 import { doc, setDoc, collection } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -129,7 +129,7 @@ export function AdmissionResultModal({
                 {r.result === "waitlisted" && <Clock className="w-4 h-4 text-amber-500 shrink-0" />}
                 {r.result === "deferred" && <Clock className="w-4 h-4 text-blue-500 shrink-0" />}
                 <span className="text-sm font-medium flex-1">{r.school}</span>
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="neutral" className="text-xs">
                   {r.result === "accepted" ? "합격" : r.result === "rejected" ? "불합격" : r.result === "waitlisted" ? "대기" : "보류"}
                 </Badge>
               </div>
@@ -147,7 +147,7 @@ export function AdmissionResultModal({
           />
           <div className="grid grid-cols-2 gap-2">
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={() => addResult("accepted")}
               disabled={!schoolInput.trim()}
@@ -156,7 +156,7 @@ export function AdmissionResultModal({
               <CheckCircle2 className="w-3.5 h-3.5" /> 합격
             </Button>
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={() => addResult("rejected")}
               disabled={!schoolInput.trim()}
@@ -165,7 +165,7 @@ export function AdmissionResultModal({
               <XCircle className="w-3.5 h-3.5" /> 불합격
             </Button>
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={() => addResult("waitlisted")}
               disabled={!schoolInput.trim()}
@@ -174,7 +174,7 @@ export function AdmissionResultModal({
               <Clock className="w-3.5 h-3.5" /> 대기
             </Button>
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={() => addResult("deferred")}
               disabled={!schoolInput.trim()}

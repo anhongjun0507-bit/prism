@@ -8,9 +8,9 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui-v2/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui-v2/card";
 import { TaskCategoryBadge } from "./TaskCategoryBadge";
 import { Sparkles, RefreshCw, Loader2, Clock, AlertTriangle } from "lucide-react";
 import { PrismLoader } from "@/components/PrismLoader";
@@ -213,7 +213,7 @@ export function GeneratedTasksPreview({
                 {(Object.keys(FOCUS_LABELS) as FocusAreaChoice[]).map((f) => (
                   <Button
                     key={f}
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     onClick={() => handleRegenerate(f)}
                     disabled={isLoading}
@@ -248,7 +248,7 @@ export function GeneratedTasksPreview({
                 )}
               </Button>
               <Button
-                variant="outline"
+                variant="secondary"
                 className="w-full"
                 onClick={() => setShowFocusPicker(true)}
                 disabled={isLoading || isSaving}

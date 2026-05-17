@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui-v2/input";
 import { ArrowRight, Eye, EyeOff, ArrowLeft, Info, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { isKakaoTalkInApp, isInAppBrowser } from "@/lib/auth-helpers";

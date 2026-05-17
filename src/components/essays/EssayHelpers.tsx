@@ -1,10 +1,10 @@
 "use client";
 
 import { ChevronRight, Trash2, TrendingUp, Zap, Sparkles, Clock } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui-v2/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
+} from "@/components/ui-v2/dialog";
 import type { Essay, EssayReview } from "@/types/essay";
 
 export function ScoreBadge({ value }: { value: number }) {
@@ -109,7 +109,7 @@ export function ReviewDetailDialog({ target, onClose }: ReviewDetailDialogProps)
               <span className="font-semibold">입학사정관 첫인상: </span>{review.firstImpression}
             </div>
           )}
-          {review.tone && <Badge variant="secondary" className="text-xs">톤: {review.tone}</Badge>}
+          {review.tone && <Badge variant="neutral" className="text-xs">톤: {review.tone}</Badge>}
           <Section title="강점" icon={<TrendingUp className="w-3.5 h-3.5 text-emerald-500" />} color="bg-emerald-50 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-200" items={review.strengths} />
           <Section title="개선이 필요한 부분" icon={<Zap className="w-3.5 h-3.5 text-red-500" />} color="bg-red-50 text-red-800 dark:bg-red-950/20 dark:text-red-200" items={review.weaknesses} />
           <Section title="개선 제안" icon={<Sparkles className="w-3.5 h-3.5 text-blue-500" />} color="bg-blue-50 text-blue-800 dark:bg-blue-950/20 dark:text-blue-200" items={review.suggestions} />

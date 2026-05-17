@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui-v2/page-header";
 import { getBusinessInfo } from "@/lib/business-info";
-import { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui-v2/card";
 import { CheckCircle2, Mail, Clock, AlertTriangle, Smartphone } from "lucide-react";
 
 export const metadata: Metadata = {

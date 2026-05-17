@@ -2,9 +2,9 @@
 
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/ui-v2/page-header";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui-v2/card";
+import { Input } from "@/components/ui-v2/input";
+import { Badge } from "@/components/ui-v2/badge";
 import { Search, ChevronRight, FileText, PenLine } from "lucide-react";
 import { COMMON_APP_PROMPTS, COMMON_APP_PROMPTS_KO } from "@/lib/constants";
 import { SchoolLogo } from "@/components/SchoolLogo";
@@ -75,7 +75,7 @@ export function EssayPicker({
         {!selectedSchool ? (
           <>
             <Card
-              variant="elevated"
+              variant="default"
               interactive
               className="hover:bg-accent/30 transition-colors"
               onClick={() => onSelectSchool("Common App")}
@@ -93,7 +93,7 @@ export function EssayPicker({
             </Card>
 
             <Card
-              variant="elevated"
+              variant="default"
               interactive
               className="hover:bg-accent/30 transition-colors"
               onClick={onOpenGeneralDialog}
@@ -117,7 +117,7 @@ export function EssayPicker({
             {filteredSchools.map((school) => (
               <Card
                 key={school.n}
-                variant="elevated"
+                variant="default"
               interactive
               className="hover:bg-accent/30 transition-colors"
                 onClick={() => onSelectSchool(school.n)}
@@ -144,7 +144,7 @@ export function EssayPicker({
             ).map((prompt: string, i: number) => (
               <Card
                 key={i}
-                variant="elevated"
+                variant="default"
               interactive
               className="hover:bg-accent/30 transition-colors"
                 onClick={() => onCreateFromPrompt(selectedSchool, prompt)}

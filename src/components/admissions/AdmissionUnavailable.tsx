@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui-v2/card";
+import { Button } from "@/components/ui-v2/button";
 import { PageHeader } from "@/components/ui-v2/page-header";
 import { BottomNav } from "@/components/BottomNav";
 import { Crown, Lock, AlertCircle } from "lucide-react";

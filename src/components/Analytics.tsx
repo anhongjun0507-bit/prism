@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Script from "next/script";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui-v2/button";
 import { readString, writeString } from "@/lib/storage";
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
@@ -60,7 +60,7 @@ export function Analytics() {
             거부해도 모든 기능을 정상 이용할 수 있어요.
           </p>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={decline} className="flex-1">
+            <Button size="sm" variant="secondary" onClick={decline} className="flex-1">
               거부
             </Button>
             <Button size="sm" onClick={accept} className="flex-1">

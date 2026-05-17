@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui-v2/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
