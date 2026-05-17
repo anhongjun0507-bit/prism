@@ -37,10 +37,6 @@ export const metadata: Metadata = {
 };
 
 // JSON-LD 구조화 데이터 — Google 리치 결과(사이트네임/사이트링크 검색박스 + FAQ rich result).
-// Organization + WebSite + FAQPage 세 entity를 @graph로 묶어 단일 script로 노출.
-// SoftwareApplication을 추가하지 않은 이유: 가격/리뷰가 schema에 강제되는데,
-// pricing이 plan별로 다르고 review aggregator가 없어 invalid markup이 됨.
-// FAQPage는 LANDING_FAQS와 단일 소스 — UI(FAQAccordion)와 검색 결과가 항상 정합.
 const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
@@ -77,183 +73,195 @@ const jsonLd = {
   ],
 };
 
+/**
+ * 랜딩 페이지 — 브리프 §1.
+ * 좌측 hero(로고/카피/태그/InteractiveHeroDemo/TrustSignals/LiveStats/3단계/샘플/페르소나/FAQ)
+ * 우측 sticky 가입 카드(AuthSection). 모바일은 단일 컬럼.
+ *
+ * v3 토큰만 사용 — 모든 색·radius·shadow·typography는 --ds-* 기반.
+ */
 export default function LandingPage() {
   return (
-    <div className="relative min-h-dvh bg-background flex flex-col items-center justify-start overflow-x-hidden">
-      {/* SEO: 구조화 데이터. Server Component에서 렌더되므로 검색 엔진이 SSR HTML에서 즉시 발견. */}
+    <div
+      className="relative min-h-dvh flex flex-col items-center justify-start overflow-x-hidden"
+      style={{ background: "var(--ds-bg-canvas)" }}
+    >
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      {/* 첫 진입 시 1회 노출되는 4-슬라이드 온보딩 (localStorage 게이팅, 우측 aside의 "더 알아보기"로 재호출). */}
       <OnboardingSlides />
       <div className="relative w-full max-w-[380px] lg:max-w-6xl mx-auto py-12 lg:py-16 px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-12 lg:items-start">
         {/* ═══ Left column on lg+: hero + content ═══ */}
         <div className="flex flex-col items-center lg:items-start lg:text-left min-w-0">
-        {/* ═══ SEO-friendly Hero Section (Server-rendered) ═══ */}
-        <header className="flex flex-col items-center lg:items-start text-center lg:text-left mb-10 w-full">
-          {/* Prism Logo — 단색 잉크. v2: blur halo 폐기. */}
-          <div className="animate-welcome-logo mb-7 relative" style={{ animationDelay: "0.1s" }}>
-            <PrismLogo size={68} variant="full" className="relative" title="PRISM" />
+          {/* ═══ Hero ═══ */}
+          <header className="flex flex-col items-center lg:items-start text-center lg:text-left mb-10 w-full">
+            <div className="animate-welcome-logo mb-7" style={{ animationDelay: "0.1s" }}>
+              <PrismLogo size={68} variant="full" title="PRISM" />
+            </div>
+
+            <h1
+              className="animate-welcome-item text-ds-display-xl font-display tracking-tight text-[color:var(--ds-text-primary)]"
+              style={{ animationDelay: "0.2s" }}
+            >
+              PRISM
+            </h1>
+
+            {/* 가치 제안 — 브리프 §1 hero 카피. text-balance + break-keep-all로 자연 줄바꿈. */}
+            <p
+              className="animate-welcome-item mt-3 text-ds-heading-md lg:text-ds-heading-lg leading-snug text-balance break-keep-all max-w-[20ch] lg:max-w-none text-[color:var(--ds-text-primary)]"
+              style={{ animationDelay: "0.3s" }}
+            >
+              내 스펙으로 갈 수 있는 대학,<br className="lg:hidden" /> 3초면 알 수 있어요
+            </p>
+
+            <p
+              className="animate-welcome-item mt-2 text-ds-body-md leading-relaxed break-keep-all text-[color:var(--ds-text-secondary)]"
+              style={{ animationDelay: "0.4s" }}
+            >
+              1,001개 미국 대학 합격 확률 AI 분석
+            </p>
+
+            {/* Feature 태그 — 브랜드 액센트 soft 배경. */}
+            <div className="animate-welcome-item flex flex-wrap gap-2 mt-5" style={{ animationDelay: "0.5s" }}>
+              {["합격 예측", "AI 상담", "에세이 코칭"].map((tag) => (
+                <span
+                  key={tag}
+                  className="text-ds-body-sm font-semibold rounded-ds-pill px-3 py-1"
+                  style={{
+                    background: "var(--ds-brand-primary-soft)",
+                    color: "var(--ds-brand-primary)",
+                  }}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </header>
+
+          {/* Interactive demo — 가입 전 즉시 체감 */}
+          <div className="w-full mb-6">
+            <InteractiveHeroDemo />
           </div>
 
-          <h1
-            className="animate-welcome-item text-5xl font-display font-extrabold text-foreground tracking-tightest"
-            style={{
-              animationDelay: "0.2s",
-            }}
-          >
-            PRISM
-          </h1>
+          {/* Trust signals + Live stats */}
+          <TrustSignalBar />
+          <LiveStatsBar />
 
-          {/* Hero 가치 제안 — 5초 안에 "내 스펙으로 어떤 대학" 이해.
-              text-balance로 폰트별 wrap 최적화 + 강제 <br /> 제거해 작은 화면(360px)에서
-              자연 줄바꿈, 큰 화면(lg+)에서는 한 줄. break-keep-all로 한국어 단어 단위 wrap. */}
-          <p
-            className="animate-welcome-item mt-3 text-lg lg:text-xl text-foreground font-semibold leading-snug text-balance break-keep-all max-w-[18ch] lg:max-w-none"
-            style={{ animationDelay: "0.3s" }}
-          >
-            내 스펙으로 갈 수 있는 대학, 3초면 알 수 있어요
-          </p>
+          {/* SEO 숨김 콘텐츠 — 크롤러용 */}
+          <section className="sr-only" aria-label="PRISM 서비스 소개">
+            <h2>PRISM — AI 기반 미국 대학 입시 매니저</h2>
+            <p>
+              한국 국제학교 학생들을 위한 미국 대학 입시 올인원 플랫폼입니다. GPA, SAT, TOEFL,
+              AP 점수를 입력하면 AI가 1,001개 미국 대학교의 합격 확률을 분석합니다.
+            </p>
+            <h3>주요 기능</h3>
+            <ul>
+              <li>AI 합격 확률 분석 — 1,001개 미국 대학교 매칭</li>
+              <li>AI 에세이 첨삭 — Common App, 대학 Supplemental 에세이 리뷰</li>
+              <li>AI 입시 상담 — 지원 전략, 학교 선택 맞춤 조언</li>
+              <li>입시 플래너 — SAT 시험, 원서 마감일, 에세이 일정 관리</li>
+              <li>스펙 분석 — 비교과 활동, 수상 경력, 추천서 종합 평가</li>
+            </ul>
+            <h3>지원 대학교 예시</h3>
+            <p>
+              Harvard, MIT, Stanford, Yale, Princeton, Columbia, UPenn, Brown, Dartmouth, Cornell,
+              UC Berkeley, UCLA, NYU, Georgetown, Emory, USC, University of Michigan 등 1,001개
+              미국 대학교
+            </p>
+            <h3>대상</h3>
+            <p>
+              한국 국제학교 재학생, 미국 대학 유학 준비생, 해외고 재학생, Common App 지원자
+            </p>
+          </section>
 
-          <p
-            className="animate-welcome-item mt-2 text-sm text-muted-foreground leading-relaxed break-keep-all"
-            style={{ animationDelay: "0.4s" }}
-          >
-            1,001개 미국 대학 합격 확률 AI 분석
-          </p>
-
-          {/* Feature tags — crawlable by search engines */}
-          <div className="animate-welcome-item flex gap-2 mt-5" style={{ animationDelay: "0.5s" }}>
-            <span className="text-xs font-semibold rounded-pill px-3 py-1 bg-accent text-foreground">
-              합격 예측
-            </span>
-            <span className="text-xs font-semibold rounded-pill px-3 py-1 bg-accent text-foreground">
-              AI 상담
-            </span>
-            <span className="text-xs font-semibold rounded-pill px-3 py-1 bg-accent text-foreground">
-              에세이 코칭
-            </span>
+          {/* 모바일 inline Auth — lg+는 우측 sticky aside가 대신. */}
+          <div id="auth" className="w-full lg:hidden scroll-mt-20">
+            <Suspense fallback={<div className="h-72" aria-hidden="true" />}>
+              <AuthSection />
+            </Suspense>
           </div>
-        </header>
 
-        {/* ═══ Interactive demo — 가입 전 즉시 체감, GPA·SAT 슬라이더로 3개 학교 합격 확률 미리보기 ═══ */}
-        <div className="w-full mb-6">
-          <InteractiveHeroDemo />
+          {/* 3단계 시작 섹션 — 브리프 §1. 카드 위에 step 번호(원형 brand-primary-soft). */}
+          <section aria-label="PRISM 이용 방법" className="w-full mt-14 space-y-5">
+            <h2 className="text-center text-ds-heading-md text-[color:var(--ds-text-primary)]">
+              3단계로 시작해요
+            </h2>
+            <ol className="space-y-3 md:space-y-0 md:grid md:grid-cols-3 md:gap-3 lg:gap-5">
+              {[
+                {
+                  step: "1",
+                  title: "성적 입력",
+                  desc: "GPA·SAT·전공을 입력하면 2분 안에 분석이 끝나요.",
+                },
+                {
+                  step: "2",
+                  title: "합격 확률 분석",
+                  desc: "1,001개 미국 대학교의 합격 확률을 Reach·Target·Safety로 분류해줘요.",
+                },
+                {
+                  step: "3",
+                  title: "에세이·플래너로 실행",
+                  desc: "AI가 에세이를 첨삭하고 지원 마감일까지 할 일을 매주 정리해요.",
+                },
+              ].map((s) => (
+                <li
+                  key={s.step}
+                  className="flex md:flex-col gap-3 p-4 md:p-5 rounded-ds-card shadow-ds-card"
+                  style={{
+                    background: "var(--ds-bg-surface)",
+                    border: "1px solid var(--ds-border-subtle)",
+                  }}
+                >
+                  <div
+                    className="w-9 h-9 rounded-ds-pill font-bold flex items-center justify-center shrink-0 text-ds-body-md"
+                    style={{
+                      background: "var(--ds-brand-primary-soft)",
+                      color: "var(--ds-brand-primary)",
+                    }}
+                  >
+                    {s.step}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-ds-body-md font-semibold text-[color:var(--ds-text-primary)]">{s.title}</p>
+                    <p className="text-ds-body-sm mt-1 leading-relaxed text-[color:var(--ds-text-secondary)]">
+                      {s.desc}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          {/* 샘플 리포트 / 페르소나 / FAQ — 도메인 컴포넌트 그대로(스타일은 자체 점진 마이그). */}
+          <SampleReportShowcase />
+          <PersonaSection />
+          <FAQAccordion />
         </div>
 
-        {/* ═══ Trust signals — 3 metrics directly under hero ═══ */}
-        <TrustSignalBar />
-        {/* 임계값 미달이면 자체 숨김 — 출시 직후엔 보이지 않다가 데이터 누적되면 자동 노출. */}
-        <LiveStatsBar />
-
-        {/* ═══ SEO: Hidden structured content for crawlers ═══ */}
-        <section className="sr-only" aria-label="PRISM 서비스 소개">
-          <h2>PRISM — AI 기반 미국 대학 입시 매니저</h2>
-          <p>
-            한국 국제학교 학생들을 위한 미국 대학 입시 올인원 플랫폼입니다. GPA, SAT, TOEFL,
-            AP 점수를 입력하면 AI가 1,001개 미국 대학교의 합격 확률을 분석합니다.
-          </p>
-          <h3>주요 기능</h3>
-          <ul>
-            <li>AI 합격 확률 분석 — 1,001개 미국 대학교 매칭</li>
-            <li>AI 에세이 첨삭 — Common App, 대학 Supplemental 에세이 리뷰</li>
-            <li>AI 입시 상담 — 지원 전략, 학교 선택 맞춤 조언</li>
-            <li>입시 플래너 — SAT 시험, 원서 마감일, 에세이 일정 관리</li>
-            <li>스펙 분석 — 비교과 활동, 수상 경력, 추천서 종합 평가</li>
-          </ul>
-          <h3>지원 대학교 예시</h3>
-          <p>
-            Harvard, MIT, Stanford, Yale, Princeton, Columbia, UPenn, Brown, Dartmouth, Cornell,
-            UC Berkeley, UCLA, NYU, Georgetown, Emory, USC, University of Michigan 등 1,001개
-            미국 대학교
-          </p>
-          <h3>대상</h3>
-          <p>
-            한국 국제학교 재학생, 미국 대학 유학 준비생, 해외고 재학생, Common App 지원자
-          </p>
-        </section>
-
-        {/* ═══ Client-side Auth UI — mobile/tablet inline. lg+ 에서는 우측 sticky 칼럼이 대신함 ═══
-            AuthSection이 useSearchParams로 returnTo를 읽으므로 Suspense로 감싸 정적 렌더 호환.
-            id="auth" 앵커 — PublicHeader의 "지금 무료 시작" CTA가 스크롤 타깃으로 사용. */}
-        <div id="auth" className="w-full lg:hidden scroll-mt-20">
-          <Suspense fallback={<div className="h-72" aria-hidden="true" />}>
-            <AuthSection />
-          </Suspense>
-        </div>
-
-        {/* ═══ How it works — 3 simple steps ═══ */}
-        <section
-          aria-label="PRISM 이용 방법"
-          className="w-full mt-14 space-y-5"
-        >
-          <h2 className="text-center text-base font-bold text-foreground">
-            3단계로 시작해요
-          </h2>
-          <ol className="space-y-3 md:space-y-0 md:grid md:grid-cols-3 md:gap-3 lg:gap-5">
-            {[
-              {
-                step: "1",
-                title: "성적 입력",
-                desc: "GPA·SAT·전공을 입력하면 2분 안에 분석이 끝나요.",
-              },
-              {
-                step: "2",
-                title: "합격 확률 분석",
-                desc: "1,001개 미국 대학교의 합격 확률을 Reach·Target·Safety로 분류해줘요.",
-              },
-              {
-                step: "3",
-                title: "에세이·플래너로 실행",
-                desc: "AI가 에세이를 첨삭하고 지원 마감일까지 할 일을 매주 정리해요.",
-              },
-            ].map((s) => (
-              <li
-                key={s.step}
-                className="flex md:flex-col gap-3 p-4 md:p-5 rounded-md bg-card border border-border-subtle"
-              >
-                <div className="w-9 h-9 rounded-md bg-accent text-foreground font-bold flex items-center justify-center shrink-0 text-sm">
-                  {s.step}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground">{s.title}</p>
-                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                    {s.desc}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
-
-        </section>
-
-        {/* ═══ Sample report preview — visual proof of output ═══ */}
-        <SampleReportShowcase />
-
-        {/* ═══ Persona scenarios — relatable user contexts ═══ */}
-        <PersonaSection />
-
-        {/* ═══ FAQ — answers critical conversion blockers ═══ */}
-        <FAQAccordion />
-        </div>
-
-        {/* ═══ Right column on lg+: Auth, sticky so always visible ═══ */}
+        {/* ═══ 우측 sticky Auth — 브리프 §1 "우측 sticky 가입 카드" ═══ */}
         <aside
           id="auth"
           aria-label="로그인"
           className="hidden lg:block lg:sticky lg:top-20 lg:self-start w-full scroll-mt-20"
         >
-          <div className="rounded-lg bg-card border border-border-subtle shadow-hairline p-6">
-            <p className="text-sm font-semibold text-foreground mb-1">3초 안에 시작</p>
-            <p className="text-xs text-muted-foreground mb-5">
+          <div
+            className="rounded-ds-card p-6 shadow-ds-card"
+            style={{
+              background: "var(--ds-bg-surface)",
+              border: "1px solid var(--ds-border-subtle)",
+            }}
+          >
+            <p className="text-ds-body-md font-semibold mb-1 text-[color:var(--ds-text-primary)]">
+              3초 안에 시작
+            </p>
+            <p className="text-ds-body-sm mb-5 text-[color:var(--ds-text-secondary)]">
               GPA·SAT만 있으면 1,001개 대학 합격 확률이 열려요.
             </p>
             <Suspense fallback={<div className="h-72" aria-hidden="true" />}>
               <AuthSection />
             </Suspense>
           </div>
-          {/* 1920px 우측 aside 빈 공간 보강 — 모바일/태블릿은 hidden lg:block 부모가 차단해 중복 없음. */}
           <AsideHighlights />
         </aside>
       </div>

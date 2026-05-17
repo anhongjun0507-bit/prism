@@ -14,27 +14,41 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://prismedu.kr/login" },
 };
 
+/**
+ * 로그인 페이지 — 브리프 §2.
+ * 화면 중앙 정렬, max-w 420 카드. 로고 → 제목 → 부제 → AuthSection(소셜 4 + 이메일).
+ * 이메일 단계 fade-swap은 AuthSection 내부가 처리.
+ */
 export default function LoginPage() {
   return (
-    <div className="relative min-h-dvh bg-background flex flex-col items-center justify-center px-6 py-12 overflow-x-hidden">
-      <div className="relative w-full max-w-[400px]">
+    <div
+      className="relative min-h-dvh flex flex-col items-center justify-center px-6 py-12 overflow-x-hidden"
+      style={{ background: "var(--ds-bg-canvas)" }}
+    >
+      <div className="relative w-full max-w-[420px]">
         <div className="text-center mb-8">
           <Link
             href="/"
             aria-label="홈으로"
-            className="inline-block mb-6 relative"
+            className="inline-block mb-6"
           >
-            <PrismLogo size={56} variant="full" className="relative" title="PRISM" />
+            <PrismLogo size={56} variant="full" title="PRISM" />
           </Link>
-          <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tightest">
+          <h1 className="text-ds-heading-lg font-display tracking-tight text-[color:var(--ds-text-primary)]">
             PRISM에 로그인
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+          <p className="mt-2 text-ds-body-md text-[color:var(--ds-text-secondary)] leading-relaxed">
             카카오·Google·Apple·이메일 중 편한 방법으로 시작해요.
           </p>
         </div>
 
-        <div className="rounded-lg bg-card border border-border-subtle shadow-hairline p-6">
+        <div
+          className="rounded-ds-card p-6 shadow-ds-card"
+          style={{
+            background: "var(--ds-bg-surface)",
+            border: "1px solid var(--ds-border-subtle)",
+          }}
+        >
           <Suspense fallback={<div className="h-72" aria-hidden="true" />}>
             <AuthSection />
           </Suspense>
@@ -43,7 +57,8 @@ export default function LoginPage() {
         <div className="mt-6 text-center">
           <Link
             href="/"
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
+            className="text-ds-body-sm hover:underline underline-offset-4 transition-colors"
+            style={{ color: "var(--ds-text-tertiary)" }}
           >
             ← 시작 화면으로
           </Link>
