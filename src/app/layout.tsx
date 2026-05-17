@@ -2,6 +2,8 @@
 import type {Metadata, Viewport} from 'next';
 import { Inter, Inter_Tight } from 'next/font/google';
 import './globals.css';
+// v3 design tokens — Phase 0~5 동안 v2 globals와 공존, --ds-* 네임스페이스로 충돌 회피.
+import '../styles/tokens.css';
 
 // next/font로 self-host: 외부 폰트 CDN round-trip 제거 + layout shift 방지.
 // Inter: 본문·UI fallback (라틴), Inter Tight: display·hero (Toss·Goldman 톤의 tight tracking)

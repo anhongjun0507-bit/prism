@@ -1,0 +1,81 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   PRISM Design System v3 (Complete Visual Overhaul)
+   ─────────────────────────────────────────────────────────────────────────
+   단일 source of truth: docs/REDESIGN_V3_BRIEF.md
+   레퍼런스: 토스증권 40% + CollegeVine 30% + Grammarly 30%
+   슬로건: Calm. Confident. Korea-aware.
+
+   네임스페이스 정책: 모든 v3 토큰은 --ds-* 접두사 사용 (v2 토큰과 공존, Phase 5에서 v2 제거)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* 이 파일은 별도 entry로 import되므로 @layer 컨텍스트 외부 — :root/.dark 직접 사용. */
+:root {
+    /* ── Surface ─────────────────────────────────────────────────────── */
+    --ds-bg-canvas:     #FAFAF7;  /* 페이지 배경 — 미세하게 따뜻한 톤 */
+    --ds-bg-surface:    #FFFFFF;  /* 카드 배경 */
+    --ds-bg-subtle:     #F4F4EF;  /* 보조 카드·입력 필드 */
+    --ds-bg-inverted:   #0B1220;  /* 다크 hero 카드 (라이트 모드에서도 유지) */
+
+    /* ── Brand ───────────────────────────────────────────────────────── */
+    --ds-brand-primary:        #2D4EF5;  /* 메인 CTA, 핵심 강조 */
+    --ds-brand-primary-hover:  #1E3BD6;
+    --ds-brand-primary-soft:   #E8EDFF;  /* 배지·hover 배경 */
+    --ds-brand-accent:         #F5A524;  /* 학부모·추천·Pro 배지 (절제) */
+    --ds-brand-accent-soft:    #FFF4E0;
+
+    /* ── Semantic — 확률 카테고리 (입시 도메인 핵심) ─────────────────── */
+    --ds-reach:       #E5484D;  --ds-reach-soft:   #FEE9EA;  /* 도전 */
+    --ds-hard:        #F76808;  --ds-hard-soft:    #FFE8D7;  /* 어려운 현실 */
+    --ds-target:      #2D4EF5;  --ds-target-soft:  #E8EDFF;  /* 현실 */
+    --ds-safety:      #18794E;  --ds-safety-soft:  #DDF3E4;  /* 안전 */
+
+    /* ── Text ────────────────────────────────────────────────────────── */
+    --ds-text-primary:    #11181C;
+    --ds-text-secondary:  #4B5563;
+    --ds-text-tertiary:   #8B95A1;
+    --ds-text-inverted:   #FFFFFF;
+    --ds-text-on-dark-secondary: rgba(255, 255, 255, 0.72);
+
+    /* ── Border ──────────────────────────────────────────────────────── */
+    --ds-border-subtle:   #ECECE6;
+    --ds-border-default:  #E0E0D9;
+    --ds-border-strong:   #C7C7BD;
+
+    /* ── Shadow — 부드럽게, "놓여있는" 느낌 ──────────────────────────── */
+    --ds-shadow-card:     0 1px 2px rgba(17, 24, 28, 0.04), 0 1px 3px rgba(17, 24, 28, 0.03);
+    --ds-shadow-elevated: 0 4px 12px rgba(17, 24, 28, 0.06), 0 2px 4px rgba(17, 24, 28, 0.04);
+
+    /* ── Motion ──────────────────────────────────────────────────────── */
+    --ds-ease-out:       cubic-bezier(0.16, 1, 0.3, 1);
+    --ds-dur-fast:       120ms;
+    --ds-dur-base:       240ms;
+    --ds-dur-count:      600ms;
+}
+
+.dark {
+    /* Dark mode token swap — subscription/profile 페이지 토글로 전역 .dark 적용 */
+    --ds-bg-canvas:     #0B0E14;
+    --ds-bg-surface:    #131822;
+    --ds-bg-subtle:     #1A2030;
+    --ds-bg-inverted:   #0B1220;  /* hero는 다크 모드에서도 동일 (PRISM 시그니처) */
+
+    --ds-brand-primary-soft: #1B2547;
+    --ds-brand-accent-soft:  #2A1F0B;
+
+    --ds-reach-soft:   #3A1418;
+    --ds-hard-soft:    #3A1F0B;
+    --ds-target-soft:  #1B2547;
+    --ds-safety-soft:  #0E2A1C;
+
+    --ds-text-primary:    #F2F4F7;
+    --ds-text-secondary:  #A9B2C0;
+    --ds-text-tertiary:   #6E7587;
+    --ds-text-inverted:   #FFFFFF;
+
+    --ds-border-subtle:   #1F2937;
+    --ds-border-default:  #2A3441;
+    --ds-border-strong:   #3F4A5C;
+
+    --ds-shadow-card:     0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+    --ds-shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.35);
+}

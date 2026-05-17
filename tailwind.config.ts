@@ -52,6 +52,18 @@ export default {
         'display-lg': ['2.75rem', { lineHeight: '1.05', letterSpacing: '-0.02em', fontWeight: '700' }],
         'display-xl': ['3.5rem',  { lineHeight: '1.04', letterSpacing: '-0.022em', fontWeight: '700' }],
         'display-2xl':['4.5rem',  { lineHeight: '1.02', letterSpacing: '-0.025em', fontWeight: '700' }],
+
+        // ── v3 Typography (ds- 접두사, Phase 5에서 v2 typography 제거) ──
+        // 브리프 §타이포그래피 — Pretendard Variable + Inter, tabular-nums, -0.02em
+        'ds-display-xl':  ['3.5rem',  { lineHeight: '4rem',    letterSpacing: '-0.025em', fontWeight: '700' }], // 56/64
+        'ds-display-lg':  ['2.5rem',  { lineHeight: '3rem',    letterSpacing: '-0.02em',  fontWeight: '700' }], // 40/48
+        'ds-display-md':  ['2rem',    { lineHeight: '2.5rem',  letterSpacing: '-0.02em',  fontWeight: '700' }], // 32/40
+        'ds-heading-lg':  ['1.5rem',  { lineHeight: '2rem',                                fontWeight: '600' }], // 24/32
+        'ds-heading-md':  ['1.125rem',{ lineHeight: '1.625rem',                            fontWeight: '600' }], // 18/26
+        'ds-body-lg':     ['1rem',    { lineHeight: '1.625rem',                            fontWeight: '400' }], // 16/26
+        'ds-body-md':     ['0.875rem',{ lineHeight: '1.375rem',                            fontWeight: '400' }], // 14/22
+        'ds-body-sm':     ['0.8125rem',{ lineHeight: '1.25rem',                            fontWeight: '400' }], // 13/20
+        'ds-mono-num':    ['0.875rem',{ lineHeight: '1.25rem',                             fontWeight: '500' }], // 14/20 (with .tabular-nums)
       },
       colors: {
         background: 'hsl(var(--background))',
@@ -165,6 +177,40 @@ export default {
           hard:        { DEFAULT: 'hsl(var(--cat-hard))',    fg: 'hsl(var(--cat-hard-fg))',    soft: 'hsl(var(--cat-hard-soft))' },
           reach:       { DEFAULT: 'hsl(var(--cat-reach))',   fg: 'hsl(var(--cat-reach-fg))',   soft: 'hsl(var(--cat-reach-soft))' },
         },
+
+        // ═══════════════════════════════════════════════════════════════
+        // v3 Design System Tokens (ds- 접두사로 v2와 분리)
+        // src/styles/tokens.css 의 --ds-* 변수 매핑.
+        // Phase 1~4 동안 v2와 공존하다 Phase 5에서 v2 제거.
+        // ═══════════════════════════════════════════════════════════════
+        ds: {
+          canvas:    'var(--ds-bg-canvas)',
+          surface:   'var(--ds-bg-surface)',
+          subtle:    'var(--ds-bg-subtle)',
+          inverted:  'var(--ds-bg-inverted)',
+          brand: {
+            DEFAULT: 'var(--ds-brand-primary)',
+            hover:   'var(--ds-brand-primary-hover)',
+            soft:    'var(--ds-brand-primary-soft)',
+            accent:  'var(--ds-brand-accent)',
+            'accent-soft': 'var(--ds-brand-accent-soft)',
+          },
+          reach:  { DEFAULT: 'var(--ds-reach)',  soft: 'var(--ds-reach-soft)'  },
+          hard:   { DEFAULT: 'var(--ds-hard)',   soft: 'var(--ds-hard-soft)'   },
+          target: { DEFAULT: 'var(--ds-target)', soft: 'var(--ds-target-soft)' },
+          safety: { DEFAULT: 'var(--ds-safety)', soft: 'var(--ds-safety-soft)' },
+          text: {
+            primary:   'var(--ds-text-primary)',
+            secondary: 'var(--ds-text-secondary)',
+            tertiary:  'var(--ds-text-tertiary)',
+            inverted:  'var(--ds-text-inverted)',
+          },
+          line: {
+            subtle:  'var(--ds-border-subtle)',
+            default: 'var(--ds-border-default)',
+            strong:  'var(--ds-border-strong)',
+          },
+        },
       },
       // Semantic spacing tokens — 의미 단위 간격.
       // 하드코딩된 p-4/p-6 대신 의도가 드러나는 token 사용 권장.
@@ -225,6 +271,11 @@ export default {
         button: 'var(--radius-button)',
         input: 'var(--radius-input)',
         pill: 'var(--radius-pill)',
+        // v3 radius (브리프 §Radius)
+        'ds-input':  '12px',  // 입력·버튼·배지
+        'ds-card':   '16px',  // 카드
+        'ds-modal':  '20px',  // 모달·대형 컨테이너
+        'ds-pill':   '9999px',
       },
       // Easing tokens:
       //   brand = spec primary (v2): cubic-bezier(0.2, 0.8, 0.2, 1) — sharp anticipation + soft settle
@@ -247,6 +298,9 @@ export default {
         hairline:
           '0 1px 2px hsl(var(--text-primary) / 0.04), 0 1px 1px hsl(var(--text-primary) / 0.03)',
         none: '0 0 #0000',
+        // v3 shadow tokens — "놓여있는" 느낌 (떠 있는 느낌 X)
+        'ds-card':     'var(--ds-shadow-card)',
+        'ds-elevated': 'var(--ds-shadow-elevated)',
       },
       // Letter-spacing tokens — display(Inter Tight)는 -0.02em, 본문은 -0.011em.
       letterSpacing: {
