@@ -27,7 +27,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthGate } from "@/components/AuthGate";
 import { Analytics } from "@/components/Analytics";
 import { InstallPrompt } from "@/components/InstallPrompt";
-import { DesktopSidebar } from "@/components/DesktopSidebar";
+// Phase 4: v2 DesktopSidebar → v3 NavSidebar 교체. v2 파일은 Phase 5에서 삭제.
+import { NavSidebar } from "@/components/ui-v2/nav-sidebar";
 import { AppShell } from "@/components/AppShell";
 import { StorageQuotaBanner } from "@/components/StorageQuotaBanner";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
@@ -158,8 +159,8 @@ export default function RootLayout({
           <ErrorBoundary>
             <AuthProvider>
               <AuthGate>
-                {/* Desktop sidebar — lg+에서만 표시. 모바일은 BottomNav로 대체 (각 페이지가 직접 렌더). */}
-                <DesktopSidebar />
+                {/* Desktop sidebar (v3 NavSidebar) — md+에서만 표시. 모바일은 BottomNav로 대체 (각 페이지가 직접 렌더). */}
+                <NavSidebar />
                 <AppShell>
                   {/* 공개·마케팅 라우트 전용 sticky 헤더. 인증 라우트는 자체 사이드바·BottomNav가 대체. */}
                   <PublicHeader />

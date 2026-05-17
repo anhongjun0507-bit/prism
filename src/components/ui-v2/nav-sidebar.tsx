@@ -10,6 +10,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { normalizePlan, PLANS } from "@/lib/plans";
 import { MORE_NAV_ITEMS } from "@/lib/nav-more-items";
+import { shouldShowSidebar } from "@/lib/sidebar-visibility";
 import { trackPrismEvent } from "@/lib/analytics/events";
 import { cn } from "@/lib/utils";
 import {
@@ -45,8 +46,12 @@ const PRIMARY_NAV: NavItem[] = [
 
 export function NavSidebar() {
   const pathname = usePathname();
-  const { user, profile } = useAuth();
+  const { user, profile, loading } = useAuth();
   const [moreOpen, setMoreOpen] = React.useState(false);
+
+  // 비로그인·공개 라우트(/, /onboarding, /login, /parent-view/*)에서는 숨김
+  // — DesktopSidebar(v2)와 동일 정책. 빈 패딩 띠를 방지하려면 AppShell도 함께 분기.
+  if (!shouldShowSidebar(pathname, !!user, loading)) return null;
 
   const currentPlan = normalizePlan(profile?.plan);
   const planInfo = PLANS[currentPlan];

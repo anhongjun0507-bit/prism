@@ -8,5 +8,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, loading } = useAuth();
   const sidebarVisible = shouldShowSidebar(pathname, !!user, loading);
-  return <div className={sidebarVisible ? "lg:pl-60" : ""}>{children}</div>;
+  // v3 NavSidebar 폭: md:w-16 (64) / lg:w-[200px] / xl:w-60 (240) — 동일 단계로 본문 좌측 패딩.
+  return <div className={sidebarVisible ? "md:pl-16 lg:pl-[200px] xl:pl-60" : ""}>{children}</div>;
 }
