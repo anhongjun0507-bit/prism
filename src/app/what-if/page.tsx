@@ -23,6 +23,7 @@ import { Button } from "@/components/ui-v2/button";
 import { Input } from "@/components/ui-v2/input";
 import { Badge } from "@/components/ui-v2/badge";
 import type { AdmissionCategory } from "@/components/ui-v2/category-pill";
+import { CountUp } from "@/components/ui-v2/count-up";
 
 /** Domain category → v3. */
 function toV3Cat(cat: string | undefined | null): AdmissionCategory | null {
@@ -662,7 +663,7 @@ function WhatIfPageInner() {
                         className="shrink-0 gap-0.5 font-semibold"
                       >
                         {improved ? <TrendingUp /> : <TrendingDown />}
-                        {improved ? `+${d.diff}%` : `${d.diff}%`}
+                        <CountUp value={d.diff} prefix={improved ? "+" : ""} suffix="%" />
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="shrink-0">
@@ -684,7 +685,7 @@ function WhatIfPageInner() {
                           className="text-ds-body-sm"
                           style={{ color: "var(--ds-text-tertiary)" }}
                         >
-                          {d.baseProb}%
+                          <CountUp value={d.baseProb} suffix="%" />
                         </span>
                         <span
                           className="text-ds-body-sm"
@@ -697,7 +698,7 @@ function WhatIfPageInner() {
                           className="text-2xl font-bold"
                           style={{ color: accentColor }}
                         >
-                          {d.newProb}%
+                          <CountUp value={d.newProb} suffix="%" />
                         </span>
                       </div>
                       <div
@@ -825,10 +826,10 @@ function WhatIfPageInner() {
                         className="flex items-center gap-1.5 text-ds-body-sm mt-0.5"
                         style={{ color: "var(--ds-text-tertiary)" }}
                       >
-                        <span>{d.baseProb}%</span>
+                        <span><CountUp value={d.baseProb} suffix="%" /></span>
                         <span>→</span>
                         <span className="font-medium text-[color:var(--ds-text-primary)]">
-                          {d.newProb}%
+                          <CountUp value={d.newProb} suffix="%" />
                         </span>
                         {catChanged && (
                           <span className="ml-1">

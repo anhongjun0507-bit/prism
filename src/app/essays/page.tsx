@@ -1030,6 +1030,17 @@ function EssaysPageInner() {
         onClose={() => setViewingReview(null)}
       />
 
+      {/* mobile floating FAB — 브리프 §9: 우상단 floating + 새 에세이 */}
+      <button
+        type="button"
+        onClick={() => setView("picker")}
+        aria-label="새 에세이 추가"
+        className="md:hidden fixed right-5 bottom-24 z-40 size-14 rounded-full shadow-ds-elevated flex items-center justify-center active:scale-[0.98] transition-transform"
+        style={{ background: "var(--ds-brand-primary)", color: "#fff" }}
+      >
+        <Plus className="size-6" aria-hidden="true" />
+      </button>
+
       <BottomNav />
     </div>
   );

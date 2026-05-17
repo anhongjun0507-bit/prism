@@ -216,7 +216,7 @@ function ProfilePageInner() {
       className="min-h-dvh pb-nav"
       style={{ background: "var(--ds-bg-canvas)" }}
     >
-      <div className="px-6 lg:px-8 pt-safe pt-6 lg:pt-10 mx-auto max-w-[720px]">
+      <div className="px-6 lg:px-8 pt-safe pt-6 lg:pt-10 mx-auto max-w-[1024px]">
         <PageHeader
           title="프로필 설정"
           subtitle="이름·사진·학년 등 내 정보를 관리해요"
@@ -231,6 +231,32 @@ function ProfilePageInner() {
             </button>
           }
         />
+
+        <div className="lg:grid lg:grid-cols-[200px_1fr] lg:gap-8">
+          {/* 좌측 sticky 섹션 메뉴 — 브리프 §16 */}
+          <nav
+            className="hidden lg:block lg:sticky lg:top-24 lg:self-start"
+            aria-label="프로필 섹션 메뉴"
+          >
+            <ul className="space-y-1 text-ds-body-sm">
+              {[
+                { href: "#section-basic", label: "기본 정보" },
+                { href: "#section-academic", label: "학업 정보" },
+                { href: "#section-theme", label: "테마" },
+                { href: "#section-account", label: "계정 관리" },
+              ].map((s) => (
+                <li key={s.href}>
+                  <a
+                    href={s.href}
+                    className="block rounded-ds-input px-3 py-2 transition-colors hover:bg-[color:var(--ds-bg-subtle)]"
+                    style={{ color: "var(--ds-text-secondary)" }}
+                  >
+                    {s.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
 
         <main className="space-y-5">
         {/* Avatar + photo URL */}
@@ -272,7 +298,7 @@ function ProfilePageInner() {
         </Card>
 
         {/* Basic info */}
-        <Card className="p-5 rounded-2xl border border-border/60 bg-card shadow-sm space-y-4">
+        <Card id="section-basic" className="p-5 rounded-2xl border border-border/60 bg-card shadow-sm space-y-4 scroll-mt-24">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold">기본 정보</h2>
             <p className="text-2xs text-muted-foreground/80">
@@ -372,7 +398,7 @@ function ProfilePageInner() {
         </Card>
 
         {/* 학업 정보 — AI 카운슬러·What-If·Analysis가 함께 읽는 단일 소스 */}
-        <Card className="p-5 rounded-2xl border border-border/60 bg-card shadow-sm space-y-4">
+        <Card id="section-academic" className="p-5 rounded-2xl border border-border/60 bg-card shadow-sm space-y-4 scroll-mt-24">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold">학업 정보</h2>
             <p className="text-2xs text-muted-foreground/80">선택 입력</p>
@@ -475,7 +501,7 @@ function ProfilePageInner() {
         </Card>
 
         {/* Theme settings */}
-        <Card className="p-5 rounded-2xl border border-border/60 bg-card shadow-sm space-y-4">
+        <Card id="section-theme" className="p-5 rounded-2xl border border-border/60 bg-card shadow-sm space-y-4 scroll-mt-24">
           <h2 className="text-sm font-bold">테마 설정</h2>
 
           <div className="flex items-center justify-between">
@@ -557,7 +583,7 @@ function ProfilePageInner() {
         </div>
 
         {/* 계정 관리 (destructive) */}
-        <div className="pt-6 mt-2 border-t border-border/60 space-y-3">
+        <div id="section-account" className="pt-6 mt-2 border-t border-border/60 space-y-3 scroll-mt-24">
           <div>
             <h2 className="text-sm font-bold text-red-600 dark:text-red-400">계정 관리</h2>
             <p className="text-2xs text-muted-foreground mt-1 leading-relaxed">
@@ -598,6 +624,7 @@ function ProfilePageInner() {
           </Button>
         </div>
         </main>
+        </div>
       </div>
 
       {/* 계정 삭제 플로우 — 2단계 AlertDialog */}

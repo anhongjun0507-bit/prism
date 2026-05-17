@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   Home, FileText, MessageSquare,
-  MoreHorizontal, Activity, Wrench,
+  MoreHorizontal, Activity, Wrench, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -132,6 +132,7 @@ export function BottomNav() {
                   <p className="font-semibold text-sm">{item.label}</p>
                   <p className="text-sm text-muted-foreground line-clamp-1">{item.description}</p>
                 </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
               </Link>
             );
           })}

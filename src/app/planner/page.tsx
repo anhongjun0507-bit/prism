@@ -525,11 +525,27 @@ function PlannerPageInner() {
                 <div className={cn("h-full rounded-full transition-all", progress >= 50 ? "bg-white/70" : "bg-primary")} style={{ width: `${progress}%` }} />
               </div>
             </div>
-            <div className={cn(
-              "w-12 h-12 rounded-full flex items-center justify-center shrink-0",
-              progress >= 50 ? "bg-white/15" : "bg-primary/10"
-            )}>
-              <CheckCircle2 className={cn("w-6 h-6", progress >= 50 ? "text-white" : "text-primary")} />
+            {/* 원형 진행률 차트 — brief §11 */}
+            <div className="relative w-14 h-14 shrink-0" role="img" aria-label={`진행률 ${progress}%`}>
+              <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                <circle
+                  cx="18" cy="18" r="15.9155"
+                  fill="none"
+                  strokeWidth="3"
+                  className={progress >= 50 ? "stroke-white/20" : "stroke-muted"}
+                />
+                <circle
+                  cx="18" cy="18" r="15.9155"
+                  fill="none"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeDasharray={`${progress}, 100`}
+                  className={cn("transition-all duration-500", progress >= 50 ? "stroke-white" : "stroke-primary")}
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <CheckCircle2 className={cn("w-4 h-4", progress >= 50 ? "text-white" : "text-primary")} aria-hidden="true" />
+              </div>
             </div>
           </Card>
 

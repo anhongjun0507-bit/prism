@@ -471,7 +471,7 @@ function ComparePageInner() {
                           className="flex items-center justify-between gap-3 rounded-ds-input px-2.5 py-2"
                           style={
                             bestIdx === i
-                              ? { background: "var(--ds-safety-soft)" }
+                              ? { background: "var(--ds-brand-primary-soft)" }
                               : undefined
                           }
                           aria-label={bestIdx === i ? `${row.label} 최적 값` : undefined}
@@ -490,15 +490,22 @@ function ComparePageInner() {
                             </span>
                           </div>
                           <span
-                            className="text-ds-body-sm tabular-nums shrink-0"
+                            className="text-ds-body-sm tabular-nums shrink-0 inline-flex items-center gap-1.5"
                             style={{
                               fontWeight: bestIdx === i ? 700 : 500,
                               color:
                                 bestIdx === i
-                                  ? "var(--ds-safety)"
+                                  ? "var(--ds-brand-primary)"
                                   : "var(--ds-text-primary)",
                             }}
                           >
+                            {bestIdx === i && (
+                              <span
+                                className="size-1.5 rounded-ds-pill"
+                                style={{ background: "var(--ds-brand-primary)" }}
+                                aria-hidden="true"
+                              />
+                            )}
                             {row.getValue(s)}
                           </span>
                         </div>
@@ -567,15 +574,24 @@ function ComparePageInner() {
                               style={
                                 bestIdx === i
                                   ? {
-                                      color: "var(--ds-safety)",
+                                      color: "var(--ds-brand-primary)",
                                       fontWeight: 700,
-                                      background: "var(--ds-safety-soft)",
+                                      background: "var(--ds-brand-primary-soft)",
                                     }
                                   : { color: "var(--ds-text-primary)" }
                               }
                               aria-label={bestIdx === i ? `${row.label} 최적 값` : undefined}
                             >
-                              {row.getValue(s)}
+                              <span className="inline-flex items-center gap-1.5">
+                                {bestIdx === i && (
+                                  <span
+                                    className="size-1.5 rounded-ds-pill"
+                                    style={{ background: "var(--ds-brand-primary)" }}
+                                    aria-hidden="true"
+                                  />
+                                )}
+                                {row.getValue(s)}
+                              </span>
                             </td>
                           ))}
                         </tr>

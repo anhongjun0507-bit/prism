@@ -138,6 +138,61 @@ export function EssayEditor({
       />
       </div>
 
+      {/* 우측 고정 통계 패널 — brief §6 (xl 이상에서만 노출) */}
+      {activeEssay.wordLimit && activeEssay.wordLimit > 0 && (() => {
+        const pct = Math.min(150, (wordCount / activeEssay.wordLimit) * 100);
+        const donutPct = Math.min(100, pct);
+        const tone =
+          pct < 50 ? "var(--ds-text-tertiary)"
+          : pct < 100 ? "var(--ds-brand-primary)"
+          : pct <= 120 ? "var(--ds-safety, #10b981)"
+          : "var(--ds-amber, #f59e0b)";
+        return (
+          <aside
+            className="hidden xl:block fixed right-8 top-32 w-[320px] z-30"
+            aria-label="에세이 통계"
+          >
+            <Card className="p-5 bg-card border border-border/60 shadow-sm space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="relative w-20 h-20 shrink-0" role="img" aria-label={`${wordCount} / ${activeEssay.wordLimit} 단어`}>
+                  <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                    <circle cx="18" cy="18" r="15.9155" fill="none" strokeWidth="3" className="stroke-muted" />
+                    <circle
+                      cx="18" cy="18" r="15.9155"
+                      fill="none"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeDasharray={`${donutPct}, 100`}
+                      style={{ stroke: tone, transition: "stroke-dasharray 0.4s ease" }}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-base font-bold tabular-nums leading-none" style={{ color: tone }}>{Math.round(pct)}%</span>
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <p className="text-xs font-semibold text-muted-foreground">단어 수</p>
+                  <p className="text-xl font-bold tabular-nums">
+                    {wordCount}
+                    <span className="text-sm font-normal text-muted-foreground"> / {activeEssay.wordLimit}</span>
+                  </p>
+                  <p className="text-2xs text-muted-foreground tabular-nums">{charCount}자</p>
+                </div>
+              </div>
+              <div className="pt-3 border-t border-border/40 space-y-1.5">
+                <p className="text-2xs font-semibold text-muted-foreground">목표 구간</p>
+                <p className="text-xs leading-relaxed text-foreground">
+                  {pct < 50 ? "아직 절반 미만이에요. 본론 전개를 더 풍부하게 써보세요."
+                   : pct < 100 ? "거의 다 왔어요. 마지막 단락의 메시지를 다듬어보세요."
+                   : pct <= 120 ? "권장 분량에 도달했어요. 가독성을 점검해보세요."
+                   : "분량이 초과됐어요. 군더더기 문장을 줄여보세요."}
+                </p>
+              </div>
+            </Card>
+          </aside>
+        );
+      })()}
+
       <div className="px-6 lg:px-8 space-y-4 mx-auto max-w-[1120px]">
         {showVersions && activeEssay.versions && activeEssay.versions.length > 0 && (
           <Card className="p-4 bg-card border-none shadow-sm space-y-2">

@@ -385,7 +385,25 @@ function ParentReportPageInner() {
         ) : (
           <div className="relative">
             <div className="pointer-events-none select-none blur-sm opacity-50">{reportContent}</div>
-            <div className="absolute inset-0 flex flex-col items-center justify-start pt-24 gap-3 px-4">
+            <div className="absolute inset-0 flex flex-col items-center justify-start pt-16 gap-3 px-4">
+              {/* PDF 3페이지 스택 시각화 — brief §17 */}
+              <div className="relative w-32 h-40 mb-2" aria-hidden="true">
+                <div
+                  className="absolute inset-0 rounded-lg border bg-card shadow-ds-elevated"
+                  style={{ transform: "rotate(-6deg) translate(-6px, 4px)", borderColor: "var(--ds-border-default)" }}
+                />
+                <div
+                  className="absolute inset-0 rounded-lg border bg-card shadow-ds-elevated"
+                  style={{ transform: "rotate(-2deg) translate(-2px, 2px)", borderColor: "var(--ds-border-default)" }}
+                />
+                <div
+                  className="absolute inset-0 rounded-lg border bg-card shadow-ds-elevated flex flex-col items-center justify-center gap-2"
+                  style={{ borderColor: "var(--ds-border-default)" }}
+                >
+                  <FileText className="w-8 h-8" style={{ color: "var(--ds-brand-primary)" }} />
+                  <span className="text-2xs font-semibold" style={{ color: "var(--ds-text-tertiary)" }}>3 pages</span>
+                </div>
+              </div>
               <UpgradeCTA
                 source="parent_report"
                 targetPlan="pro"
