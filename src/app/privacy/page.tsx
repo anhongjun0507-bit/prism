@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { PageHeader } from "@/components/PageHeader";
+import Link from "next/link";
+import { PageHeader } from "@/components/ui-v2/page-header";
 import { SUPPORT_EMAIL } from "@/lib/business-info";
 
 export const metadata: Metadata = {
@@ -10,9 +11,25 @@ export const metadata: Metadata = {
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-dvh bg-background text-foreground">
-      <PageHeader title="개인정보 처리방침" subtitle="시행일: 2026년 4월 7일" backHref="/" />
-      <div className="max-w-2xl mx-auto px-gutter-sm md:px-gutter pb-section-lg">
+    <div
+      className="min-h-dvh"
+      style={{ background: "var(--ds-bg-canvas)", color: "var(--ds-text-primary)" }}
+    >
+      <div className="max-w-2xl mx-auto px-6 lg:px-8 pt-safe pt-6 lg:pt-10">
+        <PageHeader
+          title="개인정보 처리방침"
+          subtitle="시행일: 2026년 4월 7일"
+          eyebrow={
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1 hover:underline underline-offset-2"
+            >
+              ‹ 홈으로
+            </Link>
+          }
+        />
+      </div>
+      <div className="max-w-2xl mx-auto px-6 lg:px-8 pb-section-lg">
         <div className="space-y-section text-sm leading-relaxed text-foreground/90">
           <p>
             PRISM(이하 &quot;서비스&quot;)은 이용자의 개인정보를 소중히 여기며, 관련

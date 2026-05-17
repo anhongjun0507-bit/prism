@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { PageHeader } from "@/components/PageHeader";
+import Link from "next/link";
+import { PageHeader } from "@/components/ui-v2/page-header";
 import { getBusinessInfo } from "@/lib/business-info";
 import { Card } from "@/components/ui/card";
 import { CheckCircle2, Mail, Clock, AlertTriangle, Smartphone } from "lucide-react";
@@ -22,8 +23,24 @@ export default function RefundPolicyPage() {
   );
 
   return (
-    <div className="min-h-dvh bg-background text-foreground">
-      <PageHeader title="환불정책" subtitle="시행일: 2026년 4월 25일" backHref="/" />
+    <div
+      className="min-h-dvh"
+      style={{ background: "var(--ds-bg-canvas)", color: "var(--ds-text-primary)" }}
+    >
+      <div className="max-w-2xl mx-auto px-6 lg:px-8 pt-safe pt-6 lg:pt-10">
+        <PageHeader
+          title="환불정책"
+          subtitle="시행일: 2026년 4월 25일"
+          eyebrow={
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1 hover:underline underline-offset-2"
+            >
+              ‹ 홈으로
+            </Link>
+          }
+        />
+      </div>
       <div className="max-w-2xl mx-auto px-gutter-sm md:px-gutter pb-section-lg space-y-5">
         {/* 핵심 요약 — 사용자가 가장 먼저 읽는 한 줄 */}
         <Card className="p-5 border-none bg-primary/5 ring-1 ring-primary/15 shadow-sm space-y-2">

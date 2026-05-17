@@ -1,7 +1,7 @@
 "use client";
 
 import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui-v2/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -39,13 +39,26 @@ export function EssayPicker({
   onCreateFromPrompt,
 }: EssayPickerProps) {
   return (
-    <div className="min-h-dvh bg-background pb-24">
-      <PageHeader
-        title={selectedSchool || "대학 선택"}
-        onBack={onBack}
-      />
+    <div
+      className="min-h-dvh pb-24"
+      style={{ background: "var(--ds-bg-canvas)" }}
+    >
+      <div className="px-6 lg:px-8 pt-safe pt-6 lg:pt-10 mx-auto max-w-[1120px]">
+        <PageHeader
+          title={selectedSchool || "대학 선택"}
+          eyebrow={
+            <button
+              type="button"
+              onClick={onBack}
+              className="inline-flex items-center gap-1 hover:underline underline-offset-2"
+            >
+              ‹ 뒤로
+            </button>
+          }
+        />
+      </div>
       {!selectedSchool && (
-        <div className="px-gutter-sm md:px-gutter pb-4">
+        <div className="px-6 lg:px-8 pb-4 mx-auto max-w-[1120px]">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -58,7 +71,7 @@ export function EssayPicker({
         </div>
       )}
 
-      <div className="px-gutter-sm md:px-gutter space-y-2">
+      <div className="px-6 lg:px-8 space-y-2 mx-auto max-w-[1120px]">
         {!selectedSchool ? (
           <>
             <Card

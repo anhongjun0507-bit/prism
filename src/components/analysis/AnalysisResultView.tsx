@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui-v2/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,12 +124,24 @@ export function AnalysisResultView({ specs, onBack, toggleFavorite, isFavorite }
   }, [results]);
 
   return (
-    <div className="min-h-dvh bg-background pb-nav">
+    <div
+      className="min-h-dvh pb-nav"
+      style={{ background: "var(--ds-bg-canvas)" }}
+    >
+      <div className="px-6 lg:px-8 pt-safe pt-6 lg:pt-10 mx-auto max-w-[1120px]">
       <PageHeader
         title="분석 결과"
         subtitle={`${results.length}개 대학교 분석 완료`}
-        onBack={onBack}
-        action={
+        eyebrow={
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1 hover:underline underline-offset-2"
+          >
+            ‹ 뒤로
+          </button>
+        }
+        actions={
           <Button
             variant="ghost"
             size="sm"
@@ -150,7 +162,8 @@ export function AnalysisResultView({ specs, onBack, toggleFavorite, isFavorite }
           </Button>
         }
       />
-      <div className="px-gutter-sm md:px-gutter pt-2 space-y-4">
+      </div>
+      <div className="px-6 lg:px-8 pt-2 space-y-4 mx-auto max-w-[1120px]">
         <Link href="/spec-analysis">
           <Card className="p-4 bg-accent border border-border-subtle flex items-center gap-3 duration-micro ease-brand transition-colors hover:border-border-strong">
             <div className="w-11 h-11 rounded-xl bg-primary/12 flex items-center justify-center shrink-0">

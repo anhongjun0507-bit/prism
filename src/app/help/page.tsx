@@ -6,7 +6,7 @@ import {
   HelpCircle, Wand2, Sparkles, Zap, Calendar, Users, Scale,
   Mail, MessageSquare, Shield, CreditCard, type LucideIcon,
 } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui-v2/page-header";
 import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import {
@@ -238,13 +238,18 @@ export default function HelpPage() {
   }, []);
 
   return (
-    <div className="min-h-dvh bg-background pb-nav">
-      <PageHeader
-        title="도움말·FAQ"
-        subtitle="PRISM 사용법과 자주 묻는 질문"
-      />
+    <div
+      className="min-h-dvh pb-nav"
+      style={{ background: "var(--ds-bg-canvas)" }}
+    >
+      <div className="px-6 lg:px-8 pt-safe pt-6 lg:pt-10 mx-auto max-w-[1120px]">
+        <PageHeader
+          title="도움말·FAQ"
+          subtitle="PRISM 사용법과 자주 묻는 질문"
+        />
+      </div>
 
-      <main className="px-gutter-sm md:px-gutter pb-section-lg space-y-section lg:max-w-content lg:mx-auto">
+      <main className="px-6 lg:px-8 pb-section-lg space-y-section mx-auto max-w-[1120px]">
         {/* Hero — 빠른 안내 */}
         <Card className="p-card-lg rounded-2xl border border-primary/20 bg-primary/5">
           <div className="flex items-start gap-3">

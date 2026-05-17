@@ -9,7 +9,7 @@ import {
   Sparkles, Loader2, Clock, Zap, TrendingUp, GraduationCap, History, RotateCcw,
   Lightbulb, Target,
 } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui-v2/page-header";
 import { PrismLoader } from "@/components/PrismLoader";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import { ScoreBadge } from "./EssayHelpers";
@@ -87,11 +87,23 @@ export function EssayEditor({
   onInsertSection,
 }: EssayEditorProps) {
   return (
-    <div className="min-h-dvh bg-background pb-24">
+    <div
+      className="min-h-dvh pb-24"
+      style={{ background: "var(--ds-bg-canvas)" }}
+    >
+      <div className="px-6 lg:px-8 pt-safe pt-6 lg:pt-10 mx-auto max-w-[1120px]">
       <PageHeader
         title="에세이 편집"
-        onBack={onBack}
-        action={
+        eyebrow={
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1 hover:underline underline-offset-2"
+          >
+            ‹ 뒤로
+          </button>
+        }
+        actions={
           <>
             {autoSaveStatus === "saving" && (
               <span className="text-xs text-muted-foreground animate-pulse">저장 중...</span>
@@ -124,8 +136,9 @@ export function EssayEditor({
           </>
         }
       />
+      </div>
 
-      <div className="px-gutter-sm md:px-gutter space-y-4">
+      <div className="px-6 lg:px-8 space-y-4 mx-auto max-w-[1120px]">
         {showVersions && activeEssay.versions && activeEssay.versions.length > 0 && (
           <Card className="p-4 bg-card border-none shadow-sm space-y-2">
             <div className="flex items-center justify-between">

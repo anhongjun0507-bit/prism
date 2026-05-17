@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui-v2/page-header";
 import { BottomNav } from "@/components/BottomNav";
 import { Crown, Lock, AlertCircle } from "lucide-react";
 
@@ -30,9 +30,24 @@ export function AdmissionUnavailable({ reason }: { reason: Reason }) {
   const showUpgrade = reason === "unverified";
 
   return (
-    <main className="min-h-dvh bg-background pb-nav">
-      <PageHeader title="합격 사례" backHref="/analysis" sticky />
-      <div className="max-w-md mx-auto px-gutter-sm md:px-gutter py-12">
+    <main
+      className="min-h-dvh pb-nav"
+      style={{ background: "var(--ds-bg-canvas)" }}
+    >
+      <div className="px-6 lg:px-8 pt-safe pt-6 lg:pt-10 mx-auto max-w-[1120px]">
+        <PageHeader
+          title="합격 사례"
+          eyebrow={
+            <Link
+              href="/analysis"
+              className="inline-flex items-center gap-1 hover:underline underline-offset-2"
+            >
+              ‹ 분석으로
+            </Link>
+          }
+        />
+      </div>
+      <div className="max-w-md mx-auto px-6 lg:px-8 py-12">
         <Card className="p-6 rounded-2xl border-none shadow-sm text-center space-y-4">
           <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
             <Icon className="w-7 h-7 text-primary" aria-hidden="true" />
