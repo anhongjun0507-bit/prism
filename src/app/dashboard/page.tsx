@@ -3,15 +3,12 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { AdmissionResultBanner, AdmissionResultModal } from "@/components/AdmissionResultModal";
 import { BottomNav } from "@/components/BottomNav";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
   Sparkles, ChevronRight,
   LogOut, Crown, Settings, Heart, Search,
   TrendingUp, MessageSquare, LineChart,
 } from "lucide-react";
-import { CAT_STYLE, CAT_ORDER } from "@/lib/analysis-helpers";
+import { CAT_ORDER } from "@/lib/analysis-helpers";
 import { TodayFocusCard } from "@/components/dashboard/TodayFocusCard";
 import { DashboardTipCard } from "@/components/dashboard/DashboardTipCard";
 import { LiveStatsBar } from "@/components/landing/LiveStatsBar";
@@ -19,9 +16,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Input } from "@/components/ui/input";
 import { PLANS, normalizePlan } from "@/lib/plans";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
@@ -38,19 +33,38 @@ import {
   markMigrationNudgeSeen,
 } from "@/lib/analytics/migration-nudge";
 import { SchoolLogo } from "@/components/SchoolLogo";
-import { EmptyState } from "@/components/EmptyState";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ProfileCompletionBanner } from "@/components/ProfileCompletionBanner";
 import { getGradeContext, shouldShowApplicationDDay } from "@/lib/grade";
 import { useVisualViewportSpaceBelow } from "@/hooks/use-visual-viewport";
 import { usePageDwell } from "@/hooks/use-page-dwell";
 import dynamic from "next/dynamic";
-// SchoolModal: Tabs + 4 tab 컴포넌트 + ProbabilityReveal까지 포함해 ~25KB.
-// 카드 탭 전까진 안 쓰이므로 dynamic import.
+// v3 design system
+import { Card } from "@/components/ui-v2/card";
+import { Button } from "@/components/ui-v2/button";
+import { Input } from "@/components/ui-v2/input";
+import { MetricCard } from "@/components/ui-v2/metric-card";
+import { UniversityCard } from "@/components/ui-v2/university-card";
+import { ProbabilityBar } from "@/components/ui-v2/probability-bar";
+import { EmptyState } from "@/components/ui-v2/empty-state";
+import { Skeleton } from "@/components/ui-v2/skeleton";
+import type { AdmissionCategory } from "@/components/ui-v2/category-pill";
+
+// SchoolModal: dynamic import — 카드 탭 전까진 안 쓰임.
 const SchoolModal = dynamic(
   () => import("@/components/analysis/SchoolModal").then((m) => ({ default: m.SchoolModal })),
   { ssr: false },
 );
+
+/** Domain → v3 category 매핑 — School.cat은 "Reach|Hard Target|Target|Safety" 문자열. */
+function toV3Cat(cat: string | undefined | null): AdmissionCategory {
+  switch (cat) {
+    case "Reach": return "reach";
+    case "Hard Target": return "hard";
+    case "Target": return "target";
+    case "Safety": return "safety";
+    default: return "reach";
+  }
+}
 
 function getDDay(dateStr: string): number {
   const now = new Date();
@@ -149,8 +163,6 @@ function DashboardPageInner() {
     ? getDDay(dreamSchoolData.ea || dreamSchoolData.rd || "Jan 1")
     : getDDay("Jan 1");
   const dday = formatDDay(nextDeadline);
-  // 학년 컨텍스트 — D-day를 hero에 표시할지(11/12학년/졸업) 결정.
-  // 9/10학년에게 "D-169 조기지원"은 misleading. 단일 소스(profile.grade)에서만 파생.
   const gradeCtx = getGradeContext(profile?.grade);
   const showDDay = shouldShowApplicationDDay(profile?.grade);
 
@@ -162,7 +174,6 @@ function DashboardPageInner() {
     return allMatchResults.find(s => s.n === profile.dreamSchool)?.prob ?? null;
   }, [allMatchResults, profile?.dreamSchool]);
 
-  // 데스크톱 hero 중앙: 즐겨찾기 학교의 cat 분포 카운트
   const lineupCounts = useMemo(() => {
     const counts: Record<string, number> = { Reach: 0, "Hard Target": 0, Target: 0, Safety: 0 };
     for (const s of savedSchoolResults) {
@@ -172,7 +183,6 @@ function DashboardPageInner() {
   }, [savedSchoolResults]);
   const showLineupDist = hasSpecs && savedSchoolResults.length > 0;
 
-  // Hero 아래 메트릭 스트립 — 저장 대학교 평균 prob (1자리 round-off)
   const avgSavedProb = useMemo(() => {
     if (savedSchoolResults.length === 0) return null;
     const sum = savedSchoolResults.reduce((acc, s) => acc + (s.prob ?? 0), 0);
@@ -185,8 +195,6 @@ function DashboardPageInner() {
     return schoolsIndex.filter(s => schoolMatchesQuery(s, searchQuery)).slice(0, 5);
   }, [searchQuery, schoolsIndex]);
 
-  // 모바일 키보드가 검색 드롭다운 하단 결과를 가리는 P0(USER_REPORTED 4) 대응.
-  // useVisualViewportSpaceBelow: 키보드를 제외한 가시 영역으로 maxHeight 산출.
   const searchInputBoxRef = useRef<HTMLDivElement>(null);
   const searchDropdownMaxH = useVisualViewportSpaceBelow(searchInputBoxRef);
 
@@ -195,7 +203,7 @@ function DashboardPageInner() {
   const currentMonth = new Date().getMonth() + 1;
   const isAdmissionSeason = currentMonth >= 3 && currentMonth <= 5;
 
-  // ── IA analytics: 첫 방문 nudge + scroll depth + exit time + section→action funnel ──
+  // ── IA analytics: scroll depth + exit time + section→action funnel ──
   const getDwell = usePageDwell();
   const maxScrollPercentRef = useRef(0);
   const actionClicksRef = useRef(0);
@@ -211,7 +219,6 @@ function DashboardPageInner() {
         duration: 6000,
       });
       markMigrationNudgeSeen();
-      // dashboard에서 자동 dismiss는 'main' source로 기록
       trackPrismEvent("ia_migration_nudge_dismissed", { source: "main" });
     }
 
@@ -258,15 +265,24 @@ function DashboardPageInner() {
   );
 
   return (
-    <div className="min-h-dvh bg-background pb-nav">
-      {/* ── Clean header: avatar · name · plan · icons ── */}
-      <header className="px-gutter-sm md:px-gutter pt-safe pb-4 flex items-center gap-3 lg:max-w-content-wide lg:mx-auto">
+    <div
+      className="min-h-dvh pb-nav"
+      style={{ background: "var(--ds-bg-canvas)" }}
+    >
+      {/* ── 인사 영역 (브리프 §3): 아바타 + 이름 + 플랜 배지 + 우측 액션 ── */}
+      <header className="px-5 lg:px-8 pt-safe pb-4 flex items-center gap-3 mx-auto max-w-[1120px]">
         <Link href="/profile" aria-label="프로필 설정" className="shrink-0">
-          <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm overflow-hidden hover:ring-2 hover:ring-primary/30 transition-all">
+          <div
+            className="w-11 h-11 rounded-ds-pill flex items-center justify-center font-bold text-ds-body-sm overflow-hidden ring-1 transition-all hover:ring-2"
+            style={{
+              background: "var(--ds-brand-primary-soft)",
+              color: "var(--ds-brand-primary)",
+              // @ts-expect-error CSS var ring
+              "--tw-ring-color": "var(--ds-border-subtle)",
+            }}
+          >
             {(profile?.photoURL || user?.photoURL) ? (
-              // next/image 미사용: photoURL은 임의 외부 도메인(Firebase Storage·Google·OAuth provider)이라
-              // remotePatterns로 enumerate 불가. 36px 아바타는 최적화 payoff도 작음.
-              // 대신 lazy + async decoding으로 main thread 블로킹 최소화.
+              // photoURL은 외부 OAuth provider 도메인이라 next/image remotePatterns enumerate 불가.
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={profile?.photoURL || user?.photoURL || ""}
@@ -281,65 +297,88 @@ function DashboardPageInner() {
           </div>
         </Link>
         <div className="flex-1 min-w-0">
-          <p className="text-2xs text-muted-foreground">안녕하세요</p>
+          <p className="text-[11px] text-[color:var(--ds-text-tertiary)]">안녕하세요</p>
           <div className="flex items-center gap-1.5">
-            <h1 className="text-base font-bold truncate">{displayName}님</h1>
+            <h1 className="text-ds-body-md font-bold truncate text-[color:var(--ds-text-primary)]">
+              {displayName}님
+            </h1>
             {currentPlan !== "free" && (
               <Link href="/subscription" className="shrink-0">
-                <span className="inline-flex items-center gap-1 bg-primary/10 text-primary rounded-full px-2 h-5 text-2xs font-semibold">
-                  <Crown className="w-2.5 h-2.5" /> {planInfo.displayName}
+                <span
+                  className="inline-flex items-center gap-1 rounded-ds-pill px-2 h-5 text-[11px] font-semibold"
+                  style={
+                    currentPlan === "elite"
+                      ? { background: "var(--ds-brand-accent-soft)", color: "#8A5A0E" }
+                      : { background: "var(--ds-brand-primary-soft)", color: "var(--ds-brand-primary)" }
+                  }
+                >
+                  <Crown className="w-2.5 h-2.5" aria-hidden="true" /> {planInfo.displayName}
                 </span>
               </Link>
             )}
           </div>
         </div>
-        <Link href="/profile">
-          <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" aria-label="프로필 설정">
-            <Settings className="w-[18px] h-[18px]" />
-          </Button>
-        </Link>
-        <Button variant="ghost" size="icon" onClick={() => setShowLogoutDialog(true)} className="h-9 w-9 text-muted-foreground" aria-label="로그아웃">
-          <LogOut className="w-[18px] h-[18px]" />
+        <Button asChild variant="ghost" size="icon" aria-label="프로필 설정">
+          <Link href="/profile"><Settings className="size-[18px]" /></Link>
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => setShowLogoutDialog(true)} aria-label="로그아웃">
+          <LogOut className="size-[18px]" />
         </Button>
       </header>
 
-      {/* ── Search ── */}
-      <div className="px-gutter-sm md:px-gutter pb-5 relative lg:max-w-content-wide lg:mx-auto">
+      {/* ── 검색 (드롭다운 결과) ── */}
+      <div className="px-5 lg:px-8 pb-5 relative mx-auto max-w-[1120px]">
         <div ref={searchInputBoxRef} className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          <Search
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 pointer-events-none"
+            style={{ color: "var(--ds-text-tertiary)" }}
+            aria-hidden="true"
+          />
           <Input
             placeholder="대학교 검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-11 rounded-xl bg-muted/50 dark:bg-card/60 border-none text-sm focus-visible:ring-primary/20"
+            className="pl-10 h-11"
+            aria-label="대학교 검색"
           />
         </div>
         {searchQuery.trim().length > 0 && (
           <div
-            className="absolute top-[52px] left-gutter right-gutter bg-card rounded-xl shadow-lg border z-50 overflow-y-auto overscroll-contain"
-            style={searchDropdownMaxH ? { maxHeight: `${searchDropdownMaxH}px` } : undefined}
+            className="absolute top-[52px] left-5 right-5 lg:left-8 lg:right-8 rounded-ds-card shadow-ds-elevated z-50 overflow-y-auto overscroll-contain"
+            style={{
+              background: "var(--ds-bg-surface)",
+              border: "1px solid var(--ds-border-subtle)",
+              ...(searchDropdownMaxH ? { maxHeight: `${searchDropdownMaxH}px` } : {}),
+            }}
             role="listbox"
             aria-label="검색 결과"
           >
             {searchResults.length > 0 ? (
               searchResults.map(s => (
-                <Link key={s.n} href="/analysis" onClick={() => setSearchQuery("")} className="flex items-center gap-3 p-3 hover:bg-accent/50 transition-colors">
+                <Link
+                  key={s.n}
+                  href="/analysis"
+                  onClick={() => setSearchQuery("")}
+                  className="flex items-center gap-3 p-3 transition-colors"
+                  style={{ background: "transparent" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--ds-bg-subtle)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                >
                   <SchoolLogo domain={s.d} color={s.c} name={s.n} size="sm" />
                   <div>
-                    <p className="text-sm font-medium">{s.n}</p>
-                    <p className="text-xs text-muted-foreground">{s.rk > 0 ? `#${s.rk}` : "Unranked"} · {s.loc}</p>
+                    <p className="text-ds-body-md font-medium text-[color:var(--ds-text-primary)]">{s.n}</p>
+                    <p className="text-ds-body-sm text-[color:var(--ds-text-tertiary)]">
+                      {s.rk > 0 ? `#${s.rk}` : "Unranked"} · {s.loc}
+                    </p>
                   </div>
                 </Link>
               ))
             ) : (
-              <div
-                className="px-4 py-6 text-center"
-                role="status"
-              >
-                <Search className="w-6 h-6 mx-auto mb-2 text-muted-foreground/60" aria-hidden="true" />
-                <p className="text-sm font-medium">검색 결과가 없어요</p>
-                <p className="text-xs text-muted-foreground mt-1 leading-snug">
-                  학교명 일부만 입력해도 찾을 수 있어요. 예: "Harvard", "UC", "NYU"
+              <div className="px-4 py-6 text-center" role="status">
+                <Search className="size-6 mx-auto mb-2" style={{ color: "var(--ds-text-tertiary)" }} aria-hidden="true" />
+                <p className="text-ds-body-md font-medium text-[color:var(--ds-text-primary)]">검색 결과가 없어요</p>
+                <p className="text-ds-body-sm mt-1 leading-snug text-[color:var(--ds-text-tertiary)]">
+                  학교명 일부만 입력해도 찾을 수 있어요. 예: &quot;Harvard&quot;, &quot;UC&quot;, &quot;NYU&quot;
                 </p>
               </div>
             )}
@@ -348,37 +387,46 @@ function DashboardPageInner() {
       </div>
 
       {/* ── Main content ── */}
-      <main className="px-gutter-sm md:px-gutter space-y-5 lg:max-w-content-wide lg:mx-auto">
-        {/* Hero — 목표 대학 · D-day · 합격 확률 */}
-        <Card className="p-6 rounded-2xl border-none shadow-lg overflow-hidden relative hero-navy-gradient text-hero">
-          <div className="absolute inset-0 bg-hero-overlay pointer-events-none" style={{ background: "radial-gradient(ellipse at top right, hsl(var(--hero-overlay) / 0.12), transparent 60%)" }} aria-hidden="true" />
+      <main className="px-5 lg:px-8 space-y-5 mx-auto max-w-[1120px]">
+        {/* Hero — 다크 카드 (브리프 §3). 목표 대학 + D-day + 라인업 + 합격 확률 + 스펙 칩. */}
+        <Card variant="inverted" padding="lg" className="overflow-hidden relative">
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: "radial-gradient(ellipse at top right, color-mix(in srgb, var(--ds-brand-primary) 14%, transparent), transparent 60%)" }}
+            aria-hidden="true"
+          />
           <div className="relative">
-            <p className="text-2xs text-hero-muted uppercase tracking-wide mb-1.5 font-medium">목표 대학교</p>
-            <h2 className="text-xl leading-tight font-headline font-bold truncate">
+            <p className="text-[11px] uppercase tracking-wide mb-1.5 font-medium text-[color:var(--ds-text-on-dark-secondary)]">
+              목표 대학교
+            </p>
+            <h2 className="text-ds-heading-lg font-display text-white truncate">
               {profile?.dreamSchool || "아직 미설정"}
             </h2>
 
-            <div className="flex items-stretch gap-4 mt-5 pt-5 border-t border-hero-muted">
+            <div
+              className="flex items-stretch gap-4 mt-5 pt-5 border-t"
+              style={{ borderColor: "color-mix(in srgb, white 12%, transparent)" }}
+            >
               <div className="flex-1 min-w-0">
                 {showDDay ? (
                   <>
-                    <p className="text-2xs text-hero-muted uppercase tracking-wide font-semibold mb-1">
+                    <p className="text-[11px] uppercase tracking-wide font-semibold mb-1 text-[color:var(--ds-text-on-dark-secondary)]">
                       {dreamSchoolData?.ea ? "조기 지원" : "정시 지원"}
                     </p>
-                    <p className="text-3xl font-bold tabular-nums leading-none font-headline">{dday.primary}</p>
-                    <p className="text-2xs text-hero-muted mt-1.5">{dday.hint}</p>
+                    <p className="text-ds-display-md font-display tabular-nums leading-none text-white">{dday.primary}</p>
+                    <p className="text-[11px] mt-1.5 text-[color:var(--ds-text-on-dark-secondary)]">{dday.hint}</p>
                   </>
                 ) : gradeCtx.isUnset ? (
                   <>
-                    <p className="text-2xs text-hero-muted uppercase tracking-wide font-semibold mb-1">학년 미입력</p>
-                    <p className="text-xl font-bold leading-tight font-headline">프로필 완성</p>
-                    <p className="text-2xs text-hero-muted mt-1.5">D-day는 학년 입력 후</p>
+                    <p className="text-[11px] uppercase tracking-wide font-semibold mb-1 text-[color:var(--ds-text-on-dark-secondary)]">학년 미입력</p>
+                    <p className="text-ds-heading-md font-display text-white">프로필 완성</p>
+                    <p className="text-[11px] mt-1.5 text-[color:var(--ds-text-on-dark-secondary)]">D-day는 학년 입력 후</p>
                   </>
                 ) : (
                   <>
-                    <p className="text-2xs text-hero-muted uppercase tracking-wide font-semibold mb-1">현재 학년</p>
-                    <p className="text-xl font-bold leading-tight font-headline">{gradeCtx.label}</p>
-                    <p className="text-2xs text-hero-muted mt-1.5">
+                    <p className="text-[11px] uppercase tracking-wide font-semibold mb-1 text-[color:var(--ds-text-on-dark-secondary)]">현재 학년</p>
+                    <p className="text-ds-heading-md font-display text-white">{gradeCtx.label}</p>
+                    <p className="text-[11px] mt-1.5 text-[color:var(--ds-text-on-dark-secondary)]">
                       {gradeCtx.yearsUntilApplication != null
                         ? `지원 시즌까지 ${gradeCtx.yearsUntilApplication}년`
                         : "준비 단계"}
@@ -387,37 +435,50 @@ function DashboardPageInner() {
                 )}
               </div>
               {showLineupDist && (
-                <div className="hidden md:flex md:flex-col md:flex-1 md:px-5 md:border-l md:border-hero-muted">
-                  <p className="text-2xs text-hero-muted uppercase tracking-wide font-semibold mb-3">
+                <div
+                  className="hidden md:flex md:flex-col md:flex-1 md:px-5 md:border-l"
+                  style={{ borderColor: "color-mix(in srgb, white 12%, transparent)" }}
+                >
+                  <p className="text-[11px] uppercase tracking-wide font-semibold mb-3 text-[color:var(--ds-text-on-dark-secondary)]">
                     지원 라인업 · {savedSchoolResults.length}곳
                   </p>
                   <div className="grid grid-cols-2 gap-x-5 gap-y-2.5">
-                    {CAT_ORDER.map((cat) => (
-                      <div key={cat} className="flex items-center gap-2 min-w-0">
-                        <span
-                          className={`w-2 h-2 rounded-full ${CAT_STYLE[cat].dot} shrink-0`}
-                          aria-hidden="true"
-                        />
-                        <span className="text-xs text-hero-muted truncate">
-                          {cat === "Hard Target" ? "Hard" : cat}
-                        </span>
-                        <span className="ml-auto text-lg font-bold tabular-nums leading-none font-headline">
-                          {lineupCounts[cat]}
-                        </span>
-                      </div>
-                    ))}
+                    {CAT_ORDER.map((cat) => {
+                      const v3 = toV3Cat(cat);
+                      return (
+                        <div key={cat} className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="size-2 rounded-ds-pill shrink-0"
+                            style={{ background: `var(--ds-${v3})` }}
+                            aria-hidden="true"
+                          />
+                          <span className="text-ds-body-sm truncate text-[color:var(--ds-text-on-dark-secondary)]">
+                            {cat === "Hard Target" ? "Hard" : cat}
+                          </span>
+                          <span className="ml-auto text-ds-heading-md font-display tabular-nums leading-none text-white">
+                            {lineupCounts[cat]}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
               {dreamProb != null ? (
-                <div className="text-right pl-4 border-l border-hero-muted">
-                  <p className="text-2xs text-hero-muted uppercase tracking-wide font-semibold mb-1">합격 확률</p>
-                  <p className="text-3xl font-bold tabular-nums leading-none font-headline">{dreamProb}%</p>
-                  <p className="text-2xs text-hero-muted mt-1.5">AI 예측</p>
+                <div
+                  className="text-right pl-4 border-l"
+                  style={{ borderColor: "color-mix(in srgb, white 12%, transparent)" }}
+                >
+                  <p className="text-[11px] uppercase tracking-wide font-semibold mb-1 text-[color:var(--ds-text-on-dark-secondary)]">합격 확률</p>
+                  <p className="text-ds-display-lg font-display tabular-nums leading-none text-white">{dreamProb}%</p>
+                  <p className="text-[11px] mt-1.5 text-[color:var(--ds-text-on-dark-secondary)]">AI 예측</p>
                 </div>
               ) : hasSpecs ? null : (
-                <div className="text-right pl-4 border-l border-hero-muted self-center">
-                  <Link href="/onboarding" className="text-2xs text-hero underline underline-offset-2 hover:text-hero-muted">
+                <div
+                  className="text-right pl-4 border-l self-center"
+                  style={{ borderColor: "color-mix(in srgb, white 12%, transparent)" }}
+                >
+                  <Link href="/onboarding" className="text-[11px] underline underline-offset-2 hover:opacity-80 text-white">
                     목표 대학교 설정 →
                   </Link>
                 </div>
@@ -426,26 +487,40 @@ function DashboardPageInner() {
 
             {hasSpecs && (
               <div className="flex gap-1.5 mt-4 flex-wrap">
-                {profile?.gpa && <span className="text-2xs bg-hero-overlay rounded-full px-2.5 py-1 font-medium backdrop-blur-sm">GPA {profile.gpa}</span>}
-                {profile?.sat && <span className="text-2xs bg-hero-overlay rounded-full px-2.5 py-1 font-medium backdrop-blur-sm">SAT {profile.sat}</span>}
-                {profile?.toefl && <span className="text-2xs bg-hero-overlay rounded-full px-2.5 py-1 font-medium backdrop-blur-sm">TOEFL {profile.toefl}</span>}
-                {profile?.major && <span className="text-2xs bg-hero-overlay rounded-full px-2.5 py-1 font-medium backdrop-blur-sm">{profile.major}</span>}
+                {profile?.gpa && (
+                  <span className="text-[11px] rounded-ds-pill px-2.5 py-1 font-medium text-white backdrop-blur-sm" style={{ background: "color-mix(in srgb, white 12%, transparent)" }}>
+                    GPA {profile.gpa}
+                  </span>
+                )}
+                {profile?.sat && (
+                  <span className="text-[11px] rounded-ds-pill px-2.5 py-1 font-medium text-white backdrop-blur-sm" style={{ background: "color-mix(in srgb, white 12%, transparent)" }}>
+                    SAT {profile.sat}
+                  </span>
+                )}
+                {profile?.toefl && (
+                  <span className="text-[11px] rounded-ds-pill px-2.5 py-1 font-medium text-white backdrop-blur-sm" style={{ background: "color-mix(in srgb, white 12%, transparent)" }}>
+                    TOEFL {profile.toefl}
+                  </span>
+                )}
+                {profile?.major && (
+                  <span className="text-[11px] rounded-ds-pill px-2.5 py-1 font-medium text-white backdrop-blur-sm" style={{ background: "color-mix(in srgb, white 12%, transparent)" }}>
+                    {profile.major}
+                  </span>
+                )}
               </div>
             )}
           </div>
         </Card>
 
-        {/* 학년 미입력 시 hero 바로 아래 강한 유도 — single source of truth(profile.grade) 정착 */}
+        {/* 학년 미입력 시 hero 바로 아래 강한 유도 */}
         <ProfileCompletionBanner />
 
-        {/* TodayFocusCard — Hero 바로 아래 */}
+        {/* TodayFocusCard — Grammarly 톤의 오늘의 할 일 */}
         <TodayFocusCard />
-        {/* 첫 방문자 비차단 안내 — 30일 TTL, dismiss 후 미노출 */}
         <DashboardTipCard />
-        {/* 임계값 미달이면 자체 숨김 */}
         <LiveStatsBar variant="mini" />
 
-        {/* 메트릭 스트립 — 저장 학교·평균 합격률·AI 상담·성장 기록 (스펙 입력 시만) */}
+        {/* 4개 MetricCard 행 — 브리프 §3 */}
         {hasSpecs && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
             <Link
@@ -453,105 +528,117 @@ function DashboardPageInner() {
               onClick={() => trackSectionClick(SECTION_IDS.HOME_METRIC_SAVED, 1, "/analysis")}
               className="block"
             >
-              <Card className="p-3.5 rounded-xl h-full hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ease-toss active:scale-[0.98]">
-                <div className="flex items-center gap-1.5 mb-2 text-muted-foreground">
-                  <Heart className="w-3.5 h-3.5" />
-                  <p className="text-2xs font-medium">저장한 대학교</p>
-                </div>
-                <p className="text-xl font-bold tabular-nums leading-none font-headline">
-                  {profile?.favoriteSchools?.length ?? 0}
-                  <span className="text-xs font-medium text-muted-foreground ml-0.5">곳</span>
-                </p>
-              </Card>
+              <MetricCard
+                label="저장한 대학교"
+                value={profile?.favoriteSchools?.length ?? 0}
+                suffix="곳"
+                icon={<Heart />}
+                interactive
+              />
             </Link>
             <Link
               href="/analysis"
               onClick={() => trackSectionClick(SECTION_IDS.HOME_METRIC_AVG_PROB, 2, "/analysis")}
               className="block"
             >
-              <Card className="p-3.5 rounded-xl h-full hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ease-toss active:scale-[0.98]">
-                <div className="flex items-center gap-1.5 mb-2 text-muted-foreground">
-                  <TrendingUp className="w-3.5 h-3.5" />
-                  <p className="text-2xs font-medium">평균 합격률</p>
-                </div>
-                <p className="text-xl font-bold tabular-nums leading-none font-headline">
-                  {avgSavedProb != null ? (
-                    <>{avgSavedProb}<span className="text-xs font-medium text-muted-foreground ml-0.5">%</span></>
-                  ) : (
-                    <span className="text-sm font-medium text-muted-foreground">저장 후 표시</span>
-                  )}
-                </p>
-              </Card>
+              <MetricCard
+                label="평균 합격률"
+                value={avgSavedProb ?? 0}
+                decimals={1}
+                suffix={avgSavedProb != null ? "%" : ""}
+                hint={avgSavedProb == null ? "저장 후 표시" : undefined}
+                icon={<TrendingUp />}
+                interactive
+              />
             </Link>
             <Link
               href="/tools/chat"
               onClick={() => trackSectionClick(SECTION_IDS.HOME_METRIC_AI_CHAT, 3, "/tools/chat")}
               className="block"
             >
-              <Card className="p-3.5 rounded-xl h-full hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ease-toss active:scale-[0.98]">
-                <div className="flex items-center gap-1.5 mb-2 text-muted-foreground">
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  <p className="text-2xs font-medium">AI 상담</p>
-                </div>
-                <p className="text-xl font-bold tabular-nums leading-none font-headline">
-                  {profile?.aiChatCount ?? 0}
-                  <span className="text-xs font-medium text-muted-foreground ml-0.5">회</span>
-                </p>
-              </Card>
+              <MetricCard
+                label="AI 상담"
+                value={profile?.aiChatCount ?? 0}
+                suffix="회"
+                icon={<MessageSquare />}
+                interactive
+              />
             </Link>
             <Link
               href="/insights"
               onClick={() => trackSectionClick(SECTION_IDS.HOME_METRIC_GROWTH, 4, "/insights")}
               className="block"
             >
-              <Card className="p-3.5 rounded-xl h-full hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ease-toss active:scale-[0.98]">
-                <div className="flex items-center gap-1.5 mb-2 text-muted-foreground">
-                  <LineChart className="w-3.5 h-3.5" />
-                  <p className="text-2xs font-medium">성장 기록</p>
-                </div>
-                <p className="text-xl font-bold tabular-nums leading-none font-headline">
-                  {snapshots.length}
-                  <span className="text-xs font-medium text-muted-foreground ml-0.5">개</span>
-                </p>
-              </Card>
+              <MetricCard
+                label="성장 기록"
+                value={snapshots.length}
+                suffix="개"
+                icon={<LineChart />}
+                interactive
+              />
             </Link>
           </div>
         )}
 
-        {/* Urgent deadline alert — D-30 이하만, 그리고 학년이 입시 단계일 때만 */}
+        {/* 마감 임박 — D-30 이하 + 입시 학년 */}
         {showDDay && nextDeadline > 0 && nextDeadline <= 30 && (
-          <div className="rounded-2xl p-4 flex items-center gap-3 bg-destructive/10 border border-destructive/25">
-            <div className="w-10 h-10 rounded-xl bg-destructive/15 flex items-center justify-center shrink-0">
-              <span className="text-destructive font-bold text-sm tabular-nums">D-{nextDeadline}</span>
+          <div
+            className="rounded-ds-card p-4 flex items-center gap-3"
+            style={{
+              background: "var(--ds-reach-soft)",
+              border: "1px solid color-mix(in srgb, var(--ds-reach) 30%, transparent)",
+            }}
+          >
+            <div
+              className="w-10 h-10 rounded-ds-input flex items-center justify-center shrink-0"
+              style={{ background: "color-mix(in srgb, var(--ds-reach) 15%, transparent)" }}
+            >
+              <span className="font-bold text-ds-body-md tabular-nums" style={{ color: "var(--ds-reach)" }}>
+                D-{nextDeadline}
+              </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-destructive">마감 임박</p>
-              <p className="text-xs text-destructive/80 mt-0.5 truncate">
+              <p className="text-ds-body-md font-bold" style={{ color: "var(--ds-reach)" }}>마감 임박</p>
+              <p className="text-ds-body-sm mt-0.5 truncate" style={{ color: "color-mix(in srgb, var(--ds-reach) 85%, transparent)" }}>
                 {profile?.dreamSchool || "지원 대학교"} 마감까지 {nextDeadline}일
               </p>
             </div>
           </div>
         )}
 
-        {/* 스펙 미입력 — 단일 CTA만 노출 */}
+        {/* 스펙 미입력 — 단일 CTA */}
         {!hasSpecs && (
           <>
             <Link
               href="/analysis"
               onClick={() => trackSectionClick(SECTION_IDS.HOME_SPEC_CTA, 0, "/analysis")}
             >
-              <Card className="p-5 rounded-2xl border border-primary/25 bg-primary/5 flex items-center gap-3 hover:bg-primary/10 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ease-toss active:scale-[0.98]">
-                <div className="w-12 h-12 rounded-xl bg-primary/12 flex items-center justify-center shrink-0">
-                  <Sparkles className="w-5 h-5 text-primary" />
+              <Card
+                interactive
+                padding="md"
+                style={{
+                  background: "var(--ds-brand-primary-soft)",
+                  border: "1px solid color-mix(in srgb, var(--ds-brand-primary) 25%, transparent)",
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-12 h-12 rounded-ds-card flex items-center justify-center shrink-0"
+                    style={{ background: "color-mix(in srgb, var(--ds-brand-primary) 12%, transparent)" }}
+                  >
+                    <Sparkles className="size-5" style={{ color: "var(--ds-brand-primary)" }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-ds-body-md font-bold text-[color:var(--ds-text-primary)]">성적을 입력해 시작하세요</p>
+                    <p className="text-ds-body-sm mt-0.5 text-[color:var(--ds-text-secondary)]">
+                      GPA·SAT를 입력하면 합격 확률 분석이 열려요
+                    </p>
+                  </div>
+                  <ChevronRight className="size-5 shrink-0" style={{ color: "var(--ds-brand-primary)" }} />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold">성적을 입력해 시작하세요</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">GPA·SAT를 입력하면 합격 확률 분석이 열려요</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-primary shrink-0" />
               </Card>
             </Link>
-            <p className="text-xs text-muted-foreground text-center">
+            <p className="text-ds-body-sm text-center text-[color:var(--ds-text-tertiary)]">
               먼저 분석을 완료하면 대학교 저장·에세이 리뷰·플래너가 활성화돼요
             </p>
           </>
@@ -562,103 +649,67 @@ function DashboardPageInner() {
           <AdmissionResultBanner onOpen={() => setShowResultModal(true)} />
         )}
 
-        {/* My schools — Top 3만 (전체는 /analysis) */}
+        {/* 나의 지원 대학교 (Top 3) — 브리프 §3 */}
         {hasSpecs && (
-        <div className="space-y-2.5">
-          <div className="flex justify-between items-center">
-            <h2 className="font-headline text-base font-bold">나의 지원 대학교</h2>
-            {savedSchoolResults.length > 0 && (
-              <Link
-                href="/analysis"
-                onClick={() => trackSectionClick(SECTION_IDS.HOME_MY_SCHOOLS, 0, "/analysis")}
-                className="text-xs text-primary font-semibold flex items-center"
-              >
-                전체 보기 <ChevronRight className="w-3 h-3" />
-              </Link>
-            )}
-          </div>
-          {/* PC 2열 그리드 — 모바일 1열 유지. EmptyState는 col-span-2로 풀폭. */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
-          {matchLoading && hasSpecs ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <Card key={i} className="p-3.5 rounded-2xl border border-border/60 bg-card shadow-sm flex items-center gap-3">
-                <Skeleton className="w-10 h-10 rounded-full shrink-0" />
-                <div className="flex-1 min-w-0 space-y-2">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                  <Skeleton className="h-1 w-full rounded-full" />
-                </div>
-              </Card>
-            ))
-          ) : savedSchoolResults.length === 0 ? (
-            <Card variant="elevated" className="overflow-hidden lg:col-span-2">
-              <EmptyState
-                illustration="school"
-                title="아직 저장한 대학교가 없어요"
-                description={<>분석 페이지에서 ♡를 눌러<br />관심 대학교를 추가해보세요</>}
-                action={
-                  <Link href="/analysis">
-                    <Button className="px-6">
-                      대학교 둘러보기 <ChevronRight className="w-4 h-4 ml-1" />
-                    </Button>
-                  </Link>
-                }
-              />
-            </Card>
-          ) : (
-            savedSchoolResults.slice(0, 3).map((school) => {
-              const userGpa = parseFloat(profile?.gpa || "0");
-              const userSat = parseInt(profile?.sat || "0");
-              const satMid = school.sat ? Math.round((school.sat[0] + school.sat[1]) / 2) : 0;
-              const satDiff = userSat && satMid ? userSat - satMid : null;
-              const gpaDiffNum = userGpa && school.gpa ? userGpa - school.gpa : null;
-              let reason = "";
-              if (school.cat === "Safety") {
-                if (satDiff && satDiff > 100) reason = `SAT가 평균보다 ${satDiff}점 높아요`;
-                else reason = `합격률 ${school.r}%로 가능성 높아요`;
-              } else if (school.cat === "Reach") {
-                if (satDiff && satDiff < -150) reason = `SAT ${Math.abs(satDiff)}점 차이`;
-                else reason = `합격률 ${school.r}%의 높은 경쟁률`;
-              } else if (school.cat === "Hard Target") {
-                if (gpaDiffNum && gpaDiffNum < -0.2) reason = `GPA ${Math.abs(gpaDiffNum).toFixed(1)} 차이, 에세이로 보완 가능`;
-                else reason = "도전적이지만 가능성 있어요";
-              } else {
-                reason = "경쟁 가능 범위예요";
-              }
-              return (
-                <Card
-                  key={school.n}
-                  className="hover-card p-3.5 rounded-2xl border border-border/60 bg-card shadow-sm flex items-center gap-3 cursor-pointer"
-                  onClick={() => setSelectedSchool(school)}
+          <div className="space-y-2.5">
+            <div className="flex justify-between items-center">
+              <h2 className="text-ds-heading-md text-[color:var(--ds-text-primary)]">나의 지원 대학교</h2>
+              {savedSchoolResults.length > 0 && (
+                <Link
+                  href="/analysis"
+                  onClick={() => trackSectionClick(SECTION_IDS.HOME_MY_SCHOOLS, 0, "/analysis")}
+                  className="text-ds-body-sm font-semibold inline-flex items-center"
+                  style={{ color: "var(--ds-brand-primary)" }}
                 >
-                  <SchoolLogo domain={school.d} color={school.c} name={school.n} rank={school.rk} size="md" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-bold text-sm truncate">{school.n}</p>
-                      <span className="text-sm font-bold text-primary tabular-nums shrink-0">{school.prob}%</span>
+                  전체 보기 <ChevronRight className="size-3" />
+                </Link>
+              )}
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+              {matchLoading && hasSpecs ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <Card key={i} padding="md">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="w-10 h-10 rounded-ds-pill shrink-0" />
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-3 w-1/2" />
+                        <Skeleton className="h-1 w-full rounded-ds-pill" />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <Progress value={school.prob} className="h-1 flex-1" />
-                      <Badge className={`${CAT_STYLE[school.cat || "Reach"].bg} border-none text-2xs shrink-0 px-1.5 py-0 h-4 leading-4`}>
-                        {school.cat}
-                      </Badge>
-                    </div>
-                    {hasSpecs && <p className="text-xs text-muted-foreground mt-1 truncate">{reason}</p>}
-                  </div>
-                  <button
-                    onClick={() => toggleFavorite(school.n)}
-                    className="shrink-0 w-11 h-11 -m-1.5 rounded-full hover:bg-destructive/10 transition-colors flex items-center justify-center"
-                    aria-label={isFavorite(school.n) ? `${school.n} 즐겨찾기 해제` : `${school.n} 즐겨찾기 추가`}
-                    aria-pressed={isFavorite(school.n)}
-                  >
-                    <Heart className={`w-4 h-4 transition-all ${isFavorite(school.n) ? "fill-destructive text-destructive" : "text-muted-foreground/50"}`} />
-                  </button>
-                </Card>
-              );
-            })
-          )}
+                  </Card>
+                ))
+              ) : savedSchoolResults.length === 0 ? (
+                <div className="lg:col-span-2">
+                  <EmptyState
+                    illustration={<Heart />}
+                    title="아직 저장한 대학교가 없어요"
+                    description="분석 페이지에서 ♡를 눌러 관심 대학교를 추가해보세요"
+                    action={
+                      <Button asChild>
+                        <Link href="/analysis">
+                          대학교 둘러보기 <ChevronRight className="size-4 ml-1" />
+                        </Link>
+                      </Button>
+                    }
+                  />
+                </div>
+              ) : (
+                savedSchoolResults.slice(0, 3).map((school) => (
+                  <UniversityCard
+                    key={school.n}
+                    name={school.n}
+                    subtitle={school.rk > 0 ? `#${school.rk} · ${school.loc}` : school.loc}
+                    category={toV3Cat(school.cat)}
+                    probability={school.prob ?? 0}
+                    favorited={isFavorite(school.n)}
+                    onFavoriteToggle={() => toggleFavorite(school.n)}
+                    onClick={() => setSelectedSchool(school)}
+                  />
+                ))
+              )}
+            </div>
           </div>
-        </div>
         )}
 
         {/* Free user upgrade nudge */}
@@ -667,19 +718,32 @@ function DashboardPageInner() {
             href="/pricing"
             onClick={() => trackSectionClick(SECTION_IDS.HOME_UPGRADE_NUDGE, 0, "/pricing")}
           >
-            <Card className="p-4 rounded-2xl border border-primary/20 bg-primary/5 shadow-none flex items-center gap-3 hover:bg-primary/10 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ease-toss active:scale-[0.98]">
-              <div className="w-10 h-10 rounded-xl bg-primary/12 flex items-center justify-center shrink-0">
-                <Crown className="w-4 h-4 text-primary" />
+            <Card
+              interactive
+              padding="md"
+              style={{
+                background: "var(--ds-brand-primary-soft)",
+                border: "1px solid color-mix(in srgb, var(--ds-brand-primary) 20%, transparent)",
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-ds-input flex items-center justify-center shrink-0"
+                  style={{ background: "color-mix(in srgb, var(--ds-brand-primary) 12%, transparent)" }}
+                >
+                  <Crown className="size-4" style={{ color: "var(--ds-brand-primary)" }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-ds-body-md font-semibold text-[color:var(--ds-text-primary)]">Pro 플랜 알아보기</p>
+                  <p className="text-ds-body-sm mt-0.5 text-[color:var(--ds-text-secondary)]">
+                    1,001개 대학 전체 합격 확률 분석
+                  </p>
+                </div>
+                <ChevronRight className="size-4 shrink-0" style={{ color: "var(--ds-text-tertiary)" }} />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold">Pro 플랜 알아보기</p>
-                <p className="text-xs text-muted-foreground mt-0.5">1,001개 대학 전체 합격 확률 분석</p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
             </Card>
           </Link>
         )}
-
       </main>
 
       <AdmissionResultModal open={showResultModal} onClose={() => setShowResultModal(false)} />
@@ -701,16 +765,19 @@ function DashboardPageInner() {
 
       {/* Logout dialog */}
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
-        <AlertDialogContent className="max-w-sm rounded-2xl">
+        <AlertDialogContent className="max-w-sm rounded-ds-modal">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-lg">로그아웃</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm">
+            <AlertDialogTitle className="text-ds-heading-md">로그아웃</AlertDialogTitle>
+            <AlertDialogDescription className="text-ds-body-md">
               로그아웃을 진행하시겠습니까? 저장되지 않은 데이터는 사라질 수 있습니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">취소</AlertDialogCancel>
-            <AlertDialogAction onClick={logout} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+            <AlertDialogCancel className="rounded-ds-input">취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={logout}
+              style={{ background: "var(--ds-reach)", color: "white" }}
+            >
               로그아웃
             </AlertDialogAction>
           </AlertDialogFooter>

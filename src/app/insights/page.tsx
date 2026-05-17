@@ -3,19 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import dynamic from "next/dynamic";
-import { TrendingUp, ChevronRight, Info } from "lucide-react";
+import Link from "next/link";
+import { TrendingUp, ChevronRight, ChevronLeft, Info, School } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
 import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
-import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/EmptyState";
-import { SkeletonWrapper } from "@/components/ui/skeleton-wrapper";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import { LiveStatsBar } from "@/components/landing/LiveStatsBar";
 import { AdmissionFeed } from "@/components/AdmissionFeed";
-import { CAT_STYLE } from "@/lib/analysis-helpers";
 import { fetchWithAuth } from "@/lib/api-client";
 import { getCachedMatch, setCachedMatch } from "@/lib/match-cache";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
@@ -25,14 +19,35 @@ import { MigrationNudgeBanner } from "@/components/ia/MigrationNudgeBanner";
 import { useSectionViewTracking } from "@/hooks/useSectionViewTracking";
 import { SECTION_IDS } from "@/lib/analytics/section-ids";
 import { normalizePlan } from "@/lib/plans";
-import type { Specs, School } from "@/lib/matching";
-import Link from "next/link";
+import type { Specs, School as SchoolType } from "@/lib/matching";
+// v3 design system
+import { PageHeader } from "@/components/ui-v2/page-header";
+import { Card } from "@/components/ui-v2/card";
+import { Button } from "@/components/ui-v2/button";
+import { EmptyState } from "@/components/ui-v2/empty-state";
+import { Skeleton } from "@/components/ui-v2/skeleton";
+import { SegmentedControl } from "@/components/ui-v2/segmented-control";
+import type { AdmissionCategory } from "@/components/ui-v2/category-pill";
 
 // Sparkline은 recharts(~100KB) 의존 — dynamic import로 초기 번들 분리
 const Sparkline = dynamic(
   () => import("@/components/Sparkline").then((m) => ({ default: m.Sparkline })),
   { ssr: false, loading: () => <div style={{ height: 48 }} aria-hidden="true" /> },
 );
+
+/** Domain category → v3 category. 색·dot 일관성을 위해 분포 카드도 v3 토큰으로 통일. */
+const CATEGORY_INFO: Array<{
+  label: string;
+  v3: AdmissionCategory;
+  domain: "Reach" | "Hard Target" | "Target" | "Safety";
+  range: string;
+  meaning: string;
+}> = [
+  { label: "Reach", v3: "reach", domain: "Reach", range: "15% 미만", meaning: "도전" },
+  { label: "Hard Target", v3: "hard", domain: "Hard Target", range: "15–45%", meaning: "어려운 현실" },
+  { label: "Target", v3: "target", domain: "Target", range: "45–70%", meaning: "현실적" },
+  { label: "Safety", v3: "safety", domain: "Safety", range: "70% 이상", meaning: "안전권" },
+];
 
 export default function InsightsPage() {
   return (
@@ -57,7 +72,7 @@ function InsightsPageInner() {
   const matchToefl = profile?.toefl || "";
   const matchMajor = profile?.major || "";
 
-  const [allMatchResults, setAllMatchResults] = useState<School[]>([]);
+  const [allMatchResults, setAllMatchResults] = useState<SchoolType[]>([]);
   const [matchLoading, setMatchLoading] = useState(true);
   useEffect(() => {
     if (!hasSpecs) {
@@ -84,7 +99,7 @@ function InsightsPageInner() {
     setMatchLoading(true);
     const ac = new AbortController();
     const timer = setTimeout(() => {
-      fetchWithAuth<{ results: School[]; plan?: string }>("/api/match", {
+      fetchWithAuth<{ results: SchoolType[]; plan?: string }>("/api/match", {
         method: "POST",
         body: JSON.stringify({ specs }),
         signal: ac.signal,
@@ -104,26 +119,23 @@ function InsightsPageInner() {
   }, [hasSpecs, matchGpa, matchSat, matchToefl, matchMajor, showApiError, user?.uid]);
 
   const quickResults = useMemo(() => allMatchResults.slice(0, 8), [allMatchResults]);
-  const safetyCount = quickResults.filter((s) => s.cat === "Safety").length;
-  const targetCount = quickResults.filter((s) => s.cat === "Target").length;
-  const hardTargetCount = quickResults.filter((s) => s.cat === "Hard Target").length;
-  const reachCount = quickResults.filter((s) => s.cat === "Reach").length;
+  const counts = useMemo(() => {
+    return CATEGORY_INFO.map((info) => ({
+      ...info,
+      count: quickResults.filter((s) => s.cat === info.domain).length,
+    }));
+  }, [quickResults]);
+  const statsTotal = counts.reduce((sum, c) => sum + c.count, 0);
+  const reachCount = counts.find((c) => c.domain === "Reach")?.count ?? 0;
+  const safetyCount = counts.find((c) => c.domain === "Safety")?.count ?? 0;
 
   // dashboard와 동일한 Mar-May commitment window — AdmissionFeed/Banner 노출 기준
   const currentMonth = new Date().getMonth() + 1;
   const isAdmissionSeason = currentMonth >= 3 && currentMonth <= 5;
 
-  const statsItems = [
-    { label: "Reach", count: reachCount, dot: CAT_STYLE.Reach.dot, range: "15% 미만", meaning: "도전" },
-    { label: "Hard Target", count: hardTargetCount, dot: CAT_STYLE["Hard Target"].dot, range: "15–45%", meaning: "어려운 현실" },
-    { label: "Target", count: targetCount, dot: CAT_STYLE.Target.dot, range: "45–70%", meaning: "현실적" },
-    { label: "Safety", count: safetyCount, dot: CAT_STYLE.Safety.dot, range: "70% 이상", meaning: "안전권" },
-  ];
-
-  const statsTotal = reachCount + hardTargetCount + targetCount + safetyCount;
   const showStats = hasSpecs && quickResults.length > 0 && statsTotal > 0;
 
-  // 성장 섹션 타임라인 필터 — 전체/3·6·12개월. 너무 길어진 기록에서 최근 변화를 비교하기 위함.
+  // 성장 섹션 타임라인 필터 — 전체/3·6·12개월.
   const [timelineFilter, setTimelineFilter] = useState<"all" | "3m" | "6m" | "12m">("all");
   const filteredSnapshots = useMemo(() => {
     if (timelineFilter === "all") return snapshots;
@@ -172,249 +184,362 @@ function InsightsPageInner() {
   );
 
   return (
-    <div className="min-h-dvh bg-background pb-nav">
-      <PageHeader
-        title="현황"
-        subtitle="합격 라인업·실시간 통계·성장 추이"
-        backHref="/dashboard"
-      />
-
-      <main className="px-gutter-sm md:px-gutter space-y-5 lg:max-w-content-wide lg:mx-auto">
-        <MigrationNudgeBanner source="insights" />
-        {!hasSpecs ? (
-          <Card variant="elevated" className="overflow-hidden">
-            <EmptyState
-              illustration="school"
-              title="아직 분석할 데이터가 없어요"
-              description={<>GPA·SAT를 입력하면<br />합격 라인업과 통계를 볼 수 있어요</>}
-              action={
-                <Link href="/analysis">
-                  <Button className="px-6">
-                    분석 시작하기 <ChevronRight className="w-4 h-4 ml-1" />
-                  </Button>
-                </Link>
-              }
-            />
-          </Card>
-        ) : (
-          <>
-            {/* Stats row */}
-            <SkeletonWrapper
-              loading={matchLoading}
-              skeleton={<Skeleton className="rounded-2xl h-[88px]" />}
+    <div
+      className="min-h-dvh pb-nav"
+      style={{ background: "var(--ds-bg-canvas)" }}
+    >
+      <div className="px-6 lg:px-8 pt-safe pt-6 lg:pt-10 mx-auto max-w-[1120px]">
+        <PageHeader
+          title="현황"
+          subtitle="합격 라인업·실시간 통계·성장 추이"
+          eyebrow={
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-1 text-ds-body-sm hover:underline underline-offset-2"
+              style={{ color: "var(--ds-text-tertiary)" }}
             >
-              {showStats ? (
-              <section aria-label="합격 가능성 분포" ref={statsViewRef}>
-                <div className="mb-2.5">
-                  <h2 className="font-headline text-base font-bold">합격 가능성 분포</h2>
-                  <p className="text-xs text-muted-foreground mt-1 leading-snug">
-                    내 스펙으로 매칭된 상위 {statsTotal}개교를 합격 확률로 분류했어요
-                  </p>
-                </div>
-                <div
-                  ref={statsGridRef}
-                  className="rounded-2xl bg-muted/40 border border-border/50 p-4 space-y-3"
-                >
-                  {statsItems.map(({ label, count, dot, range, meaning }) => (
-                    <CategoryBar
-                      key={label}
-                      label={label}
-                      count={count}
-                      total={statsTotal}
-                      dot={dot}
-                      range={range}
-                      meaning={meaning}
-                    />
-                  ))}
-                </div>
-                {balanceMessage && (
-                  <div className="mt-2.5 flex items-start gap-2">
-                    <Info className="w-3.5 h-3.5 text-muted-foreground/70 shrink-0 mt-0.5" aria-hidden="true" />
-                    <p className="text-xs text-muted-foreground leading-snug">
-                      {balanceMessage}{" "}
-                      <Link
-                        href="/analysis"
-                        className="text-primary font-semibold underline-offset-2 hover:underline whitespace-nowrap"
-                      >
-                        분석 페이지 →
-                      </Link>
+              <ChevronLeft className="size-4" aria-hidden="true" />
+              대시보드
+            </Link>
+          }
+        />
+
+        <main className="space-y-6">
+          <MigrationNudgeBanner source="insights" />
+
+          {!hasSpecs ? (
+            <Card>
+              <EmptyState
+                tone="brand"
+                illustration={<School />}
+                title="아직 분석할 데이터가 없어요"
+                description={
+                  <>
+                    GPA·SAT를 입력하면<br />
+                    합격 라인업과 통계를 볼 수 있어요
+                  </>
+                }
+                action={
+                  <Button asChild>
+                    <Link href="/analysis">
+                      분석 시작하기
+                      <ChevronRight className="size-4" aria-hidden="true" />
+                    </Link>
+                  </Button>
+                }
+              />
+            </Card>
+          ) : (
+            <>
+              {/* Stats row */}
+              {matchLoading ? (
+                <Skeleton className="h-[220px] rounded-ds-card" />
+              ) : showStats ? (
+                <section aria-label="합격 가능성 분포" ref={statsViewRef}>
+                  <div className="mb-3">
+                    <h2 className="text-ds-heading-md text-[color:var(--ds-text-primary)]">
+                      합격 가능성 분포
+                    </h2>
+                    <p
+                      className="text-ds-body-sm mt-1 leading-relaxed"
+                      style={{ color: "var(--ds-text-secondary)" }}
+                    >
+                      내 스펙으로 매칭된 상위 {statsTotal}개교를 합격 확률로 분류했어요
                     </p>
                   </div>
-                )}
-              </section>
-              ) : null}
-            </SkeletonWrapper>
-
-            {/* LiveStatsBar full */}
-            <section aria-label="실시간 통계" ref={liveStatsViewRef}>
-              <LiveStatsBar variant="full" />
-            </section>
-
-            {/* AdmissionFeed — 시즌(Mar–May) */}
-            {isAdmissionSeason && (
-              <section aria-label="합격 실황 피드" ref={feedViewRef}>
-                <h2 className="font-headline text-base font-bold mb-2.5">합격 실황</h2>
-                <AdmissionFeed />
-              </section>
-            )}
-
-            {/* Growth — 2회 이상 snapshot */}
-            {snapshots.length >= 2 ? (
-              (() => {
-                const inRange = filteredSnapshots.length >= 2 ? filteredSnapshots : snapshots;
-                const first = inRange[0];
-                const current = inRange[inRange.length - 1];
-                const totalSatDiff =
-                  first.sat && current.sat ? parseInt(current.sat) - parseInt(first.sat) : 0;
-                const totalProbDiff =
-                  first.dreamSchoolProb != null && current.dreamSchoolProb != null
-                    ? current.dreamSchoolProb - first.dreamSchoolProb
-                    : null;
-                const probData = inRange
-                  .filter((s) => s.dreamSchoolProb != null)
-                  .map((s) => ({ x: s.date, y: s.dreamSchoolProb as number }));
-
-                const filterChips: { id: "all" | "3m" | "6m" | "12m"; label: string }[] = [
-                  { id: "3m", label: "3개월" },
-                  { id: "6m", label: "6개월" },
-                  { id: "12m", label: "1년" },
-                  { id: "all", label: "전체" },
-                ];
-
-                return (
-                  <Card ref={growthViewRef} className="p-4 rounded-2xl bg-card border border-border/60 shadow-sm">
-                    <div className="flex items-center gap-2 mb-3">
-                      <TrendingUp className="w-4 h-4 text-primary" />
-                      <p className="text-sm font-bold">나의 성장</p>
-                      <span className="text-xs text-muted-foreground ml-auto">
-                        {inRange.length}회 · 전체 {snapshots.length}회
-                      </span>
+                  <Card variant="subtle">
+                    <div ref={statsGridRef} className="space-y-4">
+                      {counts.map((c) => (
+                        <CategoryBar
+                          key={c.label}
+                          label={c.label}
+                          count={c.count}
+                          total={statsTotal}
+                          category={c.v3}
+                          range={c.range}
+                          meaning={c.meaning}
+                        />
+                      ))}
                     </div>
-
-                    <div className="flex gap-1.5 mb-3" role="tablist" aria-label="기간 필터">
-                      {filterChips.map((c) => {
-                        const active = timelineFilter === c.id;
-                        return (
-                          <button
-                            key={c.id}
-                            type="button"
-                            role="tab"
-                            aria-selected={active}
-                            onClick={() => setTimelineFilter(c.id)}
-                            className={`text-2xs font-semibold px-2.5 h-7 rounded-full border transition-colors ${
-                              active
-                                ? "bg-primary text-primary-foreground border-primary"
-                                : "bg-background text-muted-foreground border-border/60 hover:border-primary/40 hover:text-foreground"
-                            }`}
-                          >
-                            {c.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {probData.length >= 2 && (
-                      <div className="mb-3">
-                        <p className="text-2xs text-muted-foreground mb-1">
-                          {current.dreamSchool} 합격 확률
-                        </p>
-                        <Sparkline data={probData} height={48} />
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-accent/30 rounded-xl p-2.5 text-center">
-                        <p className="text-2xs text-muted-foreground">{first.date}</p>
-                        {first.sat && <p className="text-sm font-bold mt-0.5">SAT {first.sat}</p>}
-                        {first.dreamSchoolProb != null && (
-                          <p className="text-2xs text-muted-foreground">{first.dreamSchoolProb}%</p>
-                        )}
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                      <div className="flex-1 bg-primary/5 rounded-xl p-2.5 text-center border border-primary/15">
-                        <p className="text-2xs text-primary font-medium">현재</p>
-                        {current.sat && <p className="text-sm font-bold mt-0.5">SAT {current.sat}</p>}
-                        {current.dreamSchoolProb != null && (
-                          <p className="text-2xs text-primary font-semibold">
-                            {current.dreamSchoolProb}%
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {(totalSatDiff !== 0 || (totalProbDiff != null && totalProbDiff !== 0)) && (
-                      <div className="flex items-center justify-center gap-3 mt-3 pt-3 border-t border-border/50 text-xs">
-                        {totalSatDiff !== 0 && (
-                          <span
-                            className={`font-semibold ${totalSatDiff > 0 ? "text-success" : "text-destructive"}`}
-                          >
-                            SAT {totalSatDiff > 0 ? "+" : ""}
-                            {totalSatDiff}
-                          </span>
-                        )}
-                        {totalProbDiff != null && totalProbDiff !== 0 && (
-                          <span
-                            className={`font-semibold ${totalProbDiff > 0 ? "text-success" : "text-destructive"}`}
-                          >
-                            합격 확률 {totalProbDiff > 0 ? "+" : ""}
-                            {totalProbDiff}%
-                          </span>
-                        )}
-                      </div>
-                    )}
                   </Card>
-                );
-              })()
-            ) : (
-              <Card className="p-5 rounded-2xl border border-border/60 bg-card text-center space-y-2">
-                <TrendingUp className="w-8 h-8 text-muted-foreground/40 mx-auto" aria-hidden="true" />
-                <p className="text-sm font-semibold">성장 기록은 분석 2회 이후 활성화돼요</p>
-                <p className="text-xs text-muted-foreground">
-                  스펙을 업데이트하며 분석을 반복하면, SAT·합격 확률 변화가 여기 표시돼요.
-                </p>
-              </Card>
-            )}
-          </>
-        )}
-      </main>
+                  {balanceMessage && (
+                    <div className="mt-3 flex items-start gap-2">
+                      <Info
+                        className="size-3.5 shrink-0 mt-0.5"
+                        style={{ color: "var(--ds-text-tertiary)" }}
+                        aria-hidden="true"
+                      />
+                      <p
+                        className="text-ds-body-sm leading-relaxed"
+                        style={{ color: "var(--ds-text-secondary)" }}
+                      >
+                        {balanceMessage}{" "}
+                        <Link
+                          href="/analysis"
+                          className="font-semibold underline-offset-2 hover:underline whitespace-nowrap"
+                          style={{ color: "var(--ds-brand-primary)" }}
+                        >
+                          분석 페이지 →
+                        </Link>
+                      </p>
+                    </div>
+                  )}
+                </section>
+              ) : null}
+
+              {/* LiveStatsBar full */}
+              <section aria-label="실시간 통계" ref={liveStatsViewRef}>
+                <LiveStatsBar variant="full" />
+              </section>
+
+              {/* AdmissionFeed — 시즌(Mar–May) */}
+              {isAdmissionSeason && (
+                <section aria-label="합격 실황 피드" ref={feedViewRef}>
+                  <h2 className="text-ds-heading-md text-[color:var(--ds-text-primary)] mb-3">
+                    합격 실황
+                  </h2>
+                  <AdmissionFeed />
+                </section>
+              )}
+
+              {/* Growth — 2회 이상 snapshot */}
+              {snapshots.length >= 2 ? (
+                (() => {
+                  const inRange = filteredSnapshots.length >= 2 ? filteredSnapshots : snapshots;
+                  const first = inRange[0];
+                  const current = inRange[inRange.length - 1];
+                  const totalSatDiff =
+                    first.sat && current.sat ? parseInt(current.sat) - parseInt(first.sat) : 0;
+                  const totalProbDiff =
+                    first.dreamSchoolProb != null && current.dreamSchoolProb != null
+                      ? current.dreamSchoolProb - first.dreamSchoolProb
+                      : null;
+                  const probData = inRange
+                    .filter((s) => s.dreamSchoolProb != null)
+                    .map((s) => ({ x: s.date, y: s.dreamSchoolProb as number }));
+
+                  return (
+                    <Card ref={growthViewRef}>
+                      <div className="flex items-center gap-2 mb-4">
+                        <TrendingUp
+                          className="size-4"
+                          style={{ color: "var(--ds-brand-primary)" }}
+                          aria-hidden="true"
+                        />
+                        <p className="text-ds-body-md font-semibold text-[color:var(--ds-text-primary)]">
+                          나의 성장
+                        </p>
+                        <span
+                          className="text-ds-body-sm ml-auto tabular-nums"
+                          style={{ color: "var(--ds-text-tertiary)" }}
+                        >
+                          {inRange.length}회 · 전체 {snapshots.length}회
+                        </span>
+                      </div>
+
+                      <SegmentedControl
+                        ariaLabel="기간 필터"
+                        size="sm"
+                        className="mb-4"
+                        value={timelineFilter}
+                        onValueChange={(v) =>
+                          setTimelineFilter(v as "all" | "3m" | "6m" | "12m")
+                        }
+                        segments={[
+                          { value: "3m", label: "3개월" },
+                          { value: "6m", label: "6개월" },
+                          { value: "12m", label: "1년" },
+                          { value: "all", label: "전체" },
+                        ]}
+                      />
+
+                      {probData.length >= 2 && (
+                        <div className="mb-4">
+                          <p
+                            className="text-ds-body-sm mb-1.5"
+                            style={{ color: "var(--ds-text-tertiary)" }}
+                          >
+                            {current.dreamSchool} 합격 확률
+                          </p>
+                          <Sparkline data={probData} height={48} />
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="flex-1 rounded-ds-input p-3 text-center"
+                          style={{ background: "var(--ds-bg-subtle)" }}
+                        >
+                          <p
+                            className="text-ds-body-sm"
+                            style={{ color: "var(--ds-text-tertiary)" }}
+                          >
+                            {first.date}
+                          </p>
+                          {first.sat && (
+                            <p className="text-ds-body-md font-semibold mt-1 tabular-nums text-[color:var(--ds-text-primary)]">
+                              SAT {first.sat}
+                            </p>
+                          )}
+                          {first.dreamSchoolProb != null && (
+                            <p
+                              className="text-ds-body-sm tabular-nums"
+                              style={{ color: "var(--ds-text-tertiary)" }}
+                            >
+                              {first.dreamSchoolProb}%
+                            </p>
+                          )}
+                        </div>
+                        <ChevronRight
+                          className="size-4 shrink-0"
+                          style={{ color: "var(--ds-text-tertiary)" }}
+                          aria-hidden="true"
+                        />
+                        <div
+                          className="flex-1 rounded-ds-input p-3 text-center"
+                          style={{
+                            background: "var(--ds-brand-primary-soft)",
+                            border: "1px solid var(--ds-brand-primary)",
+                          }}
+                        >
+                          <p
+                            className="text-ds-body-sm font-medium"
+                            style={{ color: "var(--ds-brand-primary)" }}
+                          >
+                            현재
+                          </p>
+                          {current.sat && (
+                            <p className="text-ds-body-md font-semibold mt-1 tabular-nums text-[color:var(--ds-text-primary)]">
+                              SAT {current.sat}
+                            </p>
+                          )}
+                          {current.dreamSchoolProb != null && (
+                            <p
+                              className="text-ds-body-sm font-semibold tabular-nums"
+                              style={{ color: "var(--ds-brand-primary)" }}
+                            >
+                              {current.dreamSchoolProb}%
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {(totalSatDiff !== 0 ||
+                        (totalProbDiff != null && totalProbDiff !== 0)) && (
+                        <div
+                          className="flex items-center justify-center gap-4 mt-4 pt-4 text-ds-body-sm"
+                          style={{ borderTop: "1px solid var(--ds-border-subtle)" }}
+                        >
+                          {totalSatDiff !== 0 && (
+                            <span
+                              className="font-semibold tabular-nums"
+                              style={{
+                                color:
+                                  totalSatDiff > 0
+                                    ? "var(--ds-success)"
+                                    : "var(--ds-danger)",
+                              }}
+                            >
+                              SAT {totalSatDiff > 0 ? "+" : ""}
+                              {totalSatDiff}
+                            </span>
+                          )}
+                          {totalProbDiff != null && totalProbDiff !== 0 && (
+                            <span
+                              className="font-semibold tabular-nums"
+                              style={{
+                                color:
+                                  totalProbDiff > 0
+                                    ? "var(--ds-success)"
+                                    : "var(--ds-danger)",
+                              }}
+                            >
+                              합격 확률 {totalProbDiff > 0 ? "+" : ""}
+                              {totalProbDiff}%
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </Card>
+                  );
+                })()
+              ) : (
+                <Card className="text-center space-y-2">
+                  <TrendingUp
+                    className="size-8 mx-auto"
+                    style={{ color: "var(--ds-text-tertiary)" }}
+                    aria-hidden="true"
+                  />
+                  <p className="text-ds-body-md font-semibold text-[color:var(--ds-text-primary)]">
+                    성장 기록은 분석 2회 이후 활성화돼요
+                  </p>
+                  <p
+                    className="text-ds-body-sm leading-relaxed"
+                    style={{ color: "var(--ds-text-secondary)" }}
+                  >
+                    스펙을 업데이트하며 분석을 반복하면, SAT·합격 확률 변화가 여기 표시돼요.
+                  </p>
+                </Card>
+              )}
+            </>
+          )}
+        </main>
+      </div>
 
       <BottomNav />
     </div>
   );
 }
 
+/** 카테고리별 막대 — v3 카테고리 토큰 색 사용. */
 function CategoryBar({
   label,
   count,
   total,
-  dot,
+  category,
   range,
   meaning,
 }: {
   label: string;
   count: number;
   total: number;
-  dot: string;
+  category: AdmissionCategory;
   range: string;
   meaning: string;
 }) {
   const display = useCountUp(count, { duration: 900 });
   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  const color = `var(--ds-${category})`;
   return (
     <div>
-      <div className="flex items-center gap-2 mb-1">
-        <span className={`w-2 h-2 rounded-full ${dot} shrink-0`} aria-hidden="true" />
-        <p className="text-xs font-semibold">{label}</p>
-        <span className="text-2xs text-muted-foreground tabular-nums">
+      <div className="flex items-center gap-2 mb-1.5">
+        <span
+          className="size-2 rounded-ds-pill shrink-0"
+          style={{ backgroundColor: color }}
+          aria-hidden="true"
+        />
+        <p className="text-ds-body-sm font-semibold text-[color:var(--ds-text-primary)]">
+          {label}
+        </p>
+        <span
+          className="text-ds-body-sm tabular-nums"
+          style={{ color: "var(--ds-text-tertiary)" }}
+        >
           {range} · {meaning}
         </span>
-        <p className="ml-auto text-sm font-bold tabular-nums leading-none font-headline">
+        <p className="ml-auto text-ds-body-md font-bold tabular-nums leading-none text-[color:var(--ds-text-primary)]">
           {display}
-          <span className="text-2xs font-normal text-muted-foreground ml-0.5">개</span>
+          <span
+            className="text-ds-body-sm font-normal ml-0.5"
+            style={{ color: "var(--ds-text-tertiary)" }}
+          >
+            개
+          </span>
         </p>
       </div>
       <div
-        className="h-2 rounded-full bg-muted/60 overflow-hidden"
+        className="h-2 rounded-ds-pill overflow-hidden"
+        style={{ background: "var(--ds-bg-subtle)" }}
         role="progressbar"
         aria-valuenow={count}
         aria-valuemin={0}
@@ -422,8 +547,12 @@ function CategoryBar({
         aria-label={`${label} ${count}개, 전체의 ${pct}%`}
       >
         <div
-          className={`h-full ${dot} transition-[width] duration-700 ease-toss`}
-          style={{ width: `${pct}%` }}
+          className="h-full transition-[width] duration-700"
+          style={{
+            width: `${pct}%`,
+            backgroundColor: color,
+            transitionTimingFunction: "var(--ds-ease-out)",
+          }}
         />
       </div>
     </div>
