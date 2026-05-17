@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
 import { type Specs } from "@/lib/matching";
 import { BarChart3 } from "lucide-react";
+import { PageHeader } from "@/components/ui-v2/page-header";
 import { useAuth } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
 import { readJSON, writeJSON } from "@/lib/storage";
@@ -183,21 +183,46 @@ function AnalysisPageInner() {
   }
 
   return (
-    <div className="min-h-dvh bg-background pb-nav">
-      <PageHeader
-        title="분석"
-        hideBack
-        leading={<BarChart3 className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />}
-        action={
-          (specsSaveStatus === "saving" || specsSaveStatus === "saved" || specLastUpdated) ? (
-            <div className="flex items-center gap-1.5">
-              {specsSaveStatus === "saving" && <span className="text-xs text-muted-foreground animate-pulse">저장 중...</span>}
-              {specsSaveStatus === "saved" && <span className="text-xs text-emerald-600">저장됨</span>}
-              {specLastUpdated && <span className="text-xs text-muted-foreground">· {specLastUpdated}</span>}
-            </div>
-          ) : null
-        }
-      />
+    <div
+      className="min-h-dvh pb-nav"
+      style={{ background: "var(--ds-bg-canvas)" }}
+    >
+      <div className="px-6 lg:px-8 pt-safe pt-6 lg:pt-10 mx-auto max-w-[1120px]">
+        <PageHeader
+          title={
+            <span className="inline-flex items-center gap-2">
+              <BarChart3
+                className="size-6 shrink-0"
+                style={{ color: "var(--ds-brand-primary)" }}
+                aria-hidden="true"
+              />
+              분석
+            </span>
+          }
+          actions={
+            (specsSaveStatus === "saving" || specsSaveStatus === "saved" || specLastUpdated) ? (
+              <div className="flex items-center gap-1.5 text-ds-body-sm">
+                {specsSaveStatus === "saving" && (
+                  <span
+                    className="animate-pulse"
+                    style={{ color: "var(--ds-text-tertiary)" }}
+                  >
+                    저장 중...
+                  </span>
+                )}
+                {specsSaveStatus === "saved" && (
+                  <span style={{ color: "var(--ds-safety)" }}>저장됨</span>
+                )}
+                {specLastUpdated && (
+                  <span style={{ color: "var(--ds-text-tertiary)" }}>
+                    · {specLastUpdated}
+                  </span>
+                )}
+              </div>
+            ) : null
+          }
+        />
+      </div>
       <AnalysisFormWizard specs={specs} updateSpec={updateSpec} onSubmit={startAnalysis} />
       <BottomNav />
     </div>
