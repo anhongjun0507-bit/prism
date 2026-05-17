@@ -4,13 +4,13 @@ import { useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
 import { PLANS, normalizePlan } from "@/lib/plans";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui-v2/button";
+import { Card } from "@/components/ui-v2/card";
+import { Badge } from "@/components/ui-v2/badge";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { Check, Crown, ArrowUpRight, Download, Upload, Sun, Moon, ShieldAlert, CalendarClock, CreditCard, Receipt } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui-v2/page-header";
 import { isHapticEnabled, setHapticEnabled, haptic } from "@/hooks/use-haptic";
 import { isChimeEnabled, setChimeEnabled, chime } from "@/lib/chime";
 import { useRouter } from "next/navigation";
@@ -134,10 +134,15 @@ function SubscriptionPageInner() {
   };
 
   return (
-    <div className="min-h-dvh bg-background pb-nav">
-      <PageHeader title="구독 관리" />
+    <div
+      className="min-h-dvh pb-nav"
+      style={{ background: "var(--ds-bg-canvas)" }}
+    >
+      <div className="px-6 lg:px-8 pt-safe pt-6 lg:pt-10 mx-auto max-w-[720px]">
+        <PageHeader title="구독 관리" subtitle="플랜·결제·설정·데이터를 한 곳에서 관리해요" />
+      </div>
 
-      <div className="px-gutter-sm md:px-gutter space-y-6 lg:max-w-content lg:mx-auto">
+      <div className="px-6 lg:px-8 space-y-6 mx-auto max-w-[720px]">
         {/* Current Plan */}
         <Card className="bg-primary text-white border-none p-6 relative overflow-hidden animate-fade-up prism-strip">
           <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-white/10 rounded-full blur-[60px]" />
@@ -145,7 +150,7 @@ function SubscriptionPageInner() {
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-1">
               {currentPlan === "elite" && <Crown className="w-5 h-5 text-amber-300" />}
-              <Badge variant="secondary" className="bg-white/15 text-white border-white/20">현재 플랜</Badge>
+              <Badge variant="neutral" className="bg-white/15 text-white border-white/20">현재 플랜</Badge>
             </div>
             <h2 className="text-3xl font-bold font-headline mt-2">{plan.displayName}</h2>
             <p className="text-white/80 text-sm mt-1">{monthlyPriceLabel}</p>
@@ -260,17 +265,17 @@ function SubscriptionPageInner() {
           {currentPlan === "pro" && (
             <>
               <Button
-                size="xl"
+                size="lg"
                 onClick={() => router.push("/pricing")}
                 className="w-full rounded-xl font-bold"
               >
                 Elite로 업그레이드
               </Button>
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={() => setCancelDialogOpen(true)}
                 disabled={cancelling}
-                size="xl"
+                size="lg"
                 className="w-full rounded-xl text-red-500 border-red-200 hover:bg-red-50"
               >
                 {cancelling ? "해지 처리 중..." : "구독 해지"}
@@ -280,8 +285,8 @@ function SubscriptionPageInner() {
 
           {currentPlan === "elite" && (
             <Button
-              variant="outline"
-              size="xl"
+              variant="secondary"
+              size="lg"
               onClick={handleCancel}
               disabled={cancelling}
               className="w-full rounded-xl text-red-500 border-red-200 hover:bg-red-50"
@@ -362,10 +367,10 @@ function SubscriptionPageInner() {
           <h3 className="font-bold text-sm">데이터 관리</h3>
           <p className="text-xs text-muted-foreground">에세이, 플래너, 성장 기록을 다른 기기로 옮기거나 백업할 수 있어요.</p>
           <div className="flex gap-3">
-            <Button variant="outline" size="sm" className="flex-1 gap-1.5" onClick={handleExport}>
+            <Button variant="secondary" size="sm" className="flex-1 gap-1.5" onClick={handleExport}>
               <Download className="w-4 h-4" /> 내보내기
             </Button>
-            <Button variant="outline" size="sm" className="flex-1 gap-1.5" onClick={() => fileRef.current?.click()}>
+            <Button variant="secondary" size="sm" className="flex-1 gap-1.5" onClick={() => fileRef.current?.click()}>
               <Upload className="w-4 h-4" /> 가져오기
             </Button>
             <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleImport} />

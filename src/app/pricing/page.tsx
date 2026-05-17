@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { PLANS, normalizePlan, type Plan, type BillingCycle } from "@/lib/plans";
 import { trackPrismEvent } from "@/lib/analytics/events";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui-v2/button";
+import { Card } from "@/components/ui-v2/card";
+import { Badge } from "@/components/ui-v2/badge";
 import { Check, Sparkles, Users, Loader2, Crown, Smartphone } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui-v2/page-header";
 import { SegmentedControl, SegmentedControlItem } from "@/components/ui/segmented-control";
 import { fetchWithAuth } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
@@ -100,10 +100,15 @@ export default function PricingPage() {
   const planOrder: Plan[] = ["free", "pro", "elite"];
 
   return (
-    <div className="min-h-dvh bg-background pb-nav">
-      <PageHeader title="요금제 선택" />
+    <div
+      className="min-h-dvh pb-nav"
+      style={{ background: "var(--ds-bg-canvas)" }}
+    >
+      <div className="px-6 lg:px-8 pt-safe pt-6 lg:pt-10 mx-auto max-w-[1120px]">
+        <PageHeader title="요금제 선택" subtitle="대치동 컨설팅 1회 가격으로 한 달 내내 무제한" />
+      </div>
 
-      <div className="px-gutter-sm md:px-gutter space-y-5 lg:max-w-content-wide lg:mx-auto">
+      <div className="px-6 lg:px-8 space-y-5 mx-auto max-w-[1120px]">
         {/* Hero */}
         <div className="text-center pt-2 space-y-2">
           <h2 className="font-headline font-bold text-2xl leading-tight">
@@ -190,7 +195,7 @@ export default function PricingPage() {
           return (
             <Card
               key={plan.id}
-              variant={isRecommended ? "elevated" : "default"}
+              variant="default"
               className={`relative p-6 border-2 duration-micro ease-brand transition-colors flex flex-col ${
                 isRecommended
                   ? "border-primary shadow-hairline bg-accent"
@@ -205,7 +210,7 @@ export default function PricingPage() {
                 </Badge>
               )}
               {isElite && (
-                <Badge variant="gold" className="absolute -top-3 left-1/2 -translate-x-1/2 px-3">
+                <Badge variant="accent" className="absolute -top-3 left-1/2 -translate-x-1/2 px-3">
                   <Users className="w-3 h-3 mr-1" aria-hidden="true" /> 학부모가 선택
                 </Badge>
               )}
@@ -216,7 +221,7 @@ export default function PricingPage() {
                   <h3 className="font-bold text-lg">{plan.displayName}</h3>
                 </div>
                 {isCurrent && (
-                  <Badge variant="secondary" className="text-xs">현재</Badge>
+                  <Badge variant="neutral" className="text-xs">현재</Badge>
                 )}
               </div>
 
@@ -257,11 +262,11 @@ export default function PricingPage() {
 
               {/* CTA */}
               {isCurrent ? (
-                <Button variant="outline" className="w-full" disabled>
+                <Button variant="secondary" className="w-full" disabled>
                   현재 사용 중
                 </Button>
               ) : plan.id === "free" ? (
-                <Button variant="outline" className="w-full" disabled>
+                <Button variant="secondary" className="w-full" disabled>
                   기본 제공
                 </Button>
               ) : isMaster ? (

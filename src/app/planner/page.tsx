@@ -3,13 +3,13 @@
 import { Suspense, useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui-v2/page-header";
+import { Card } from "@/components/ui-v2/card";
+import { Button } from "@/components/ui-v2/button";
+import { Input } from "@/components/ui-v2/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui-v2/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -420,34 +420,38 @@ function PlannerPageInner() {
   const profileComplete = !!(profile?.grade && profile?.gpa && profile?.major && profile?.dreamSchool);
 
   return (
-    <div className="min-h-dvh bg-background pb-nav">
-      <PageHeader
-        title="입시 플래너"
-        subtitle="합격을 향한 중요한 일정을 관리하세요."
-        hideBack
-        action={
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={() => handleGenerate("balanced")}
-              variant="outline"
-              size="sm"
-              disabled={genLoading || !profileComplete}
-              className="rounded-full gap-1.5 shrink-0"
-              aria-label={profileComplete ? "AI로 다음 주 자동 생성" : "프로필을 먼저 완성해주세요"}
-              title={profileComplete ? undefined : "프로필을 완성해야 AI가 맞춤 일정을 만들 수 있어요"}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">AI 자동 생성</span>
-              <span className="sm:hidden">AI</span>
-            </Button>
-            <Button onClick={openAddDialog} size="icon" className="rounded-full w-10 h-10 shadow-lg shrink-0" aria-label="일정 추가">
-              <Plus className="w-4 h-4" />
-            </Button>
-          </div>
-        }
-      />
+    <div
+      className="min-h-dvh pb-nav"
+      style={{ background: "var(--ds-bg-canvas)" }}
+    >
+      <div className="px-6 lg:px-8 pt-safe pt-6 lg:pt-10 mx-auto max-w-[1120px]">
+        <PageHeader
+          title="입시 플래너"
+          subtitle="합격을 향한 중요한 일정을 관리하세요."
+          actions={
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => handleGenerate("balanced")}
+                variant="secondary"
+                size="sm"
+                disabled={genLoading || !profileComplete}
+                className="rounded-full gap-1.5 shrink-0"
+                aria-label={profileComplete ? "AI로 다음 주 자동 생성" : "프로필을 먼저 완성해주세요"}
+                title={profileComplete ? undefined : "프로필을 완성해야 AI가 맞춤 일정을 만들 수 있어요"}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">AI 자동 생성</span>
+                <span className="sm:hidden">AI</span>
+              </Button>
+              <Button onClick={openAddDialog} size="icon" className="rounded-full w-10 h-10 shadow-lg shrink-0" aria-label="일정 추가">
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+          }
+        />
+      </div>
       {!profileComplete && (
-        <div className="px-gutter-sm md:px-gutter pt-1 pb-3 lg:max-w-content-wide lg:mx-auto">
+        <div className="px-6 lg:px-8 pt-1 pb-3 mx-auto max-w-[1120px]">
           <div className="rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-950/20 p-3 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2">
             <Sparkles className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />
             <span className="flex-1">
@@ -464,7 +468,7 @@ function PlannerPageInner() {
         </div>
       )}
 
-      <div className="px-gutter-sm md:px-gutter space-y-6 lg:max-w-content-wide lg:mx-auto">
+      <div className="px-6 lg:px-8 space-y-6 mx-auto max-w-[1120px]">
         <PageIntroCard
           toolId="planner"
           title="입시 플래너란?"
@@ -477,7 +481,7 @@ function PlannerPageInner() {
 
         {/* Empty state — AI 자동 생성을 메인 CTA로 */}
         {tasks.length === 0 ? (
-          <Card variant="elevated">
+          <Card variant="default">
             <EmptyState
               illustration="task"
               title="아직 계획이 없어요"
@@ -595,7 +599,7 @@ function PlannerPageInner() {
                     )} />
                   </div>
                   <Card
-                    variant="elevated"
+                    variant="default"
                     interactive
                     className="flex-1 p-4"
                     onClick={() => openEditDialog(t)}
@@ -667,7 +671,7 @@ function PlannerPageInner() {
                         <div className="w-2 h-2 rounded-full bg-red-500" />
                       </div>
                       <Card
-                        variant="elevated"
+                        variant="default"
                         interactive
                         className="flex-1 p-4 border-l-2 border-l-red-400"
                         onClick={() => openEditDialog(t)}
@@ -726,7 +730,7 @@ function PlannerPageInner() {
                       <CheckCircle2 size={16} />
                     </div>
                     <Card
-                      variant="elevated"
+                      variant="default"
                       interactive
                       className="flex-1 p-4"
                       onClick={() => openEditDialog(t)}
@@ -948,7 +952,7 @@ function TaskDialog({
         <DialogFooter className="gap-2 sm:gap-2">
           {isEdit && (
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={onRequestDelete}
               className="rounded-xl text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
             >
@@ -956,7 +960,7 @@ function TaskDialog({
             </Button>
           )}
           <div className="flex-1" />
-          <Button variant="outline" onClick={onClose}>취소</Button>
+          <Button variant="secondary" onClick={onClose}>취소</Button>
           <Button onClick={handleSave} disabled={!title.trim()}>
             {isEdit ? "저장" : "추가"}
           </Button>

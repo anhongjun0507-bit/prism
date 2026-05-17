@@ -3,12 +3,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui-v2/button";
+import { Input } from "@/components/ui-v2/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui-v2/card";
+import { Badge } from "@/components/ui-v2/badge";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { UNI_LIST, MAJOR_LIST, majorMatchesQuery } from "@/lib/constants";
@@ -172,7 +172,10 @@ export default function OnboardingPage() {
   );
 
   return (
-    <div className="min-h-dvh bg-background flex flex-col p-8 pt-12 relative overflow-hidden lg:max-w-content-narrow lg:mx-auto lg:w-full">
+    <div
+      className="min-h-dvh flex flex-col p-8 pt-12 relative overflow-hidden mx-auto w-full max-w-[560px]"
+      style={{ background: "var(--ds-bg-canvas)" }}
+    >
 
       {/* Step indicator — 잉크 단색 dot tracker */}
       <div className="relative space-y-3 mb-10">
@@ -634,7 +637,7 @@ export default function OnboardingPage() {
       {/* Navigation buttons */}
       <div className="mt-auto pt-8 flex gap-3">
         {step > 1 && step < 3 && (
-          <Button variant="ghost" onClick={prevStep} size="2xl" className="rounded-2xl">
+          <Button variant="ghost" onClick={prevStep} size="lg" className="rounded-2xl">
             이전
           </Button>
         )}
@@ -652,7 +655,7 @@ export default function OnboardingPage() {
         {step === 2 && (
           <div className="flex-1 flex gap-3">
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={() => { setStepDir("forward"); setStep(3); }}
               className="h-14 flex-1 rounded-2xl"
             >

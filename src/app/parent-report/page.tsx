@@ -9,15 +9,15 @@ import { fetchWithAuth } from "@/lib/api-client";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { trackPrismEvent } from "@/lib/analytics/events";
 import { BottomNav } from "@/components/BottomNav";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui-v2/card";
+import { Button } from "@/components/ui-v2/button";
+import { Badge } from "@/components/ui-v2/badge";
 import { Progress } from "@/components/ui/progress";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/ui-v2/skeleton";
 import { UpgradeCTA } from "@/components/UpgradeCTA";
 import { ParentShareSection } from "@/components/parent/ParentShareSection";
 import { Users, TrendingUp, Award, Download, Sparkles, FileText } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui-v2/page-header";
 import { EmptyState } from "@/components/EmptyState";
 import Link from "next/link";
 
@@ -154,7 +154,7 @@ function ParentReportPageInner() {
       </div>
       <Button
         size="sm"
-        variant="outline"
+        variant="secondary"
         onClick={() => setMatchRetryToken((t) => t + 1)}
         className="shrink-0 rounded-xl"
       >
@@ -360,14 +360,19 @@ function ParentReportPageInner() {
   );
 
   return (
-    <main className="min-h-dvh bg-background pb-nav print:pb-0">
-      <PageHeader
-        title="학부모 리포트"
-        className="print:hidden"
-        action={!hasAccess && <Badge variant="secondary" className="text-xs">Pro</Badge>}
-      />
+    <main
+      className="min-h-dvh pb-nav print:pb-0"
+      style={{ background: "var(--ds-bg-canvas)" }}
+    >
+      <div className="px-6 lg:px-8 pt-safe pt-6 lg:pt-10 mx-auto max-w-[1280px] print:hidden">
+        <PageHeader
+          title="학부모 리포트"
+          subtitle="자녀 입시 현황을 한 페이지로 — 인쇄·공유 가능"
+          actions={!hasAccess ? <Badge variant="neutral" className="text-xs">Pro</Badge> : undefined}
+        />
+      </div>
 
-      <div className="px-gutter-sm md:px-gutter lg:max-w-content-full lg:mx-auto">
+      <div className="px-6 lg:px-8 mx-auto max-w-[1280px]">
         {hasAccess ? (
           matchLoading && hasSpecs && matchResults.length === 0 ? (
             reportSkeleton

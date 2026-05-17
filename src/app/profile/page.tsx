@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui-v2/page-header";
+import { Card } from "@/components/ui-v2/card";
+import { Button } from "@/components/ui-v2/button";
+import { Input } from "@/components/ui-v2/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
@@ -212,14 +212,27 @@ function ProfilePageInner() {
   };
 
   return (
-    <div className="min-h-dvh bg-background pb-nav">
-      <PageHeader
-        title="프로필 설정"
-        subtitle="이름·사진·학년 등 내 정보를 관리해요"
-        onBack={() => router.back()}
-      />
+    <div
+      className="min-h-dvh pb-nav"
+      style={{ background: "var(--ds-bg-canvas)" }}
+    >
+      <div className="px-6 lg:px-8 pt-safe pt-6 lg:pt-10 mx-auto max-w-[720px]">
+        <PageHeader
+          title="프로필 설정"
+          subtitle="이름·사진·학년 등 내 정보를 관리해요"
+          eyebrow={
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="inline-flex items-center gap-1 text-ds-body-sm hover:underline underline-offset-2"
+              style={{ color: "var(--ds-text-tertiary)" }}
+            >
+              ‹ 뒤로
+            </button>
+          }
+        />
 
-      <div className="px-gutter-sm md:px-gutter space-y-5 lg:max-w-content-narrow lg:mx-auto">
+        <main className="space-y-5">
         {/* Avatar + photo URL */}
         <Card className="p-5 rounded-2xl border border-border/60 bg-card shadow-sm">
           <div className="flex items-center gap-4">
@@ -584,6 +597,7 @@ function ProfilePageInner() {
             계정 삭제
           </Button>
         </div>
+        </main>
       </div>
 
       {/* 계정 삭제 플로우 — 2단계 AlertDialog */}
@@ -641,7 +655,7 @@ function ProfilePageInner() {
               </div>
               <AlertDialogFooter>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => setDeleteStep("closed")}
                 >
                   취소
@@ -695,7 +709,7 @@ function ProfilePageInner() {
               </div>
               <AlertDialogFooter>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   disabled={deleting}
                   onClick={() => {
                     setDeleteStep("closed");
