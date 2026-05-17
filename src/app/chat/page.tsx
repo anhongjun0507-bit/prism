@@ -771,7 +771,7 @@ function ChatPageInner() {
                           toast({
                             title: "복사 실패",
                             description: "직접 선택 후 복사해주세요.",
-                            variant: "destructive",
+                            variant: "danger",
                           });
                         }
                       }}

@@ -47,7 +47,7 @@ export function useApiErrorToast() {
       // 인증 문제 — 명시적 안내
       if (status === 401 || code === "NOT_AUTHENTICATED" || code === "TOKEN_FAILED") {
         toast({
-          variant: "destructive",
+          variant: "danger",
           title: "로그인이 필요해요",
           description: "세션이 만료되었어요. 다시 로그인해주세요.",
         });
@@ -65,7 +65,7 @@ export function useApiErrorToast() {
 
       // 기본 — ApiError면 서버 메시지, 아니면 일반 fallback
       toast({
-        variant: "destructive",
+        variant: "danger",
         title: opts.title || "요청 실패",
         description: serverMessage || "잠시 후 다시 시도해주세요.",
       });

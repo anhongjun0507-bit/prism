@@ -59,7 +59,7 @@ export function SampleReportActions() {
       toast({
         title: "복사 실패",
         description: "주소창의 URL을 직접 복사해주세요.",
-        variant: "destructive",
+        variant: "danger",
       });
     }
   };

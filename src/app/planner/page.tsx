@@ -217,7 +217,7 @@ function PlannerPageInner() {
         toast({
           title: "플래너 동기화 실패",
           description: "네트워크 연결을 확인한 뒤 다시 열어주세요. 로컬 임시 목록으로 표시 중이에요.",
-          variant: "destructive",
+          variant: "danger",
         });
       }
     }, () => { /* ignore errors, keep local state */ });
@@ -263,7 +263,7 @@ function PlannerPageInner() {
         toast({
           title: "삭제 실패",
           description: "서버 동기화에 실패했어요. 네트워크를 확인하고 다시 시도해주세요.",
-          variant: "destructive",
+          variant: "danger",
         });
         return;
       }
@@ -312,7 +312,7 @@ function PlannerPageInner() {
       toast({
         title: "로그인이 필요해요",
         description: "AI 자동 생성은 로그인 후 이용할 수 있어요.",
-        variant: "destructive",
+        variant: "danger",
       });
       return;
     }
@@ -344,27 +344,27 @@ function PlannerPageInner() {
         toast({
           title: "프로필을 먼저 완성해주세요",
           description: "학년·GPA·전공·관심 학교를 입력하면 맞춤 계획을 만들어드려요.",
-          variant: "destructive",
+          variant: "danger",
         });
         router.push("/profile");
       } else if (err.code === "QUOTA_EXCEEDED") {
         toast({
           title: "이번 달 무료 생성을 모두 사용했어요",
           description: "Pro로 업그레이드하면 무제한으로 생성할 수 있어요.",
-          variant: "destructive",
+          variant: "danger",
         });
         router.push("/pricing");
       } else if (err.status === 429) {
         toast({
           title: "잠시 후 다시 시도해주세요",
           description: "하루 생성 한도에 도달했어요 (5회).",
-          variant: "destructive",
+          variant: "danger",
         });
       } else {
         toast({
           title: "생성 실패",
           description: err.message || "잠시 후 다시 시도해주세요.",
-          variant: "destructive",
+          variant: "danger",
         });
       }
     } finally {
@@ -398,7 +398,7 @@ function PlannerPageInner() {
       toast({
         title: "저장 실패",
         description: "네트워크를 확인하고 다시 시도해주세요.",
-        variant: "destructive",
+        variant: "danger",
       });
     } finally {
       setGenSaving(false);

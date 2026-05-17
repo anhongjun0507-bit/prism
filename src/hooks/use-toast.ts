@@ -6,7 +6,7 @@ import * as React from "react"
 import type {
   ToastActionElement,
   ToastProps,
-} from "@/components/ui/toast"
+} from "@/components/ui-v2/toast"
 
 // Toast 동시 표시 한도 — 같은 액션에서 여러 알림이 쌓이는 경우(예: 학부모 토큰 발급 +
 // 카피 안내 동시 발사)를 위해 3개까지 허용. 그래도 너무 많으면 oldest가 잘림.

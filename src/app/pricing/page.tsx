@@ -90,7 +90,7 @@ export default function PricingPage() {
       toast({
         title: "결제를 시작할 수 없어요",
         description: message,
-        variant: "destructive",
+        variant: "danger",
       });
     } finally {
       setProcessing(null);

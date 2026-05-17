@@ -34,7 +34,7 @@ function PaymentSuccessContent() {
       toast({ title: "복구 ID가 복사되었어요" });
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast({ title: "복사 실패", description: "ID를 직접 선택해 복사해주세요.", variant: "destructive" });
+      toast({ title: "복사 실패", description: "ID를 직접 선택해 복사해주세요.", variant: "danger" });
     }
   };
 

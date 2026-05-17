@@ -483,7 +483,7 @@ function EssayReviewPageInner() {
         toast({
           title: "저장 실패",
           description: "첨삭은 받았지만 클라우드 저장에 실패했어요. 네트워크를 확인 후 다시 시도해주세요.",
-          variant: "destructive",
+          variant: "danger",
         });
       }
     }
@@ -635,7 +635,7 @@ function EssayReviewPageInner() {
         title: "분석은 완료됐지만 저장에 실패했어요",
         description:
           "결과는 화면에서 볼 수 있지만 목록에는 저장되지 않았어요. 다운로드하거나 복사해 보관해주세요.",
-        variant: "destructive",
+        variant: "danger",
       });
     } finally {
       setLoading(false);
@@ -1096,7 +1096,7 @@ function EssayReviewPageInner() {
                         toast({
                           title: "다운로드 실패",
                           description: "내용 복사로 대신 시도해주세요.",
-                          variant: "destructive",
+                          variant: "danger",
                         });
                       }
                     }}
@@ -1122,7 +1122,7 @@ function EssayReviewPageInner() {
                         toast({
                           title: "복사 실패",
                           description: "텍스트를 직접 선택해 복사해주세요.",
-                          variant: "destructive",
+                          variant: "danger",
                         });
                       }
                     }}

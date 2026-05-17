@@ -121,7 +121,7 @@ function ProfilePageInner() {
 
   const handleSave = async () => {
     if (!user) {
-      toast({ title: "로그인이 필요해요", variant: "destructive" });
+      toast({ title: "로그인이 필요해요", variant: "danger" });
       return;
     }
     // 필수 + 범위 검증을 한 번에 — 첫 에러에서 멈추지 않고 모두 표시.
@@ -166,7 +166,7 @@ function ProfilePageInner() {
       toast({
         title: "저장 실패",
         description: e instanceof Error ? e.message : "잠시 후 다시 시도해주세요.",
-        variant: "destructive",
+        variant: "danger",
       });
     } finally {
       setSaving(false);
@@ -205,7 +205,7 @@ function ProfilePageInner() {
       toast({
         title: "삭제에 실패했어요",
         description,
-        variant: "destructive",
+        variant: "danger",
       });
       setDeleting(false);
     }

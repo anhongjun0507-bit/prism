@@ -86,7 +86,7 @@ function SubscriptionPageInner() {
       toast({
         title: "해지 처리 실패",
         description: err instanceof Error ? err.message : "잠시 후 다시 시도해주세요.",
-        variant: "destructive",
+        variant: "danger",
       });
     } finally {
       setCancelling(false);

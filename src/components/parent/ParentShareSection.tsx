@@ -74,7 +74,7 @@ export function ParentShareSection() {
         toast({
           title: "활성 링크가 최대치예요",
           description: "기존 링크를 취소한 후 새로 발급해주세요.",
-          variant: "destructive",
+          variant: "danger",
         });
       } else {
         showApiError(err, { title: "링크 발급 실패" });
@@ -112,7 +112,7 @@ export function ParentShareSection() {
       toast({
         title: "URL 복사 실패",
         description: "브라우저 권한을 확인해주세요.",
-        variant: "destructive",
+        variant: "danger",
       });
     }
   };

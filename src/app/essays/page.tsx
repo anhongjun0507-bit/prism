@@ -16,7 +16,7 @@ import {
   Plus, Sparkles, ChevronRight, Trash2, PenLine, FileText as FileTextIcon,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { ToastAction } from "@/components/ui/toast";
+import { ToastAction } from "@/components/ui-v2/toast";
 import { useAuth } from "@/lib/auth-context";
 import { AuthRequired } from "@/components/AuthRequired";
 import Link from "next/link";
@@ -302,7 +302,7 @@ function EssaysPageInner() {
             toast({
               title: "자동 저장에 실패했어요",
               description: "네트워크를 확인해주세요. 편집한 내용은 이 기기에 남아 있어요.",
-              variant: "destructive",
+              variant: "danger",
             });
           }
         });
@@ -449,7 +449,7 @@ function EssaysPageInner() {
       toast({
         title: "삭제 실패",
         description: "서버 동기화에 실패했어요. 네트워크를 확인하고 다시 시도해주세요.",
-        variant: "destructive",
+        variant: "danger",
       });
       return;
     }
@@ -546,7 +546,7 @@ function EssaysPageInner() {
       toast({
         title: "에세이 구조 생성 실패",
         description: err instanceof Error ? err.message : "잠시 후 다시 시도해주세요.",
-        variant: "destructive",
+        variant: "danger",
       });
     } finally {
       if (outlineAbortRef.current === controller) {

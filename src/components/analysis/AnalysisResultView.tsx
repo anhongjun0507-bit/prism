@@ -152,7 +152,7 @@ export function AnalysisResultView({ specs, onBack, toggleFavorite, isFavorite }
               } else if (navigator.clipboard) {
                 navigator.clipboard.writeText(text).then(
                   () => toast({ description: "결과가 클립보드에 복사되었어요." }),
-                  () => toast({ description: "복사에 실패했어요.", variant: "destructive" })
+                  () => toast({ description: "복사에 실패했어요.", variant: "danger" })
                 );
               }
             }}

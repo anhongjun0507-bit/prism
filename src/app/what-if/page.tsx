@@ -181,7 +181,7 @@ function WhatIfPageInner() {
           toast({
             title: "시뮬레이션 실패",
             description: "네트워크를 확인하고 다시 시도해주세요.",
-            variant: "destructive",
+            variant: "danger",
           });
           console.warn("[what-if] simulation fetch failed:", e);
         });
