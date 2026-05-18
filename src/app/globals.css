@@ -1,507 +1,186 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   PRISM Design Tokens · v2 (2026-05-16 redesign)
+   PRISM Design Tokens · v3 (2026-05-18 redesign — Step 1)
    ─────────────────────────────────────────────────────────────────────────
-   단일 진실: docs/redesign-spec.md
-   - 액센트: 잉크 네이비 1색 (#0A0F1E)
-   - 프리미엄 강조: 골드 1색 (#B89968, 6곳 한정 사용)
-   - 보라/살구/테라코타·그라데이션·그림자 표면 폐기
-   - HSL 컴포넌트 형태로 저장(shadcn `hsl(var(--x))` 호환)
+   - Brand: Indigo #4F46E5 (Primary), Linear-pattern Black/White CTA
+   - Admission spectrum: Safety green / Match indigo / Reach amber
+   - shadcn 호환 토큰을 HSL 컴포넌트 형식으로 별도 정의
+   - 한국어 폰트는 jsdelivr Pretendard CDN dynamic-subset (layout.tsx 참조)
    ═══════════════════════════════════════════════════════════════════════ */
 
 @layer base {
   :root {
-    /* ── Surface ─────────────────────────────────────────────────────── */
-    --bg-canvas:     0 0% 98%;          /* #FAFAFA */
-    --bg-surface:    0 0% 100%;         /* #FFFFFF */
-    --bg-muted:      220 13% 96%;       /* #F4F5F7 */
-    --bg-inverse:    225 51% 8%;        /* #0A0F1E 잉크 네이비 */
-    --bg-inverse-2:  224 41% 13%;       /* #131A2E */
+    /* === Typography (CSS variable layer — next/font와 동기화) === */
+    --font-korean: "Pretendard Variable", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    /* --font-latin / --font-display / --font-serif : next/font가 layout.tsx에서 주입 */
 
-    /* ── Text ────────────────────────────────────────────────────────── */
-    --text-primary:    225 51% 8%;      /* #0A0F1E */
-    --text-secondary:  221 12% 34%;     /* #4B5260 */
-    --text-tertiary:   218 12% 59%;     /* #8A93A4 */
-    --text-inverse:    0 0% 100%;
-    --text-on-accent:  0 0% 100%;
+    /* === PRISM 디자인 토큰 (라이트) === */
 
-    /* ── Border ──────────────────────────────────────────────────────── */
-    --border-subtle:   220 17% 94%;     /* #EDEFF3 hairline */
-    --border-default:  220 14% 87%;     /* #D7DBE3 */
-    --border-strong:   225 51% 8%;      /* #0A0F1E focus·active */
+    /* Brand */
+    --color-primary: #4F46E5;
+    --color-primary-hover: #4338CA;
+    --color-primary-soft: #EEF2FF;
 
-    /* ── Accent (잉크 1색) ───────────────────────────────────────────── */
-    --accent-ink:        225 51% 8%;    /* #0A0F1E primary CTA bg */
-    --accent-ink-hover:  225 37% 16%;   /* #1A2238 */
-    --accent-ink-soft:   220 22% 95%;   /* #EEF0F5 라이트 칩·배지 */
+    /* CTA (Linear 패턴 — Primary와 분리) */
+    --color-cta: #18181B;
+    --color-cta-hover: #27272A;
+    --color-cta-foreground: #FFFFFF;
 
-    /* ── Gold (Elite·학부모 전용·6곳 한정) ───────────────────────────── */
-    --gold:        35 36% 56%;          /* #B89968 */
-    --gold-strong: 34 34% 41%;          /* #8E7045 */
-    --gold-soft:   43 56% 93%;          /* #F7F1E3 */
+    /* Neutral 라이트 5단계 */
+    --color-bg: #FFFFFF;
+    --color-surface: #FAFAF8;
+    --color-surface-hover: #F1F1EE;
+    --color-border-prism: #E9E9E7;
+    --color-text-muted: #787774;
+    --color-text-prism: #37352F;
 
-    /* ── Semantic ────────────────────────────────────────────────────── */
-    --success:        142 71% 29%;      /* #15803D */
-    --success-soft:   141 84% 93%;      /* #DCFCE7 */
-    --warning:        26 90% 37%;       /* #B45309 */
-    --warning-soft:   48 96% 89%;       /* #FEF3C7 */
-    --danger:         0 74% 42%;        /* #B91C1C */
-    --danger-soft:    0 93% 94%;        /* #FEE2E2 */
-    --info:           225 76% 48%;      /* #1D4ED8 */
-    --info-soft:      225 70% 95%;
+    /* Semantic */
+    --color-success: #10B981;
+    --color-warning: #F59E0B;
+    --color-danger: #EF4444;
+    --color-info: #3B82F6;
+    --color-success-soft: #ECFDF5;
+    --color-warning-soft: #FFFBEB;
+    --color-danger-soft: #FEE2E2;
+    --color-info-soft: #EFF6FF;
 
-    /* ── Charts (이외 색 금지) ──────────────────────────────────────── */
-    --chart-1: 225 51% 8%;              /* #0A0F1E 메인 */
-    --chart-2: 222 33% 27%;             /* #2E3A5C */
-    --chart-3: 225 16% 49%;             /* #6A7392 */
-    --chart-4: 35 36% 56%;              /* #B89968 골드 */
-    --chart-5: 220 12% 81%;             /* #C8CCD6 보조 그레이 */
+    /* Admission Categories (스펙트럼 컨셉) */
+    --color-safety: #10B981;
+    --color-match: #4F46E5;
+    --color-reach: #F59E0B;
+    --color-safety-soft: #ECFDF5;
+    --color-match-soft: #EEF2FF;
+    --color-reach-soft: #FFFBEB;
 
-    /* ── Admission category (Reach/Hard/Target/Safety) ──────────────── */
-    --cat-reach:       0 74% 42%;       /* #B91C1C */
-    --cat-reach-fg:    0 75% 35%;
-    --cat-reach-soft:  0 93% 94%;
-    --cat-hard:        26 90% 37%;      /* #B45309 */
-    --cat-hard-fg:     32 90% 32%;
-    --cat-hard-soft:   48 96% 89%;
-    --cat-target:      225 76% 48%;     /* #1D4ED8 */
-    --cat-target-fg:   217 80% 30%;
-    --cat-target-soft: 217 70% 95%;
-    --cat-safety:      142 71% 29%;     /* #15803D */
-    --cat-safety-fg:   160 70% 24%;
-    --cat-safety-soft: 141 84% 93%;
+    /* Shadow (라이트) */
+    --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.04), 0 1px 3px 0 rgba(15, 23, 42, 0.06);
+    --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
 
-    /* ── Motion ──────────────────────────────────────────────────────── */
-    --ease-brand: cubic-bezier(0.2, 0.8, 0.2, 1);
-    --dur-micro:  120ms;
-    --dur-page:   240ms;
-    --dur-emph:   480ms;
+    /* Radius */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius: var(--radius-md); /* shadcn 기본 변수 통합 */
 
-    /* ── Radius ──────────────────────────────────────────────────────── */
-    --radius:        12px;  /* card */
-    --radius-button: 10px;
-    --radius-input:  10px;
-    --radius-pill:   9999px;
-
-    /* ── shadcn role aliases (기존 컴포넌트 호환) ─────────────────── */
-    --background:           var(--bg-canvas);
-    --foreground:           var(--text-primary);
-    --card:                 var(--bg-surface);
-    --card-foreground:      var(--text-primary);
-    --popover:              var(--bg-surface);
-    --popover-foreground:   var(--text-primary);
-    --primary:              var(--accent-ink);
-    --primary-foreground:   var(--text-on-accent);
-    --secondary:            var(--bg-muted);
-    --secondary-foreground: var(--text-primary);
-    --muted:                var(--bg-muted);
-    --muted-foreground:     var(--text-secondary);
-    --accent:               var(--accent-ink-soft);
-    --accent-foreground:    var(--accent-ink);
-    --destructive:          var(--danger);
+    /* === shadcn 호환 토큰 (HSL 컴포넌트 형식) === */
+    --background: 0 0% 100%;            /* #FFFFFF */
+    --foreground: 30 7% 20%;            /* #37352F */
+    --card: 60 17% 98%;                 /* #FAFAF8 */
+    --card-foreground: 30 7% 20%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 30 7% 20%;
+    --primary: 244 76% 59%;             /* #4F46E5 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 60 17% 95%;            /* #F1F1EE */
+    --secondary-foreground: 30 7% 20%;
+    --muted: 60 17% 95%;
+    --muted-foreground: 45 3% 47%;      /* #787774 */
+    --accent: 60 17% 95%;
+    --accent-foreground: 30 7% 20%;
+    --destructive: 0 84% 60%;           /* #EF4444 */
     --destructive-foreground: 0 0% 100%;
-    --success-foreground:   0 0% 100%;
-    --warning-foreground:   0 0% 100%;
-    --info-foreground:      0 0% 100%;
-    --border:               var(--border-subtle);
-    --input:                var(--border-default);
-    --ring:                 var(--accent-ink);
-
-    /* ── Hero card text ─────────────────────────────────────────────── */
-    --hero-text:        0 0% 100%;
-    --hero-text-muted:  0 0% 100%;
-    --hero-overlay:     0 0% 100%;
-
-    /* ── PrismLogo beams (스펙 — 무지개 금지, 단색 잉크 1색) ────────── */
-    --logo-beam-1: var(--accent-ink);
-    --logo-beam-2: var(--accent-ink);
-    --logo-beam-3: var(--accent-ink);
-
-    /* ── Legacy aliases (v1 토큰 호환, 기존 컴포넌트 빌드 보호) ─────── */
-    --accent-vivid:             var(--accent-ink);
-    --accent-vivid-foreground:  var(--text-on-accent);
-    --accent-vivid-soft:        var(--accent-ink-soft);
+    --border: 60 4% 91%;                /* #E9E9E7 */
+    --input: 60 4% 91%;
+    --ring: 244 76% 59%;
   }
 
   .dark {
-    --bg-canvas:     225 36% 5%;        /* #07090F */
-    --bg-surface:    222 42% 9%;        /* #0E1422 */
-    --bg-muted:      223 38% 13%;       /* #131A2C */
-    --bg-inverse:    225 51% 8%;
-    --bg-inverse-2:  224 41% 13%;
+    /* === PRISM 디자인 토큰 (다크) === */
+    --color-primary: #818CF8;
+    --color-primary-hover: #6366F1;
+    --color-primary-soft: #312E81;
 
-    --text-primary:    225 23% 97%;     /* #F5F6FA */
-    --text-secondary:  220 17% 76%;     /* #B5BCCB */
-    --text-tertiary:   222 10% 48%;     /* #6E7587 */
-    --text-inverse:    0 0% 100%;
-    --text-on-accent:  225 51% 8%;      /* 다크에서 CTA는 화이트 BG → 잉크 텍스트 */
+    --color-cta: #FFFFFF;
+    --color-cta-hover: #F5F5F4;
+    --color-cta-foreground: #000000;
 
-    --border-subtle:   224 35% 17%;     /* #1B2238 */
-    --border-default:  222 27% 23%;     /* #2A334B */
-    --border-strong:   225 23% 97%;     /* #F5F6FA */
+    --color-bg: #08090A;
+    --color-surface: #15161A;
+    --color-surface-hover: #1F2024;
+    --color-border-prism: #1F2024;
+    --color-text-muted: #8A8F98;
+    --color-text-prism: #F5F5F4;
 
-    --accent-ink:        225 23% 97%;   /* 다크에서 primary CTA = 화이트 */
-    --accent-ink-hover:  220 18% 92%;   /* #E6E8F0 */
-    --accent-ink-soft:   224 35% 17%;   /* #1B2238 */
+    --color-success: #34D399;
+    --color-warning: #FBBF24;
+    --color-danger: #F87171;
+    --color-info: #60A5FA;
+    --color-success-soft: #064E3B;
+    --color-warning-soft: #78350F;
+    --color-danger-soft: #7F1D1D;
+    --color-info-soft: #1E3A8A;
 
-    /* gold·semantic·category — 다크모드에서도 동일 톤 유지 (스펙) */
-    --gold:        35 40% 60%;
-    --gold-strong: 34 34% 45%;
-    --gold-soft:   223 38% 15%;         /* 다크 카드 위 골드 텍스트 받침용 */
+    --color-safety: #34D399;
+    --color-match: #818CF8;
+    --color-reach: #FBBF24;
+    --color-safety-soft: #064E3B;
+    --color-match-soft: #312E81;
+    --color-reach-soft: #78350F;
 
-    --success-soft:   142 40% 14%;
-    --warning-soft:   38 50% 14%;
-    --danger-soft:    0 50% 14%;
-    --info-soft:      217 50% 14%;
+    /* Shadow (다크) — 그림자 대신 hairline 보더 */
+    --shadow-sm: 0 0 0 1px rgba(255, 255, 255, 0.04);
+    --shadow-md: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 16px rgba(0, 0, 0, 0.4);
 
-    --chart-1: 225 23% 97%;
-    --chart-2: 220 17% 76%;
-    --chart-3: 222 10% 48%;
-    --chart-4: 35 40% 60%;
-    --chart-5: 222 27% 23%;
-
-    --cat-reach:       0 75% 60%;
-    --cat-reach-fg:    0 80% 78%;
-    --cat-reach-soft:  0 50% 14%;
-    --cat-hard:        38 92% 55%;
-    --cat-hard-fg:     38 95% 75%;
-    --cat-hard-soft:   38 50% 13%;
-    --cat-target:      217 80% 60%;
-    --cat-target-fg:   217 85% 78%;
-    --cat-target-soft: 217 50% 14%;
-    --cat-safety:      160 60% 50%;
-    --cat-safety-fg:   160 70% 75%;
-    --cat-safety-soft: 160 45% 12%;
-
-    --logo-beam-1: var(--accent-ink);
-    --logo-beam-2: var(--accent-ink);
-    --logo-beam-3: var(--accent-ink);
+    /* === shadcn 다크 === */
+    --background: 220 13% 4%;           /* #08090A */
+    --foreground: 60 9% 96%;            /* #F5F5F4 */
+    --card: 222 12% 9%;                 /* #15161A */
+    --card-foreground: 60 9% 96%;
+    --popover: 222 12% 9%;
+    --popover-foreground: 60 9% 96%;
+    --primary: 234 89% 74%;             /* #818CF8 */
+    --primary-foreground: 220 13% 4%;
+    --secondary: 222 11% 13%;           /* #1F2024 */
+    --secondary-foreground: 60 9% 96%;
+    --muted: 222 11% 13%;
+    --muted-foreground: 220 9% 57%;     /* #8A8F98 */
+    --accent: 222 11% 13%;
+    --accent-foreground: 60 9% 96%;
+    --destructive: 0 84% 71%;
+    --destructive-foreground: 60 9% 96%;
+    --border: 222 11% 13%;
+    --input: 222 11% 13%;
+    --ring: 234 89% 74%;
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   Base reset + 한글 타이포
-   ═══════════════════════════════════════════════════════════════════════ */
 @layer base {
-  * { @apply border-border; }
-  body { @apply bg-background text-foreground; }
-
-  *:focus-visible {
-    outline: 2px solid hsl(var(--border-strong));
-    outline-offset: 2px;
-    border-radius: inherit;
+  * {
+    @apply border-border;
   }
-}
-
-html {
-  font-display: swap;
-  -webkit-text-size-adjust: 100%;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  overscroll-behavior-y: none;
-}
-body {
-  font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "ss06" 1;
-  text-rendering: optimizeLegibility;
-  letter-spacing: -0.011em;
-  word-break: keep-all;
-  overflow-wrap: break-word;
-  overscroll-behavior-y: contain;
-  overscroll-behavior-x: none;
-}
-.tabular-nums { font-variant-numeric: tabular-nums; }
-
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-delay: 0s !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    transition-delay: 0s !important;
-    scroll-behavior: auto !important;
+  html {
+    font-family: var(--font-korean), var(--font-latin), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-size: 15px;
+    line-height: 1.6;
   }
 }
 
 @layer utilities {
-  /* Tap feedback */
-  a, button:not([disabled]) {
-    -webkit-tap-highlight-color: transparent;
-    transition: transform var(--dur-micro) var(--ease-brand);
+  /* Tabular numerals — 정렬된 숫자 (확률·통계·계량 디스플레이) */
+  .tabular {
+    font-feature-settings: "tnum";
   }
-  @media (hover: none) {
-    a:active, button:not([disabled]):active { transform: scale(0.97); }
-  }
-
-  /* Safe-area */
-  .pb-safe { padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px)); }
-  .pb-nav  { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
-  .pt-safe { padding-top: max(1rem, env(safe-area-inset-top, 0px)); }
-
-  /* Hairline shadow (스펙: 그림자 거의 없음, 필요 시 1px hairline) */
-  .shadow-hairline {
-    box-shadow:
-      0 1px 2px hsl(var(--text-primary) / 0.04),
-      0 1px 1px hsl(var(--text-primary) / 0.03);
+  /* Serif display — Newsreader 헤드라인 모먼트 (감성·마케팅) */
+  .font-serif-display {
+    font-family: var(--font-serif), Georgia, serif;
   }
 
-  /* Inverse hero — bg-inverse + 흰 텍스트 */
-  .bg-inverse    { background-color: hsl(var(--bg-inverse)); color: hsl(var(--text-inverse)); }
-  .bg-inverse-2  { background-color: hsl(var(--bg-inverse-2)); color: hsl(var(--text-inverse)); }
-
-  /* Skeleton shimmer (단색 톤, 무지개·brand-tint 폐기) */
-  .shimmer {
-    background: linear-gradient(
-      90deg,
-      hsl(var(--bg-muted)) 0%,
-      hsl(var(--bg-muted)) 40%,
-      hsl(var(--text-tertiary) / 0.12) 50%,
-      hsl(var(--bg-muted)) 60%,
-      hsl(var(--bg-muted)) 100%
-    );
-    background-size: 200% 100%;
-    animation: shimmer-sweep 1.4s var(--ease-brand) infinite;
+  /* PRISM 스펙트럼 그라데이션 — 로고·온보딩 완료·축하 모먼트 한정 */
+  .bg-prism-gradient {
+    background: linear-gradient(90deg, #10B981 0%, #4F46E5 50%, #F59E0B 100%);
   }
-  @keyframes shimmer-sweep {
-    0%   { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
-
-  /* Horizontal scroll fade hint */
-  .scroll-fade-right {
-    -webkit-mask-image: linear-gradient(to right, black 88%, transparent 100%);
-    mask-image: linear-gradient(to right, black 88%, transparent 100%);
-  }
-
-  /* Skip link */
-  .focus\:skip-link:focus {
-    position: fixed; top: 1rem; left: 1rem; z-index: 200;
-    background: hsl(var(--accent-ink)); color: hsl(var(--text-on-accent));
-    padding: 0.5rem 1rem; border-radius: var(--radius-button);
+  .text-prism-gradient {
+    background: linear-gradient(90deg, #10B981 0%, #4F46E5 50%, #F59E0B 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 }
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   Animations · keyframes (toss easing 유지, brand easing은 var로 컴포넌트가 사용)
-   ═══════════════════════════════════════════════════════════════════════ */
-@keyframes fade-up   { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes fade-in   { from { opacity: 0; } to { opacity: 1; } }
-@keyframes scale-in  { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
-@keyframes slide-right { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
-@keyframes count-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
-@keyframes page-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-
-.animate-page-in { animation: page-in var(--dur-micro) var(--ease-brand) both; }
-
-/* Stagger entry — CSS variable로 delay 조절 */
-.animate-stagger {
-  animation: fade-up var(--dur-emph) var(--ease-brand) both;
-  animation-delay: calc(var(--i, 0) * 60ms);
-}
-
-/* Chat msg enter */
-@keyframes msg-enter-left  { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
-@keyframes msg-enter-right { from { opacity: 0; transform: translateX(8px); }  to { opacity: 1; transform: translateX(0); } }
-.animate-msg-ai   { animation: msg-enter-left  var(--dur-page) var(--ease-brand) both; }
-.animate-msg-user { animation: msg-enter-right var(--dur-page) var(--ease-brand) both; }
-
-/* Welcome/view enter */
-@keyframes welcome-fade-up   { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes welcome-scale-in  { from { opacity: 0; transform: scale(0.8); }      to { opacity: 1; transform: scale(1); } }
-@keyframes welcome-view-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-.animate-welcome-item { animation: welcome-fade-up var(--dur-emph) var(--ease-brand) both; }
-.animate-welcome-logo { animation: welcome-scale-in var(--dur-emph) var(--ease-brand) both; }
-.animate-view-enter   { animation: welcome-view-enter var(--dur-page) var(--ease-brand) both; }
-
-/* Step transition */
-@keyframes step-slide-left  { from { opacity: 0; transform: translateX(24px); }  to { opacity: 1; transform: translateX(0); } }
-@keyframes step-slide-right { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: translateX(0); } }
-.animate-step-forward { animation: step-slide-left  var(--dur-page) var(--ease-brand) both; }
-.animate-step-back    { animation: step-slide-right var(--dur-page) var(--ease-brand) both; }
-
-/* Probability reveal particle burst — 잉크 단색 */
-@keyframes prob-particle-burst {
-  0%   { transform: translate(-50%, -50%) rotate(var(--angle)) translateY(0)    scale(0.4); opacity: 0; }
-  20%  { opacity: 1; }
-  100% { transform: translate(-50%, -50%) rotate(var(--angle)) translateY(-28px) scale(0); opacity: 0; }
-}
-.prob-particle {
-  position: absolute; top: 50%; left: 50%;
-  width: 6px; height: 6px; border-radius: var(--radius-pill);
-  background: var(--color, hsl(var(--accent-ink)));
-  transform-origin: center;
-  animation: prob-particle-burst 0.9s var(--ease-brand) var(--delay, 0ms) both;
-  will-change: transform, opacity;
-}
-
-/* Illustration micro-motion (모노톤, 1색) */
-@keyframes illust-float    { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
-@keyframes illust-bob      { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-2px) rotate(2deg); } }
-@keyframes illust-twinkle  { 0%,100% { opacity: 0.4; transform: scale(0.85); } 50% { opacity: 1; transform: scale(1.1); } }
-@keyframes illust-write    { 0% { transform: rotate(35deg); } 50% { transform: rotate(35deg) translateX(-1px); } 100% { transform: rotate(35deg); } }
-@keyframes illust-ping     { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(1.6); opacity: 0; } }
-.illust-float        { animation: illust-float 3s ease-in-out infinite; transform-origin: center; }
-.illust-bob          { animation: illust-bob 2.6s ease-in-out infinite; transform-origin: center; }
-.illust-twinkle      { animation: illust-twinkle 2s ease-in-out infinite; transform-origin: center; }
-.illust-twinkle-delay { animation: illust-twinkle 2s ease-in-out 0.7s infinite; transform-origin: center; }
-.illust-write        { animation: illust-write 4s ease-in-out infinite; transform-origin: 50% 100%; }
-.illust-ping         { animation: illust-ping 2.4s ease-out infinite; transform-origin: center; }
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   Parent track typography (학부모 view-only — 큰 글자 유지)
-   ═══════════════════════════════════════════════════════════════════════ */
-.parent-track {
-  font-size: 1.125rem;
-  line-height: 1.7;
-}
-@media (min-width: 640px) {
-  .parent-track { font-size: 1.0625rem; line-height: 1.65; }
-}
-.parent-track h1 { font-size: 1.875rem; line-height: 1.3; }
-.parent-track h2 { font-size: 1.375rem; line-height: 1.4; }
-.parent-track h3 { font-size: 1.125rem; line-height: 1.5; }
-.parent-track :where(button, a[href], [role="button"]) { min-height: 44px; }
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   Print styles · PDF export
-   ═══════════════════════════════════════════════════════════════════════ */
-@media print {
-  body { background: white !important; color: black !important; }
-  .print\:hidden, nav, header button, .bottom-nav { display: none !important; }
-  .dark-hero-gradient,
-  .hero-navy-gradient,
-  .parent-hero-gradient {
-    background: #0A0F1E !important;
-    color: #FFFFFF !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  main, .max-w-md, .max-w-2xl, .max-w-4xl {
-    max-width: 100% !important; padding: 0 !important;
-  }
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   LEGACY · v1 호환 alias (STEP 4 페이지 리라이트 시 사용처 제거 예정)
-   - 잔재 클래스 이름은 유지하되 내용은 잉크 단색으로 치환
-   - 무지개 prismatic·violet orb·brand-warm 그라데이션 제거
-   ═══════════════════════════════════════════════════════════════════════ */
-.bg-brand-warm,
-.bg-brand-warm-soft,
-.bg-prismatic,
-.bg-prismatic-soft,
-.dark-hero-gradient,
-.hero-navy-gradient,
-.parent-hero-gradient {
-  background: hsl(var(--bg-inverse));
-  color: hsl(var(--text-inverse));
-}
-.dark .bg-brand-warm,
-.dark .bg-brand-warm-soft,
-.dark .bg-prismatic,
-.dark .bg-prismatic-soft,
-.dark .dark-hero-gradient,
-.dark .hero-navy-gradient,
-.dark .parent-hero-gradient {
-  background: hsl(var(--bg-inverse));
-  color: hsl(var(--text-inverse));
-}
-
-/* Orb 장식 — 모두 잉크 1색 (보라/앰버 폐기) */
-.brand-orb { display: none; }
-.brand-orb-primary,
-.brand-orb-violet,
-.brand-orb-amber,
-.brand-orb-mesh { display: none; }
-
-/* card-tinted / card-emphasis — 잉크 hairline 카드로 치환 */
-.card-tinted,
-.card-emphasis {
-  background: hsl(var(--bg-surface));
-  border: 1px solid hsl(var(--border-subtle));
-}
-.dark .card-tinted,
-.dark .card-emphasis {
-  background: hsl(var(--bg-surface));
-  border-color: hsl(var(--border-subtle));
-}
-.card-emphasis::before { display: none; }
-
-/* hover-card / hover-lift / hover-glow — 그림자 호버 폐기 → 보더 강화만 */
-.hover-card,
-.hover-lift,
-.hover-glow {
-  transition: border-color var(--dur-micro) var(--ease-brand);
-}
-@media (hover: hover) {
-  .hover-card:hover,
-  .hover-lift:hover,
-  .hover-glow:hover {
-    border-color: hsl(var(--border-strong));
-  }
-}
-.tap-press {
-  transition: transform var(--dur-micro) var(--ease-brand);
-  will-change: transform;
-}
-.tap-press:active { transform: scale(0.97); }
-
-/* Brand-tinted shadow utilities — 그림자 폐기, hairline으로 치환 */
-.shadow-glow-sm,
-.shadow-glow-md,
-.shadow-glow-lg {
-  box-shadow:
-    0 1px 2px hsl(var(--text-primary) / 0.04),
-    0 1px 1px hsl(var(--text-primary) / 0.03);
-}
-
-/* Focus glow — 잉크 outline halo */
-.focus-glow:focus-visible,
-.focus-ring-primary:focus-visible {
-  outline: 2px solid hsl(var(--border-strong));
-  outline-offset: 2px;
-  box-shadow: none;
-}
-
-/* Prism light strip — 무지개 폐기, 잉크 단색 strip */
-.prism-strip,
-.prism-strip-reactive,
-.prism-strip-once { position: relative; overflow: hidden; }
-.prism-strip::before,
-.prism-strip-reactive::before,
-.prism-strip-once::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: hsl(var(--accent-ink));
-  z-index: 20;
-  border-radius: inherit;
-}
-
-/* Glass card — 단순 흰 카드 + hairline */
-.glass-card {
-  background: hsl(var(--bg-surface));
-  border: 1px solid hsl(var(--border-subtle));
-  backdrop-filter: none;
-}
-.dark .glass-card {
-  background: hsl(var(--bg-surface));
-  border-color: hsl(var(--border-subtle));
-}
-
-/* Dark mode color-50 backgrounds — 카테고리 soft 토큰으로 치환 */
-.dark .bg-emerald-50,
-.dark .bg-emerald-100 { background-color: hsl(var(--cat-safety-soft)); }
-.dark .bg-blue-50,
-.dark .bg-blue-100    { background-color: hsl(var(--cat-target-soft)); }
-.dark .bg-amber-50,
-.dark .bg-amber-100   { background-color: hsl(var(--cat-hard-soft)); }
-.dark .bg-red-50,
-.dark .bg-red-100     { background-color: hsl(var(--cat-reach-soft)); }
-.dark .bg-orange-50   { background-color: hsl(var(--cat-hard-soft)); }
