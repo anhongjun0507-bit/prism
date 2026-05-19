@@ -858,6 +858,45 @@ export default function TokenTestPage() {
           </div>
         </section>
 
+        {/* ═══ STEP 4b — 네비게이션 셸 (임시 마운트) ═══ */}
+        <section className="space-y-3 pb-6 border-b border-border">
+          <p className="text-caption uppercase text-muted-foreground">
+            STEP 4b · NAVIGATION SHELL (실제 컴포넌트는 페이지 끝에 fixed 마운트)
+          </p>
+          <p className="text-small text-muted-foreground">
+            아래 두 컴포넌트는 fixed 포지셔닝이라 페이지 본문이 아닌 viewport
+            가장자리에 부착됨. 검증 시 확인 사항:
+          </p>
+          <ul className="text-small text-muted-foreground space-y-1 list-disc pl-5">
+            <li>
+              <b>모바일 뷰 (≤767px)</b> — 화면 하단에 BottomNav 5탭 노출
+              (홈·분석·에세이·채팅·더보기), Sidebar 자동 숨김. /test 라우트는
+              어느 탭에도 매칭되지 않으므로 모든 탭 비활성(회색) 상태가 정상.
+            </li>
+            <li>
+              <b>데스크톱 뷰 (≥768px)</b> — 좌측에 Sidebar 240px 고정 노출
+              (PRISM 로고 + 워크스페이스 카드 + 주메뉴 4 + 도구 4 + 설정 +
+              테마 + 로그아웃), BottomNav 자동 숨김. 본문은 wrapper의
+              <code className="px-1 rounded bg-secondary">md:pl-60</code> 덕에
+              Sidebar에 가려지지 않음.
+            </li>
+            <li>
+              <b>워크스페이스 카드</b> — 로그인 시 사용자명 + 플랜 배지
+              (Free=outline / Pro·Elite=primary). 로그아웃 상태/loading
+              상태 모두 안전 처리.
+            </li>
+            <li>
+              <b>다크 모드</b> — Sidebar 배경 <code className="px-1 rounded bg-secondary">bg-card</code> (#15161A),
+              border-r hairline. 로고 그라데이션 유지.
+            </li>
+            <li>
+              <b>주의</b> — Sidebar 하단 "로그아웃" 버튼 클릭 시 실제 로그아웃 +
+              <code className="px-1 rounded bg-secondary">/</code> 리다이렉트.
+              검증 중에는 누르지 말 것.
+            </li>
+          </ul>
+        </section>
+
         {/* Section 1 — Typography scale */}
         <section className="space-y-6">
           <h2 className="text-h2 font-display font-semibold">Typography</h2>
