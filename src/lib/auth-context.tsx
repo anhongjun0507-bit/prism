@@ -45,6 +45,7 @@ export interface UserProfile {
   gpa?: string;
   sat?: string;
   toefl?: string;
+  extracurriculars?: string;
   outlineUsed?: number;
   essayReviewUsed?: number;
   whatIfUsed?: number;
