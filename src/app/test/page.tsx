@@ -50,6 +50,9 @@ import { RubricBar } from "@/components/prism/rubric-bar";
 import { AIBlock } from "@/components/prism/ai-block";
 import { StreamingText } from "@/components/prism/streaming-text";
 import { AIBadge } from "@/components/prism/ai-badge";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { Topbar } from "@/components/layout/Topbar";
+import { MoreHorizontal } from "lucide-react";
 
 /**
  * PRISM v3 디자인 토큰 검증 페이지 (/test).
@@ -799,6 +802,59 @@ export default function TokenTestPage() {
                 GPA·SAT·EC 종합 분석 결과입니다.
               </p>
             </Card>
+          </div>
+        </section>
+
+        {/* ═══ STEP 4a — 레이아웃 chrome atoms ═══ */}
+        <section className="space-y-4 pb-6 border-b border-border">
+          <p className="text-caption uppercase text-muted-foreground">
+            STEP 4a · THEME TOGGLE
+          </p>
+          <TooltipProvider delayDuration={150}>
+            <div className="flex items-center gap-4">
+              <ThemeToggle />
+              <p className="text-small text-muted-foreground">
+                클릭 → 라이트·다크 즉시 전환. 호버 → 툴팁 노출. 아이콘이
+                테마에 따라 Sun/Moon 자동 스왑.
+              </p>
+            </div>
+          </TooltipProvider>
+        </section>
+
+        <section className="space-y-4 pb-6 border-b border-border">
+          <p className="text-caption uppercase text-muted-foreground">
+            STEP 4a · TOPBAR (모바일 전용 · md 미만에서만 표시)
+          </p>
+          <p className="text-small text-muted-foreground">
+            아래 박스는 Topbar를 감싸기만 한 데모 컨테이너. 실제 페이지에서는
+            viewport top에 sticky 부착. 데스크톱 뷰포트(≥768px)에서는 자동
+            숨김 → 브라우저 dev tools 모바일 뷰(예: 375×812)에서 확인.
+          </p>
+          <div className="rounded-md border border-border overflow-hidden">
+            <Topbar
+              title="에세이 첨삭"
+              backHref="/test"
+              actions={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  shape="pill"
+                  aria-label="더보기"
+                >
+                  <MoreHorizontal className="h-5 w-5" aria-hidden />
+                </Button>
+              }
+            />
+            <div className="p-6 bg-card text-small text-muted-foreground">
+              backHref(/test) + title + actions(MoreHorizontal) 세 슬롯 모두.
+            </div>
+          </div>
+          <div className="rounded-md border border-border overflow-hidden">
+            <Topbar title="대시보드" />
+            <div className="p-6 bg-card text-small text-muted-foreground">
+              title만 — backHref 없음(좌 슬롯 빈칸으로 중앙 정렬 유지),
+              actions 없음.
+            </div>
           </div>
         </section>
 
