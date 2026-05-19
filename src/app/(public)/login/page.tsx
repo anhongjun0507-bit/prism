@@ -1,23 +1,22 @@
+import { Suspense } from "react";
+import type { Metadata } from "next";
+import { LoginForm } from "./LoginForm";
+
+export const metadata: Metadata = {
+  title: "로그인",
+  description: "PRISM에 로그인하고 1,001개 미국 대학 합격 확률을 분석하세요.",
+};
+
 /**
- * /login 스텁 — Step 5에서 실제 구현.
+ * /login — SSO 3종 (Google · Apple · Kakao) + Hero.
  *
- * 향후 구성: Google/Apple/Kakao SSO 버튼, 캐치프레이즈, 푸터.
- * 가이드 §5.1 참조.
+ * Server boundary: metadata export + Suspense (useSearchParams 정적 렌더링 요건).
+ * 본격 폼은 LoginForm.tsx (Client) — useAuth · useRouter · useSearchParams · useState 사용.
  */
 export default function LoginPage() {
   return (
-    <div className="flex min-h-dvh items-center justify-center p-4">
-      <div className="w-full max-w-[420px] space-y-6 text-center">
-        <h1 className="text-display font-display font-bold text-prism-gradient">
-          PRISM
-        </h1>
-        <p className="text-body text-muted-foreground">
-          로그인 페이지 — Step 5에서 구현
-        </p>
-        <p className="text-small text-muted-foreground">
-          Google · Apple · Kakao SSO + 캐치프레이즈 + 푸터
-        </p>
-      </div>
-    </div>
+    <Suspense fallback={<div className="min-h-dvh" />}>
+      <LoginForm />
+    </Suspense>
   );
 }
