@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     template: "%s | PRISM",
   },
   description:
-    "한국 국제학교 학생들을 위한 AI 기반 미국 대학 입시 가이드. 1,001개 대학 합격 확률 분석, AI 에세이 첨삭, 맞춤 입시 플래너를 한곳에서.",
+    "한국 국제학교 학생들을 위한 AI 기반 미국 대학 입시 가이드. 약 1,000개 대학 합격 확률 분석, AI 에세이 첨삭, 맞춤 입시 플래너를 한곳에서.",
   keywords: [
     "미국 대학 입시",
     "합격 예측",
@@ -33,14 +33,14 @@ export const metadata: Metadata = {
     url: "https://prismedu.kr",
     title: "PRISM — 미국 대학 입시 매니저",
     description:
-      "AI가 분석하는 1,001개 미국 대학 합격 확률. 내 스펙으로 갈 수 있는 대학, 3초면 알 수 있어요.",
+      "AI가 분석하는 약 1,000개 미국 대학 합격 확률. 내 스펙으로 갈 수 있는 대학, 3초면 알 수 있어요.",
     siteName: "PRISM",
   },
   twitter: {
     card: "summary_large_image",
     title: "PRISM — 미국 대학 입시 매니저",
     description:
-      "AI가 분석하는 1,001개 미국 대학 합격 확률. 내 스펙으로 갈 수 있는 대학, 3초면 알 수 있어요.",
+      "AI가 분석하는 약 1,000개 미국 대학 합격 확률. 내 스펙으로 갈 수 있는 대학, 3초면 알 수 있어요.",
   },
   robots: {
     index: true,

@@ -204,7 +204,7 @@ export function SpecAnalysisClient() {
             AI 강점/약점 분석은 Pro 전용입니다
           </h2>
           <p className="text-body text-muted-foreground mb-6 max-w-md mx-auto">
-            1,001개 학교 매칭은 무료로 사용 가능해요. Pro 플랜에서는 입학사정관 관점의
+            약 1,000개 학교 매칭은 무료로 사용 가능해요. Pro 플랜에서는 입학사정관 관점의
             심층 분석과 맞춤 개선 제안을 받아볼 수 있어요.
           </p>
           <Button asChild>

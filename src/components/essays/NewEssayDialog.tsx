@@ -40,7 +40,7 @@ interface NewEssayDialogProps {
  * 새 에세이 생성 모달 (가이드 §9 + 사용자 Q2=B 결정).
  *
  * Flow:
- *  1) 대학 입력 — 자동완성 (useSchoolsIndex 1,001개) + "자유 주제" 상단 고정 옵션.
+ *  1) 대학 입력 — 자동완성 (useSchoolsIndex 약 1,000개) + "자유 주제" 상단 고정 옵션.
  *  2) 학교 선택 시 /api/schools/{name} 호출 → prompts 라디오 리스트.
  *  3) 사용자가 prompt 선택 또는 "직접 입력" 자유 텍스트.
  *  4) wordLimit 기본 650(Common App), Number Input으로 조정.

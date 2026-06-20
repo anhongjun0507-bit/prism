@@ -152,12 +152,12 @@ export function ParentReportView({
       <Card className="space-y-4 p-6">
         <h2 className="text-h3 font-bold text-foreground">PRISM이란?</h2>
         <p className="text-body leading-relaxed text-foreground">
-          한국 국제학교 학생을 위한 미국 대학 입시 가이드 앱이에요. AI가 1,001개 대학교의 합격
+          한국 국제학교 학생을 위한 미국 대학 입시 가이드 앱이에요. AI가 약 1,000개 대학교의 합격
           가능성을 분석하고, 에세이 첨삭·일정 관리를 도와드려요.
         </p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <PlanBox name="Free" desc="기본 분석 5개 학교" highlight={false} />
-          <PlanBox name="Pro" desc="전체 1,001개 분석 · 무제한 에세이 첨삭" highlight={plan === "pro"} />
+          <PlanBox name="Pro" desc="약 1,000개 대학 분석 · 무제한 에세이 첨삭" highlight={plan === "pro"} />
           <PlanBox name="Elite" desc="대학별 맞춤 첨삭 · 학부모 주간 리포트" highlight={plan === "elite"} />
         </div>
         <Button asChild className="w-full">

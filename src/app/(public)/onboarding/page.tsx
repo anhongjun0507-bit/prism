@@ -4,7 +4,7 @@ import { OnboardingWizard } from "./OnboardingWizard";
 
 export const metadata: Metadata = {
   title: "시작하기",
-  description: "내 프로필을 등록하고 1,001개 미국 대학과 매칭해보세요.",
+  description: "내 프로필을 등록하고 약 1,000개 미국 대학과 매칭해보세요.",
 };
 
 /**

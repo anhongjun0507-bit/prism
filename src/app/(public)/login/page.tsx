@@ -4,7 +4,7 @@ import { LoginForm } from "./LoginForm";
 
 export const metadata: Metadata = {
   title: "로그인",
-  description: "PRISM에 로그인하고 1,001개 미국 대학 합격 확률을 분석하세요.",
+  description: "PRISM에 로그인하고 약 1,000개 미국 대학 합격 확률을 분석하세요.",
 };
 
 /**

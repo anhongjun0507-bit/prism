@@ -68,7 +68,7 @@ export function LoginForm() {
             PRISM
           </h1>
           <p className="text-h2 font-semibold leading-tight text-foreground">
-            AI가 분석하는 1,001개 미국 대학 합격 확률
+            AI가 분석하는 약 1,000개 미국 대학 합격 확률
           </p>
           <p className="text-small text-muted-foreground">
             한국 국제학교 학생을 위한 AI 입시 매니저
