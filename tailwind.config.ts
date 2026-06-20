@@ -7,6 +7,9 @@ export default {
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    // lib의 class 리터럴 스캔 — task-categories(CATEGORY_COLORS)·analysis-helpers(CAT_STYLE)의
+    // bg-cat-*/text-cat-*-fg/ring-cat-* 가 생성되도록(미포함 시 미생성 → 색 깨짐).
+    "./src/lib/**/*.{js,ts}",
   ],
   theme: {
     extend: {
@@ -99,6 +102,28 @@ export default {
           reach: "var(--color-reach)",
           "reach-soft": "var(--color-reach-soft)",
         },
+        // 4-state 카테고리 — task-categories(CATEGORY_COLORS)·analysis-helpers(CAT_STYLE)의
+        // bg-cat-*/text-cat-*-fg/ring-cat-*/bg-cat-* 복구. safety=green / target=indigo / hard=amber / reach=red.
+        // 기존 --color-* 재사용(globals 변경 불요). 두 lib 무수정으로 색 복구.
+        cat: {
+          // base 키는 color-mix로 정의 — hex var에도 opacity modifier(ring-cat-*/30)가 적용되도록.
+          // (solid 사용 시 alpha=1 → 원색, /30 → 30%). soft·fg는 opacity 없이 쓰므로 solid var.
+          safety: "color-mix(in srgb, var(--color-safety) calc(<alpha-value> * 100%), transparent)",
+          "safety-soft": "var(--color-safety-soft)",
+          "safety-fg": "var(--color-safety)",
+          target: "color-mix(in srgb, var(--color-match) calc(<alpha-value> * 100%), transparent)",
+          "target-soft": "var(--color-match-soft)",
+          "target-fg": "var(--color-match)",
+          hard: "color-mix(in srgb, var(--color-warning) calc(<alpha-value> * 100%), transparent)",
+          "hard-soft": "var(--color-warning-soft)",
+          "hard-fg": "var(--color-warning)",
+          reach: "color-mix(in srgb, var(--color-danger) calc(<alpha-value> * 100%), transparent)",
+          "reach-soft": "var(--color-danger-soft)",
+          "reach-fg": "var(--color-danger)",
+        },
+        // 프리미엄 액센트 (Elite 등급) — primary 인디고와 구분되는 바이올렛.
+        "brand-accent": "var(--color-brand-accent)",
+        "brand-accent-soft": "var(--color-brand-accent-soft)",
         // Semantic — soft 배경은 별도 키 (root에 hyphenated로 둠)
         success: "var(--color-success)",
         warning: "var(--color-warning)",

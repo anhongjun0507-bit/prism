@@ -8,6 +8,8 @@ export const MAX_SCHOOLS = 3;
  */
 export interface CompareSchool {
   n: string;
+  /** 로고 도메인 (Clearbit 로고 URL용). */
+  d?: string;
   rk: number;
   r?: number;
   sat?: number[];

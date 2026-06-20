@@ -38,7 +38,7 @@ export function PlanCard({ plan, billing, recommended, cta }: PlanCardProps) {
       className={cn(
         "relative flex flex-col p-6",
         recommended && "ring-2 ring-primary shadow-prism-md",
-        isElite && !recommended && "border-warning",
+        isElite && !recommended && "border-2 border-brand-accent",
       )}
     >
       {recommended && (

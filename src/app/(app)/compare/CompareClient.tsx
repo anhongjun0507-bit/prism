@@ -60,6 +60,7 @@ export function CompareClient() {
     if (matched.length > 0) return matched;
     return schoolsIndex.map((s) => ({
       n: s.n,
+      d: s.d,
       rk: s.rk,
       r: s.r,
       sat: s.sat,
@@ -130,6 +131,7 @@ export function CompareClient() {
             key={s.n}
             schoolName={s.n}
             location={s.loc}
+            logoUrl={s.d ? `https://logo.clearbit.com/${s.d}` : undefined}
             myProbability={hasMyProb ? s.prob : undefined}
             category={hasMyProb ? toCompareCategory(s.cat) : undefined}
             onRemove={() => remove(s.n)}
