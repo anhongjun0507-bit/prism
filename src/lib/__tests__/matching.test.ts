@@ -40,7 +40,7 @@ const AVG_SPECS: Specs = {
 describe("matchSchools()", () => {
   it("결과가 있어야 함 (학교 데이터 로드 검증)", () => {
     const results = matchSchools(AVG_SPECS);
-    expect(results.length).toBeGreaterThan(100); // 1001개 학교 중 SAT 0-0&GPA 0인 것 제외
+    expect(results.length).toBeGreaterThan(100); // 약 1,000개 학교 중 SAT 0-0&GPA 0인 것 제외
   });
 
   it("기본 정렬이 prob 내림차순", () => {

@@ -18,7 +18,7 @@ export const LANDING_FAQS: LandingFaqEntry[] = [
     id: "plan_difference",
     question: "Pro와 Elite 플랜은 어떤 차이가 있나요?",
     plainAnswer:
-      "Pro는 1,001개 대학 분석, AI 상담, 에세이 첨삭, 자동 플래너를 무제한으로 제공합니다. Elite는 추가로 Top 20 대학별 맞춤 rubric 첨삭, 합격자 케이스 매칭, 학부모 주간 리포트를 제공합니다.",
+      "Pro는 약 1,000개 대학 분석, AI 상담, 에세이 첨삭, 자동 플래너를 무제한으로 제공합니다. Elite는 추가로 Top 20 대학별 맞춤 rubric 첨삭, 합격자 케이스 매칭, 학부모 주간 리포트를 제공합니다.",
   },
   {
     id: "refund_policy",
@@ -30,7 +30,7 @@ export const LANDING_FAQS: LandingFaqEntry[] = [
     id: "ai_accuracy",
     question: "AI 분석 결과를 신뢰할 수 있나요?",
     plainAnswer:
-      "PRISM은 1,001개 대학의 공식 데이터(Common Data Set)와 32+건의 검증된 합격 사례를 기반으로 분석합니다. 단, 입시 결과는 다양한 요인에 따라 달라질 수 있으며 PRISM의 분석은 참고용입니다.",
+      "PRISM은 약 1,000개 대학의 공식 데이터(Common Data Set)와 32+건의 검증된 합격 사례를 기반으로 분석합니다. 단, 입시 결과는 다양한 요인에 따라 달라질 수 있으며 PRISM의 분석은 참고용입니다.",
   },
   {
     id: "privacy",

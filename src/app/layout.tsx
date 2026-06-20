@@ -1,100 +1,69 @@
-
-import type {Metadata, Viewport} from 'next';
-import { Inter, Inter_Tight } from 'next/font/google';
-import './globals.css';
-// v3 design tokens — Phase 0~5 동안 v2 globals와 공존, --ds-* 네임스페이스로 충돌 회피.
-import '../styles/tokens.css';
-
-// next/font로 self-host: 외부 폰트 CDN round-trip 제거 + layout shift 방지.
-// Inter: 본문·UI fallback (라틴), Inter Tight: display·hero (Toss·Goldman 톤의 tight tracking)
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  display: 'swap',
-  variable: '--font-inter',
-});
-const interTight = Inter_Tight({
-  subsets: ['latin'],
-  weight: ['500', '600', '700', '800'],
-  display: 'swap',
-  variable: '--font-display',
-});
-import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from "@/lib/auth-context";
-import { PageTransition } from "@/components/PageTransition";
+import type { Metadata, Viewport } from "next";
+import "./globals.css";
+import { inter, interTight, newsreader } from "@/lib/fonts";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { AuthGate } from "@/components/AuthGate";
-import { Analytics } from "@/components/Analytics";
-import { InstallPrompt } from "@/components/InstallPrompt";
-// Phase 4: v2 DesktopSidebar → v3 NavSidebar 교체. v2 파일은 Phase 5에서 삭제.
-import { NavSidebar } from "@/components/ui-v2/nav-sidebar";
-import { AppShell } from "@/components/AppShell";
-import { StorageQuotaBanner } from "@/components/StorageQuotaBanner";
-import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
-import { ConditionalFooter } from "@/components/ConditionalFooter";
-import { PublicHeader } from "@/components/PublicHeader";
-import { MobileCTABar } from "@/components/MobileCTABar";
-import { SessionExpiryWatcher } from "@/components/SessionExpiryWatcher";
+import { AuthProvider } from "@/lib/auth-context";
 import { I18nProvider } from "@/lib/i18n";
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://prismedu.kr'),
+  metadataBase: new URL("https://prismedu.kr"),
   title: {
-    default: 'PRISM — 미국 대학 입시 매니저',
-    template: '%s | PRISM',
+    default: "PRISM — 미국 대학 입시 매니저",
+    template: "%s | PRISM",
   },
-  description: '한국 국제학교 학생들을 위한 AI 기반 미국 대학 입시 가이드. 1,001개 대학 합격 확률 분석, AI 에세이 첨삭, 맞춤 입시 플래너를 한곳에서.',
-  keywords: ['미국 대학 입시', '합격 예측', 'AI 첨삭', '에세이', 'Common App', '국제학교', 'SAT', 'GPA', 'PRISM', '미국 유학', '대학 지원'],
-  authors: [{ name: 'PRISM' }],
-  // L007: openGraph.images / twitter.images는 명시하지 않음 — Next.js 파일 컨벤션에 위임.
-  // app/opengraph-image.tsx가 자동으로 /opengraph-image 엔드포인트를 제공하고,
-  // 하위 세그먼트에서 opengraph-image.tsx를 추가하면 해당 경로가 덮어씀(dynamic SEO).
+  description:
+    "한국 국제학교 학생들을 위한 AI 기반 미국 대학 입시 가이드. 약 1,000개 대학 합격 확률 분석, AI 에세이 첨삭, 맞춤 입시 플래너를 한곳에서.",
+  keywords: [
+    "미국 대학 입시",
+    "합격 예측",
+    "AI 첨삭",
+    "에세이",
+    "Common App",
+    "국제학교",
+    "SAT",
+    "GPA",
+    "PRISM",
+    "미국 유학",
+    "대학 지원",
+  ],
+  authors: [{ name: "PRISM" }],
   openGraph: {
-    type: 'website',
-    locale: 'ko_KR',
-    url: 'https://prismedu.kr',
-    title: 'PRISM — 미국 대학 입시 매니저',
-    description: 'AI가 분석하는 1,001개 미국 대학 합격 확률. 내 스펙으로 갈 수 있는 대학, 3초면 알 수 있어요.',
-    siteName: 'PRISM',
+    type: "website",
+    locale: "ko_KR",
+    url: "https://prismedu.kr",
+    title: "PRISM — 미국 대학 입시 매니저",
+    description:
+      "AI가 분석하는 약 1,000개 미국 대학 합격 확률. 내 스펙으로 갈 수 있는 대학, 3초면 알 수 있어요.",
+    siteName: "PRISM",
   },
   twitter: {
-    card: 'summary_large_image',
-    title: 'PRISM — 미국 대학 입시 매니저',
-    description: 'AI가 분석하는 1,001개 미국 대학 합격 확률. 내 스펙으로 갈 수 있는 대학, 3초면 알 수 있어요.',
+    card: "summary_large_image",
+    title: "PRISM — 미국 대학 입시 매니저",
+    description:
+      "AI가 분석하는 약 1,000개 미국 대학 합격 확률. 내 스펙으로 갈 수 있는 대학, 3초면 알 수 있어요.",
   },
   robots: {
     index: true,
     follow: true,
   },
-  manifest: '/manifest.json',
-  // SVG favicon takes precedence in modern browsers; app/favicon.ico stays as legacy fallback via Next.js convention.
-  // apple touch icon: iOS Safari 12+ supports SVG icons for "Add to Home Screen".
+  manifest: "/manifest.json",
   icons: {
-    icon: [
-      { url: '/favicon.svg', type: 'image/svg+xml' },
-    ],
-    apple: [
-      { url: '/icon.svg', type: 'image/svg+xml' },
-    ],
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
   },
   alternates: {
-    canonical: 'https://prismedu.kr',
+    canonical: "https://prismedu.kr",
   },
 };
 
 export const viewport: Viewport = {
-  width: 'device-width',
+  width: "device-width",
   initialScale: 1,
-  // Modern mobile keyboard behavior: keyboard resizes the layout viewport
-  // (instead of overlaying), so sticky/100dvh inputs land above the keyboard.
-  interactiveWidget: 'resizes-content',
-  viewportFit: 'cover', // enable env(safe-area-inset-*) on iOS
-  // Light/dark별 theme-color → 모바일 status bar 색 자동.
-  // v2 redesign: light = #FAFAFA(--bg-canvas), dark = #07090F(--bg-canvas dark).
+  interactiveWidget: "resizes-content",
+  viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FAFAFA" },
-    { media: "(prefers-color-scheme: dark)", color: "#07090F" },
+    { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
+    { media: "(prefers-color-scheme: dark)", color: "#08090A" },
   ],
 };
 
@@ -104,24 +73,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" suppressHydrationWarning className={`${inter.variable} ${interTight.variable}`}>
+    <html
+      lang="ko"
+      suppressHydrationWarning
+      className={`${inter.variable} ${interTight.variable} ${newsreader.variable}`}
+    >
       <head>
         {/*
-          Pretendard 한글 폰트 — CDN 사용. (L009 재검토 결론: CDN 유지)
-          - 자체 호스팅 옵션 재검토 결과 비현실적:
-            · npm `pretendard` 패키지는 unpacked 97MB
-            · 단일 woff2(`PretendardVariable.woff2`)는 2MB → 모든 페이지에서 강제 로드 시 비효율
-            · `@fontsource-variable/pretendard`도 전체 subset 합치면 수백 KB
-            · `next/font/local`은 한글 subset 자동화 없음 → 수동으로 unicode-range 관리 필요
-          - CDN의 `dynamic-subset.min.css`는 unicode-range로 페이지에 실제 사용되는
-            글리프 범위만 ~30KB woff2로 동적 로드 → 한국어 앱에 최적(self-host 2MB의 1/66).
-          - CDN 리스크(장애/검열): jsDelivr은 다중 geo POP(CloudFront·BunnyCDN·Fastly)
-            fallback을 자체적으로 처리 → 단일 실패점 아님. 국내 접근성도 검증됨.
-          - preconnect + dns-prefetch로 cross-browser RTT 최소화. (Safari < 14는 preconnect
-            지원 불완전하나 dns-prefetch는 보편 지원)
-          - crossOrigin="anonymous"는 font CORS 요구사항과 정합 (preconnect와 동일).
+          Pretendard 한글 폰트 — jsDelivr CDN의 dynamic-subset.min.css 사용.
+          unicode-range로 페이지에 실제 사용되는 글리프만 ~30KB woff2로 동적 로드.
+          (self-host 2MB 대비 1/66, npm 패키지는 97MB unpacked → CDN이 최적)
         */}
-        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
+        <link
+          rel="preconnect"
+          href="https://cdn.jsdelivr.net"
+          crossOrigin="anonymous"
+        />
         <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
         <link
           rel="preload"
@@ -134,6 +101,11 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
           crossOrigin="anonymous"
         />
+        {/*
+          Pre-hydration theme — FOUC 방지.
+          ThemeProvider의 단순 로직과 정합: localStorage "prism_theme" === "dark"만 .dark 적용.
+          (시스템 prefers-color-scheme은 추적하지 않음)
+        */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{
@@ -143,46 +115,11 @@ export default function RootLayout({
           }}
         />
       </head>
-      {/* 모바일 BottomNav 클리어런스는 각 페이지가 자체 pb-nav로 처리함(safe-area 포함) —
-          body에 전역 pb를 두면 chat 같은 full-height 페이지에서 document 오버플로 발생.
-          lg+ 사이드바 자리 확보(lg:pl-64)는 AppShell이 pathname 기반으로 조건부 적용 —
-          DesktopSidebar가 숨겨지는 라우트(/, /onboarding, /parent-view/*)에서 좌측에
-          빈 256px이 생기지 않도록 한다. */}
-      <body className="font-body antialiased min-h-dvh">
-        <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[200] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-xl focus:shadow-lg">
-          메인 콘텐츠로 건너뛰기
-        </a>
-        <Analytics />
-        <ServiceWorkerRegister />
+      <body className="font-sans antialiased min-h-dvh bg-background text-foreground">
         <ThemeProvider>
-          <I18nProvider>
-          <ErrorBoundary>
-            <AuthProvider>
-              <AuthGate>
-                {/* Desktop sidebar (v3 NavSidebar) — md+에서만 표시. 모바일은 BottomNav로 대체 (각 페이지가 직접 렌더). */}
-                <NavSidebar />
-                <AppShell>
-                  {/* 공개·마케팅 라우트 전용 sticky 헤더. 인증 라우트는 자체 사이드바·BottomNav가 대체. */}
-                  <PublicHeader />
-                  {/* Content shell —
-                        모바일·태블릿: max-w-md / md:max-w-2xl 중앙 정렬 (기존 mobile-first 디자인 보호).
-                        lg+: cap 해제 — 페이지가 자체 lg:max-w-* 로 콘텐츠 폭을 통제하고,
-                        배경(gradient/blob)은 viewport 전체로 흐른다. */}
-                  <main id="main-content" className="max-w-md md:max-w-2xl lg:max-w-none mx-auto min-h-dvh bg-background relative overflow-x-hidden">
-                    <PageTransition>{children}</PageTransition>
-                  </main>
-                  <ConditionalFooter />
-                  {/* 모바일 공개 라우트 sticky CTA — hero AuthSection이 화면 밖일 때만 노출. */}
-                  <MobileCTABar />
-                </AppShell>
-                <Toaster />
-                <SessionExpiryWatcher />
-                <StorageQuotaBanner />
-                <InstallPrompt />
-              </AuthGate>
-            </AuthProvider>
-          </ErrorBoundary>
-          </I18nProvider>
+          <AuthProvider>
+            <I18nProvider>{children}</I18nProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

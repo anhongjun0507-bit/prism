@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Lock } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { InvalidTokenReason } from "@/lib/parent/types";
 import type { InvalidTokenMeta } from "@/lib/parent/validate-token";
 
@@ -26,11 +28,7 @@ const REASON_MESSAGES: Record<InvalidTokenReason, { title: string; body: string 
 };
 
 function formatKoreanDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  return new Date(iso).toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
 }
 
 export function InvalidTokenView({
@@ -41,55 +39,52 @@ export function InvalidTokenView({
   meta?: InvalidTokenMeta;
 }) {
   const msg = REASON_MESSAGES[reason];
-  // 만료/조회 초과 분기에서만 의미 있는 메타 표시 (다른 분기는 기본 안내문만)
   const showMeta =
     (reason === "expired" && meta?.expiresAtISO) ||
     (reason === "view_limit_exceeded" && typeof meta?.viewLimit === "number");
 
   return (
-    <main className="parent-track min-h-dvh bg-background flex flex-col items-center justify-center px-6 py-12">
-      <div className="max-w-md w-full text-center space-y-6">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-muted">
-          <span className="text-3xl" aria-hidden="true">
-            🔒
-          </span>
-        </div>
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-background px-6 py-12">
+      <div className="w-full max-w-md space-y-6 text-center">
+        <span className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary">
+          <Lock className="h-7 w-7 text-muted-foreground" aria-hidden />
+        </span>
+
         <div className="space-y-3">
-          <h1 className="font-headline text-2xl font-bold text-foreground">{msg.title}</h1>
-          <p className="text-foreground/80 leading-relaxed">{msg.body}</p>
+          <h1 className="text-h2 font-bold text-foreground">{msg.title}</h1>
+          <p className="text-body leading-relaxed text-muted-foreground">{msg.body}</p>
           {showMeta && (
-            <div className="mt-3 mx-auto inline-block rounded-xl border border-border/60 bg-muted/40 px-4 py-3 text-sm text-foreground/75 leading-relaxed">
+            <div className="mx-auto inline-block rounded-md border border-border bg-secondary/40 px-4 py-3 text-small text-muted-foreground">
               {reason === "expired" && meta?.expiresAtISO && (
                 <span>
-                  만료일: <strong className="text-foreground">{formatKoreanDate(meta.expiresAtISO)}</strong>
+                  만료일:{" "}
+                  <strong className="text-foreground">{formatKoreanDate(meta.expiresAtISO)}</strong>
                 </span>
               )}
               {reason === "view_limit_exceeded" && (
                 <span>
-                  사용량: <strong className="text-foreground">{meta!.viewCount ?? meta!.viewLimit} / {meta!.viewLimit}회</strong>
+                  사용량:{" "}
+                  <strong className="text-foreground">
+                    {meta!.viewCount ?? meta!.viewLimit} / {meta!.viewLimit}회
+                  </strong>
                 </span>
               )}
             </div>
           )}
         </div>
-        {/* 학생에게 새 링크 요청 — 학부모 입장에서 가장 자연스러운 다음 행동 */}
-        <div className="pt-2">
-          <p className="text-sm text-foreground/75 leading-relaxed">
-            자녀(학생)에게 PRISM 앱에서 새 링크를 발급해 다시 보내달라고 요청해주세요.
-          </p>
-        </div>
-        <div className="pt-6 border-t border-border/60 space-y-3">
-          <p className="text-sm text-muted-foreground">PRISM이 무엇인가요?</p>
-          <p className="text-sm text-foreground/70 leading-relaxed">
+
+        <p className="text-small leading-relaxed text-muted-foreground">
+          자녀(학생)에게 PRISM 앱에서 새 링크를 발급해 다시 보내달라고 요청해주세요.
+        </p>
+
+        <div className="space-y-3 border-t border-border pt-6">
+          <p className="text-small leading-relaxed text-muted-foreground">
             PRISM은 한국 국제학교 학생들의 미국 대학 입시를 돕는 서비스예요. 자녀의 입시 진행 상황을
             한눈에 확인할 수 있는 학부모 리포트를 제공해요.
           </p>
-          <Link
-            href="/"
-            className="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-base hover:bg-primary/90 transition-colors"
-          >
-            PRISM 알아보기
-          </Link>
+          <Button asChild>
+            <Link href="/">PRISM 알아보기</Link>
+          </Button>
         </div>
       </div>
     </main>

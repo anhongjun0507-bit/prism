@@ -1,53 +1,40 @@
-import { Badge } from "@/components/ui-v2/badge";
+import type { TaskCategory } from "@/lib/task-categories";
 import { cn } from "@/lib/utils";
-import { CATEGORY_COLORS, type TaskCategory } from "@/lib/task-categories";
-import {
-  BookOpen,
-  ClipboardList,
-  FileText,
-  Mail,
-  PenLine,
-  Trophy,
-  Users,
-  Sparkles,
-  type LucideIcon,
-} from "lucide-react";
 
-const ICONS: Record<TaskCategory, LucideIcon> = {
-  "시험": BookOpen,
-  "행정": ClipboardList,
-  "에세이": PenLine,
-  "추천서": Mail,
-  "지원": FileText,
-  "과외활동": Trophy,
-  "학부모 미팅": Users,
-  "기타": Sparkles,
+/**
+ * 카테고리 칩.
+ *
+ * ⚠️ lib/task-categories.ts의 CATEGORY_COLORS는 v2 토큰(bg-cat-*)을 참조하는데 v3 Tailwind엔
+ * 해당 토큰이 없어 배경이 렌더되지 않는다. task-categories.ts 수정 금지 제약이 있어,
+ * 여기서 v3 유효 토큰으로 자체 매핑한다. (추후 task-categories.ts CATEGORY_COLORS 정리 권장.)
+ */
+const CATEGORY_STYLE: Record<TaskCategory, string> = {
+  "시험": "bg-info-soft text-info",
+  "행정": "bg-secondary text-secondary-foreground",
+  "에세이": "bg-warning-soft text-warning",
+  "추천서": "bg-success-soft text-success",
+  "지원": "bg-danger-soft text-destructive",
+  "과외활동": "bg-prism-soft text-prism",
+  "학부모 미팅": "bg-accent text-accent-foreground",
+  "기타": "bg-muted text-muted-foreground",
 };
 
 export function TaskCategoryBadge({
   category,
-  size = "sm",
-  showIcon = true,
   className,
 }: {
   category: TaskCategory;
-  size?: "sm" | "xs";
-  showIcon?: boolean;
   className?: string;
 }) {
-  const Icon = ICONS[category];
   return (
-    <Badge
-      variant="outline"
+    <span
       className={cn(
-        "border-none font-medium gap-1",
-        size === "xs" ? "text-[10px] px-1.5 py-0" : "text-xs px-1.5 py-0.5",
-        CATEGORY_COLORS[category],
+        "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-caption font-medium",
+        CATEGORY_STYLE[category] ?? "bg-muted text-muted-foreground",
         className,
       )}
     >
-      {showIcon && Icon ? <Icon className={size === "xs" ? "w-3 h-3" : "w-3.5 h-3.5"} aria-hidden="true" /> : null}
       {category}
-    </Badge>
+    </span>
   );
 }

@@ -1,151 +1,50 @@
-import { ImageResponse } from 'next/og';
+import { ImageResponse } from "next/og";
 
-export const runtime = 'edge';
-export const alt = 'PRISM — AI 기반 미국 대학 입시 매니저';
+/**
+ * 루트 OpenGraph 이미지 (소셜 공유 미리보기). next/og 내장 ImageResponse — 새 패키지 0.
+ * 한글 폰트 로딩 리스크를 피하려 Latin 브랜드 카드로 구성(default 폰트 → fetch 없이 항상 렌더).
+ * (한글 태그라인 버전은 public/에 폰트 번들 후 후속 가능.)
+ */
+export const alt = "PRISM — AI U.S. college admissions";
 export const size = { width: 1200, height: 630 };
-export const contentType = 'image/png';
+export const contentType = "image/png";
 
-export default function OgImage() {
+export default function OpengraphImage() {
   return new ImageResponse(
     (
       <div
         style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'linear-gradient(135deg, #1a1714 0%, #2d1f10 50%, #1a1714 100%)',
-          fontFamily: 'sans-serif',
-          position: 'relative',
-          overflow: 'hidden',
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: "72px",
+          background: "linear-gradient(135deg, #0B1220 0%, #312E81 100%)",
+          color: "#FFFFFF",
+          fontFamily: "sans-serif",
         }}
       >
-        {/* Background decorative orbs */}
-        <div
-          style={{
-            position: 'absolute',
-            top: '-80px',
-            right: '-80px',
-            width: '400px',
-            height: '400px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(139,92,246,0.3) 0%, transparent 70%)',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '-100px',
-            left: '-60px',
-            width: '350px',
-            height: '350px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(249,115,22,0.25) 0%, transparent 70%)',
-          }}
-        />
-
-        {/* Logo icon */}
-        <div
-          style={{
-            width: '88px',
-            height: '88px',
-            borderRadius: '22px',
-            background: 'linear-gradient(135deg, #3B82F6, #8B5CF6, #EC4899, #F97316)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: '28px',
-            boxShadow: '0 8px 32px rgba(139,92,246,0.4)',
-          }}
-        >
-          <svg width="44" height="44" viewBox="0 0 32 32" fill="none">
-            <path d="M16 4L28 26H4L16 4Z" fill="white" fillOpacity="0.95" />
-          </svg>
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div style={{ display: "flex", width: "26px", height: "26px", borderRadius: "9999px", background: "#818CF8" }} />
+          <span style={{ fontSize: "30px", letterSpacing: "5px", color: "#A5B4FC", fontWeight: 700 }}>
+            AI · U.S. COLLEGE ADMISSIONS
+          </span>
         </div>
 
-        {/* Title */}
-        <div
-          style={{
-            fontSize: '64px',
-            fontWeight: 800,
-            color: 'white',
-            letterSpacing: '-0.02em',
-            marginBottom: '16px',
-          }}
-        >
-          PRISM
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <span style={{ fontSize: "190px", fontWeight: 800, letterSpacing: "-6px", lineHeight: 1 }}>PRISM</span>
+          <span style={{ fontSize: "46px", fontWeight: 600, color: "#C7D2FE", marginTop: "16px" }}>
+            Find your best-fit universities in 3 seconds.
+          </span>
         </div>
 
-        {/* Tagline */}
-        <div
-          style={{
-            fontSize: '28px',
-            fontWeight: 600,
-            color: 'rgba(255,255,255,0.9)',
-            marginBottom: '12px',
-            textAlign: 'center',
-          }}
-        >
-          내 스펙으로 갈 수 있는 대학, 3초면 알 수 있어요
-        </div>
-
-        {/* Description */}
-        <div
-          style={{
-            fontSize: '20px',
-            color: 'rgba(255,255,255,0.5)',
-            textAlign: 'center',
-          }}
-        >
-          1,001개 미국 대학 합격 확률 AI 분석 | 에세이 첨삭 | 입시 플래너
-        </div>
-
-        {/* Feature pills */}
-        <div
-          style={{
-            display: 'flex',
-            gap: '12px',
-            marginTop: '32px',
-          }}
-        >
-          {[
-            { label: '합격 예측', bg: 'rgba(59,130,246,0.2)', border: 'rgba(59,130,246,0.4)', color: '#93C5FD' },
-            { label: 'AI 에세이 첨삭', bg: 'rgba(139,92,246,0.2)', border: 'rgba(139,92,246,0.4)', color: '#C4B5FD' },
-            { label: '입시 플래너', bg: 'rgba(249,115,22,0.2)', border: 'rgba(249,115,22,0.4)', color: '#FDBA74' },
-          ].map((tag) => (
-            <div
-              key={tag.label}
-              style={{
-                padding: '8px 20px',
-                borderRadius: '999px',
-                background: tag.bg,
-                border: `1px solid ${tag.border}`,
-                color: tag.color,
-                fontSize: '16px',
-                fontWeight: 600,
-              }}
-            >
-              {tag.label}
-            </div>
-          ))}
-        </div>
-
-        {/* Bottom URL */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '24px',
-            fontSize: '16px',
-            color: 'rgba(255,255,255,0.3)',
-            fontWeight: 500,
-          }}
-        >
-          prismedu.kr
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "27px", color: "#94A3B8" }}>
+          <span style={{ fontWeight: 700, color: "#E2E8F0" }}>prismedu.kr</span>
+          <span>admission odds · AI essay review · planner</span>
         </div>
       </div>
     ),
-    { ...size }
+    { ...size },
   );
 }

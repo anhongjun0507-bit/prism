@@ -1,20 +1,14 @@
 "use client";
 
 import { Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { Button } from "@/components/ui-v2/button";
-import { Card } from "@/components/ui-v2/card";
-import { XCircle, Mail } from "lucide-react";
-import { PrismLoader } from "@/components/PrismLoader";
-import { SUPPORT_EMAIL } from "@/lib/business-info";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Loader2, Mail, XCircle } from "lucide-react";
 
-/**
- * 결제 실패/취소 시 Toss가 redirect하는 페이지.
- * URL 쿼리: code, message, orderId
- *
- * Toss 대표 코드 → 친절한 한국어 매핑.
- * 매핑에 없는 코드는 Toss가 준 message를 그대로 노출.
- */
+import { SUPPORT_EMAIL } from "@/lib/business-info";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+
+/** Toss 대표 실패 코드 → 친절한 한국어. 없는 코드는 Toss message 그대로. */
 const KNOWN_ERROR_MESSAGES: Record<string, string> = {
   PAY_PROCESS_CANCELED: "결제를 취소하셨어요. 언제든 다시 시도하실 수 있어요.",
   PAY_PROCESS_ABORTED: "결제가 중단되었어요. 다시 시도해주세요.",
@@ -38,63 +32,50 @@ function PaymentFailContent() {
     rawMessage ||
     "결제 처리 중 문제가 발생했어요. 잠시 후 다시 시도해주세요.";
 
-  const mailSubject = encodeURIComponent("결제 실패 문의");
-  const mailBody = encodeURIComponent(
+  const mailHref = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("결제 실패 문의")}&body=${encodeURIComponent(
     [
-      "결제 과정에서 문제가 발생해 문의드립니다.",
-      "",
       `에러 코드: ${errorCode || "(없음)"}`,
       `에러 메시지: ${rawMessage || "(없음)"}`,
       `주문 번호: ${orderId || "(없음)"}`,
-    ].join("\n")
-  );
+    ].join("\n"),
+  )}`;
 
   return (
-    <div className="min-h-dvh flex items-center justify-center bg-background p-6">
-      <Card className="p-6 text-center max-w-sm w-full">
-        <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-950/30 flex items-center justify-center mx-auto mb-4">
-          <XCircle className="w-10 h-10 text-red-500" aria-hidden="true" />
-        </div>
-        <h1 className="font-headline font-bold text-xl mb-2">결제가 완료되지 않았어요</h1>
-        <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
-          {friendlyMessage}
-        </p>
+    <div className="flex min-h-dvh items-center justify-center bg-background p-6">
+      <Card className="w-full max-w-sm p-6 text-center">
+        <span className="mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-danger-soft">
+          <XCircle className="h-10 w-10 text-destructive" aria-hidden />
+        </span>
+        <p className="text-h2 font-bold text-foreground">결제가 완료되지 않았어요</p>
+        <p className="mt-2 text-small leading-relaxed text-muted-foreground">{friendlyMessage}</p>
 
         {(errorCode || orderId) && (
-          <div className="bg-muted/50 rounded-lg p-3 mb-5 text-left space-y-1">
+          <div className="mt-4 space-y-1 rounded-lg bg-secondary/40 p-3 text-left">
             {errorCode && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-caption text-muted-foreground">
                 <span className="font-semibold">오류 코드:</span> {errorCode}
               </p>
             )}
             {orderId && (
-              <p className="text-xs text-muted-foreground break-all">
+              <p className="break-all text-caption text-muted-foreground">
                 <span className="font-semibold">주문 번호:</span> {orderId}
               </p>
             )}
           </div>
         )}
 
-        <div className="space-y-2">
-          <Button
-            onClick={() => router.push("/pricing")}
-            className="w-full rounded-xl"
-          >
+        <div className="mt-5 space-y-2">
+          <Button onClick={() => router.push("/pricing")} className="w-full">
             다시 시도하기
           </Button>
-          <Button
-            variant="ghost"
-            onClick={() => router.push("/dashboard")}
-            className="w-full rounded-xl"
-          >
+          <Button variant="ghost" onClick={() => router.push("/dashboard")} className="w-full">
             홈으로 돌아가기
           </Button>
           <a
-            href={`mailto:${SUPPORT_EMAIL}?subject=${mailSubject}&body=${mailBody}`}
-            className="inline-flex items-center justify-center gap-1.5 w-full text-xs font-semibold text-muted-foreground hover:text-foreground pt-2"
+            href={mailHref}
+            className="inline-flex w-full items-center justify-center gap-1.5 pt-1 text-caption font-semibold text-muted-foreground hover:text-foreground"
           >
-            <Mail className="w-3.5 h-3.5" aria-hidden="true" />
-            도움이 필요하신가요? {SUPPORT_EMAIL}
+            <Mail className="h-3.5 w-3.5" aria-hidden /> 도움이 필요하신가요? {SUPPORT_EMAIL}
           </a>
         </div>
       </Card>
@@ -106,8 +87,8 @@ export default function PaymentFailPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-dvh flex items-center justify-center bg-background">
-          <PrismLoader size={36} />
+        <div className="flex min-h-dvh items-center justify-center bg-background">
+          <Loader2 className="h-9 w-9 animate-spin text-prism" aria-hidden />
         </div>
       }
     >

@@ -1,265 +1,155 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, Loader2, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
-import { Button } from "@/components/ui-v2/button";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card } from "@/components/ui-v2/card";
-import { TaskCategoryBadge } from "./TaskCategoryBadge";
-import { Sparkles, RefreshCw, Loader2, Clock, AlertTriangle } from "lucide-react";
-import { PrismLoader } from "@/components/PrismLoader";
+import { formatDate } from "@/lib/date";
 import { cn } from "@/lib/utils";
-import type { TaskCategory } from "@/lib/task-categories";
+import type { GeneratedTask } from "@/lib/prompts/planner";
+import { TaskCategoryBadge } from "./TaskCategoryBadge";
 
-export interface GeneratedTaskView {
-  id: string;
-  title: string;
-  description: string;
-  category: TaskCategory;
-  priority: "높음" | "중간" | "낮음";
-  dueDate: string; // ISO
-  estimatedMinutes: number;
-}
-
-export type FocusAreaChoice = "balanced" | "essay" | "test-prep" | "ec";
-
-const FOCUS_LABELS: Record<FocusAreaChoice, string> = {
-  balanced: "균형",
-  essay: "에세이",
-  "test-prep": "시험 준비",
-  ec: "과외활동",
+/** 우선순위 칩 — AI 미리보기에서만 표시(저장 모델엔 없음, notes로 흡수). */
+const PRIORITY_STYLE: Record<string, string> = {
+  "높음": "bg-danger-soft text-destructive",
+  "중간": "bg-warning-soft text-warning",
+  "낮음": "bg-secondary text-muted-foreground",
 };
 
-const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
-
-function dayLabel(iso: string): string {
-  try {
-    const d = new Date(iso + "T00:00:00");
-    return WEEKDAY_LABELS[d.getDay()];
-  } catch {
-    return "";
-  }
-}
-
-function priorityBadge(p: GeneratedTaskView["priority"]): string {
-  if (p === "높음") return "bg-red-50 text-red-600 dark:text-red-300";
-  if (p === "중간") return "bg-amber-50 text-amber-600 dark:text-amber-300";
-  return "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300";
+interface GeneratedTasksPreviewProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  loading: boolean;
+  saving: boolean;
+  tasks: GeneratedTask[];
+  reasoning: string;
+  error: string | null;
+  onConfirm: (selected: GeneratedTask[]) => void;
 }
 
 export function GeneratedTasksPreview({
   open,
   onOpenChange,
+  loading,
+  saving,
   tasks,
   reasoning,
-  isLoading,
-  isSaving,
-  tooManyExistingTasks,
-  onRegenerate,
-  onSave,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  tasks: GeneratedTaskView[];
-  reasoning: string;
-  isLoading: boolean;
-  isSaving: boolean;
-  tooManyExistingTasks?: boolean;
-  /** 재생성 호출. 사용자가 focusArea 다시 선택 */
-  onRegenerate: (focus: FocusAreaChoice) => void;
-  /** 선택된 task들 저장 요청 */
-  onSave: (selected: GeneratedTaskView[]) => void;
-}) {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [showFocusPicker, setShowFocusPicker] = useState(false);
+  error,
+  onConfirm,
+}: GeneratedTasksPreviewProps) {
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  // tasks가 바뀌면(새로 생성) 전부 체크
+  // 새 결과 도착 시 전체 선택.
   useEffect(() => {
-    setSelectedIds(new Set(tasks.map((t) => t.id)));
-    setShowFocusPicker(false);
+    setSelected(new Set(tasks.map((t) => t.id)));
   }, [tasks]);
 
-  const sorted = useMemo(
-    () => [...tasks].sort((a, b) => a.dueDate.localeCompare(b.dueDate)),
-    [tasks],
+  const selectedTasks = useMemo(
+    () => tasks.filter((t) => selected.has(t.id)),
+    [tasks, selected],
   );
 
-  const toggle = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
     });
-  };
-
-  const selectedCount = selectedIds.size;
-  const selectedTasks = sorted.filter((t) => selectedIds.has(t.id));
-
-  const handleRegenerate = (focus: FocusAreaChoice) => {
-    setShowFocusPicker(false);
-    onRegenerate(focus);
-  };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="max-h-[92dvh] overflow-y-auto rounded-t-2xl p-0 md:max-w-lg md:mx-auto"
-      >
-        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-gutter-sm md:px-gutter pt-6 pb-4">
-          <SheetHeader className="space-y-1 text-left">
-            <SheetTitle className="flex items-center gap-2 text-lg">
-              <Sparkles className="w-5 h-5 text-primary" aria-hidden="true" />
-              AI가 제안한 다음 주 계획
-            </SheetTitle>
-            <SheetDescription className="text-xs">
-              프로필과 목표 대학교를 기반으로 생성됐어요. 체크박스로 원하는 항목만 저장할 수 있어요.
-            </SheetDescription>
-          </SheetHeader>
-        </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[560px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-prism" aria-hidden />
+            AI 추천 주간 계획
+          </DialogTitle>
+          <DialogDescription>
+            {reasoning || "이번 주에 집중하면 좋은 할 일을 골라 담아보세요."}
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="px-gutter-sm md:px-gutter py-4 space-y-4">
-          {tooManyExistingTasks && (
-            <Card className="p-3 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
-              <p className="text-xs text-amber-700 dark:text-amber-300 flex items-start gap-1.5">
-                <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />
-                기존 미완료 일정이 많아 정확도가 떨어질 수 있어요.
-              </p>
-            </Card>
-          )}
-
-          {isLoading && (
-            <div className="py-12 flex flex-col items-center justify-center text-center gap-3">
-              <PrismLoader size={48} />
-              <p className="text-sm font-medium">AI가 다음 주 계획을 만들고 있어요</p>
-              <p className="text-xs text-muted-foreground">최대 45초가 걸릴 수 있어요</p>
-            </div>
-          )}
-
-          {!isLoading && reasoning && (
-            <Card className="p-3 bg-primary/5 border-primary/20">
-              <p className="text-xs font-semibold text-primary mb-0.5">이번 주의 포커스</p>
-              <p className="text-sm">{reasoning}</p>
-            </Card>
-          )}
-
-          {!isLoading && sorted.length > 0 && (
-            <div className="space-y-2">
-              {sorted.map((t) => {
-                const checked = selectedIds.has(t.id);
-                return (
-                  <Card
-                    key={t.id}
-                    className={cn(
-                      "p-3 border transition-colors cursor-pointer",
-                      checked ? "border-primary/40 bg-primary/5" : "border-border",
-                    )}
-                    onClick={() => toggle(t.id)}
-                  >
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={() => toggle(t.id)}
-                        className="mt-0.5 rounded shrink-0"
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label={`${t.title} 선택`}
-                      />
-                      <div className="flex-1 min-w-0 space-y-1.5">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[10px] font-bold text-muted-foreground tabular-nums">
-                            [{dayLabel(t.dueDate)}]
-                          </span>
-                          <TaskCategoryBadge category={t.category} size="xs" />
-                          <span
-                            className={cn(
-                              "text-[10px] px-1.5 py-0 rounded-sm font-medium",
-                              priorityBadge(t.priority),
-                            )}
-                          >
-                            {t.priority}
-                          </span>
-                        </div>
-                        <h4 className="text-sm font-bold leading-snug">{t.title}</h4>
-                        {t.description && (
-                          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
-                            {t.description}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                          <Clock className="w-3 h-3" aria-hidden="true" />
-                          <span>{t.estimatedMinutes}분</span>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        <div className="sticky bottom-0 z-10 bg-background/95 backdrop-blur-sm border-t border-border px-gutter-sm md:px-gutter py-3 space-y-2">
-          {showFocusPicker ? (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground">어느 영역에 집중할까요?</p>
-              <div className="grid grid-cols-2 gap-2">
-                {(Object.keys(FOCUS_LABELS) as FocusAreaChoice[]).map((f) => (
-                  <Button
-                    key={f}
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleRegenerate(f)}
-                    disabled={isLoading}
-                    className="text-xs"
-                  >
-                    {FOCUS_LABELS[f]}
-                  </Button>
-                ))}
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowFocusPicker(false)}
-                className="w-full text-xs"
-              >
-                취소
-              </Button>
-            </div>
-          ) : (
-            <>
-              <Button
-                className="w-full"
-                onClick={() => onSave(selectedTasks)}
-                disabled={isLoading || isSaving || selectedCount === 0}
-              >
-                {isSaving ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> 저장 중...</>
-                ) : selectedCount === sorted.length && sorted.length > 0 ? (
-                  `${sorted.length}개 모두 플래너에 추가`
-                ) : (
-                  `${selectedCount}개 플래너에 추가`
+        {loading ? (
+          <div className="flex flex-col items-center gap-2 py-10 text-center">
+            <Loader2 className="h-6 w-6 animate-spin text-prism" aria-hidden />
+            <p className="text-small text-muted-foreground">AI가 이번 주 계획을 만들고 있어요…</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center gap-2 py-8 text-center">
+            <AlertTriangle className="h-6 w-6 text-warning" aria-hidden />
+            <p className="text-small text-muted-foreground">{error}</p>
+          </div>
+        ) : (
+          <div className="max-h-[50vh] space-y-2 overflow-y-auto">
+            {tasks.map((t) => (
+              <div
+                key={t.id}
+                className={cn(
+                  "flex items-start gap-3 rounded-lg border p-3 transition-colors",
+                  selected.has(t.id) ? "border-primary bg-prism-soft" : "border-border",
                 )}
-              </Button>
-              <Button
-                variant="secondary"
-                className="w-full"
-                onClick={() => setShowFocusPicker(true)}
-                disabled={isLoading || isSaving}
               >
-                <RefreshCw className="w-4 h-4 mr-2" aria-hidden="true" />
-                다시 생성
-              </Button>
-            </>
+                <Checkbox
+                  checked={selected.has(t.id)}
+                  onChange={() => toggle(t.id)}
+                  aria-label={`${t.title} 선택`}
+                  className="mt-0.5"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-small font-medium text-foreground">{t.title}</p>
+                  {t.description && (
+                    <p className="mt-0.5 line-clamp-2 text-caption text-muted-foreground">
+                      {t.description}
+                    </p>
+                  )}
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <TaskCategoryBadge category={t.category} />
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-1.5 py-0.5 text-caption font-medium",
+                        PRIORITY_STYLE[t.priority] ?? "bg-secondary text-muted-foreground",
+                      )}
+                    >
+                      {t.priority}
+                    </span>
+                    <span className="text-caption text-muted-foreground tabular">
+                      {formatDate(t.dueDate)}
+                    </span>
+                    {t.estimatedMinutes ? (
+                      <span className="text-caption text-muted-foreground tabular">
+                        ~{t.estimatedMinutes}분
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
+            닫기
+          </Button>
+          {!loading && !error && (
+            <Button
+              onClick={() => onConfirm(selectedTasks)}
+              disabled={selectedTasks.length === 0 || saving}
+            >
+              {saving ? "추가 중…" : `선택 ${selectedTasks.length}개 추가`}
+            </Button>
           )}
-        </div>
-      </SheetContent>
-    </Sheet>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
