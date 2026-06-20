@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 
 import { useAuth, type UserProfile } from "@/lib/auth-context";
 import { ApiError, consumeSSE, streamWithAuth } from "@/lib/api-client";
@@ -305,6 +306,12 @@ export function ChatClient() {
               <p className="mt-0.5 text-caption text-muted-foreground">
                 Pro 플랜으로 업그레이드하면 무제한으로 상담할 수 있어요.
               </p>
+              <Link
+                href="/pricing"
+                className="mt-2 inline-flex items-center justify-center rounded-md bg-secondary px-3 py-1.5 text-caption font-medium text-foreground transition-colors hover:bg-secondary/70"
+              >
+                요금제 보기
+              </Link>
             </div>
           ) : (
             <>

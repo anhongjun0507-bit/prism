@@ -28,7 +28,7 @@ export function UpgradeBanner({ lockedCount }: UpgradeBannerProps) {
             플랜을 업그레이드하면 전체 학교 매칭 결과를 볼 수 있어요.
           </p>
           <Button asChild>
-            <Link href="/plans">플랜 보기 →</Link>
+            <Link href="/pricing">플랜 보기 →</Link>
           </Button>
         </div>
       </div>

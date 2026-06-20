@@ -208,7 +208,7 @@ export function SpecAnalysisClient() {
             심층 분석과 맞춤 개선 제안을 받아볼 수 있어요.
           </p>
           <Button asChild>
-            <Link href="/plans">플랜 보기 →</Link>
+            <Link href="/pricing">플랜 보기 →</Link>
           </Button>
         </Card>
       </div>
