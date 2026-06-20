@@ -14,7 +14,8 @@
 
 import { collection, deleteDoc, doc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "./firebase";
-import type { Essay } from "@/types/essay";
+import { countWords } from "./essay-utils";
+import type { Essay, EssayVersion, EssayReview } from "@/types/essay";
 
 export interface CreateEssayParams {
   university: string;
@@ -71,4 +72,78 @@ export async function restoreEssay(uid: string, id: string): Promise<void> {
 /** 영구 삭제 — Firestore document 자체 제거. */
 export async function deleteEssay(uid: string, id: string): Promise<void> {
   await deleteDoc(doc(db, "users", uid, "essays", id));
+}
+
+/* ──────────────────────────────────────────────────────────
+   에디터(/essays/review/[id]) 전용 — content/version/review 저장
+   ────────────────────────────────────────────────────────── */
+
+/** 버전 히스토리 최대 보관 개수 — 초과 시 오래된 것부터 제거. */
+const MAX_VERSIONS = 10;
+/** 첨삭 결과 최대 보관 개수 — 최신이 [0]. */
+const MAX_REVIEWS = 5;
+
+/**
+ * 자동 저장 — 본문만 갱신(버전은 만들지 않음). lastSaved(YYYY-MM-DD)·updatedAt(ISO)을
+ * 함께 갱신해 목록 정렬(updatedAt desc)·표시(lastSaved)에 반영.
+ */
+export async function updateEssayContent(
+  uid: string,
+  id: string,
+  content: string,
+): Promise<void> {
+  const now = new Date().toISOString();
+  await updateDoc(doc(db, "users", uid, "essays", id), {
+    content,
+    lastSaved: now.slice(0, 10),
+    updatedAt: now,
+  });
+}
+
+/**
+ * 수동 저장 — 현재 본문을 새 버전으로 push. version 번호는 직전 +1, 최대 MAX_VERSIONS개만
+ * 유지(초과 시 오래된 것 제거). 갱신된 versions 배열을 반환해 호출자가 재조회 없이
+ * 로컬 상태를 미러링할 수 있게 한다.
+ */
+export async function pushEssayVersion(
+  uid: string,
+  id: string,
+  content: string,
+  existingVersions: EssayVersion[],
+): Promise<EssayVersion[]> {
+  const now = new Date().toISOString();
+  const nextVersion =
+    (existingVersions[existingVersions.length - 1]?.version ?? 0) + 1;
+  const newVersion: EssayVersion = {
+    version: nextVersion,
+    content,
+    savedAt: now,
+    wordCount: countWords(content),
+  };
+  const versions = [...existingVersions, newVersion].slice(-MAX_VERSIONS);
+  await updateDoc(doc(db, "users", uid, "essays", id), {
+    versions,
+    content,
+    lastSaved: now.slice(0, 10),
+    updatedAt: now,
+  });
+  return versions;
+}
+
+/**
+ * 첨삭 결과 저장 — reviews 맨 앞에 prepend(최신이 [0]; EssayCard가 reviews[0]을 최신으로
+ * 사용). 최대 MAX_REVIEWS개 유지. 갱신된 reviews 배열을 반환.
+ */
+export async function appendReview(
+  uid: string,
+  id: string,
+  review: EssayReview,
+  existingReviews: EssayReview[],
+): Promise<EssayReview[]> {
+  const reviews = [review, ...existingReviews].slice(0, MAX_REVIEWS);
+  await updateDoc(doc(db, "users", uid, "essays", id), {
+    reviews,
+    updatedAt: new Date().toISOString(),
+  });
+  return reviews;
 }
