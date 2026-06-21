@@ -8,7 +8,7 @@ import {
   updateProfile, sendPasswordResetEmail,
   User,
 } from "firebase/auth";
-import { auth, googleProvider, appleProvider, db } from "./firebase";
+import { auth, googleProvider, db } from "./firebase";
 import { shouldUseRedirectAuth, isKakaoTalkInApp } from "./auth-helpers";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
 import type { PlanType, BillingCycle } from "./plans";
@@ -78,7 +78,6 @@ interface AuthContextValue {
   signUpWithEmail: (email: string, password: string, name: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   loginWithKakao: () => Promise<void>;
-  loginWithApple: () => Promise<void>;
   logout: () => void;
   saveProfile: (data: Partial<UserProfile>) => Promise<void>;
   snapshots: ProfileSnapshot[];
@@ -163,7 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     // 부팅 시 1회: redirect 기반 OAuth 결과 hydrate.
-    // - Google/Apple: signInWithRedirect 이후 페이지가 redirect로 복귀하면 getRedirectResult가 1회 결과를 돌려준다.
+    // - Google: signInWithRedirect 이후 페이지가 redirect로 복귀하면 getRedirectResult가 1회 결과를 돌려준다.
     //   onAuthStateChanged가 어차피 user를 set하므로 우리는 에러 케이스만 신경쓰면 됨.
     // - Kakao: callback이 sessionStorage에 customToken을 저장해두면 그걸 소비해 signInWithCustomToken 호출.
     //   state는 redirect 모드에서도 클라이언트 sessionStorage에 미리 저장된 값과 대조 → CSRF.
@@ -414,23 +413,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const loginWithApple = async () => {
-    if (shouldUseRedirectAuth()) {
-      await signInWithRedirect(auth, appleProvider);
-      return;
-    }
-    try {
-      await signInWithPopup(auth, appleProvider);
-    } catch (e: unknown) {
-      const code = (e && typeof e === "object" && "code" in e) ? (e as { code: string }).code : "";
-      if (code === "auth/popup-blocked" || code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
-        await signInWithRedirect(auth, appleProvider);
-        return;
-      }
-      throw e;
-    }
-  };
-
   const logout = async () => {
     // 순서가 중요: (1) Firestore snapshot 구독 선해제 → in-flight 콜백이
     // 아래에서 비운 localStorage를 재오염시키는 race 차단.
@@ -553,7 +535,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, profile, loading, isMaster,
-      loginWithGoogle, loginWithEmail, signUpWithEmail, resetPassword, loginWithKakao, loginWithApple,
+      loginWithGoogle, loginWithEmail, signUpWithEmail, resetPassword, loginWithKakao,
       logout, saveProfile, snapshots, toggleFavorite, isFavorite,
     }}>
       {children}

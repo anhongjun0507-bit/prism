@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,11 +11,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { logError } from "@/lib/log";
 
-type Provider = "google" | "apple" | "kakao";
+type Provider = "google" | "kakao";
 type Mode = "login" | "signup";
 
+/** 회원가입 비밀번호 정책: 8자 이상 + 특수문자(ASCII 기호) 1개 이상. */
+const SPECIAL_CHAR_RE = /[!@#$%^&*()_+=[\]{};:'",.<>?/\\|`~-]/;
+
+/** 비밀번호 정책 위반 시 한국어 안내 메시지, 통과하면 null. */
+function passwordIssue(password: string): string | null {
+  if (password.length < 8) return "비밀번호는 8자 이상이어야 해요.";
+  if (!SPECIAL_CHAR_RE.test(password)) return "특수문자를 하나 이상 포함해주세요.";
+  return null;
+}
+
 /**
- * /login Client form — 이메일/비밀번호(로그인·회원가입) + SSO 3종(Google·Apple·Kakao).
+ * /login Client form — 이메일/비밀번호(로그인·회원가입) + SSO 2종(Google·Kakao).
  *
  * 인증 흐름:
  *   - 이메일: useAuth().loginWithEmail / signUpWithEmail / resetPassword
@@ -28,7 +38,6 @@ export function LoginForm() {
   const {
     user,
     loginWithGoogle,
-    loginWithApple,
     loginWithKakao,
     loginWithEmail,
     signUpWithEmail,
@@ -42,6 +51,7 @@ export function LoginForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
 
   const from = (() => {
@@ -59,12 +69,16 @@ export function LoginForm() {
     }
   }, [user, router, from]);
 
+  const switchMode = (next: Mode) => {
+    setMode(next);
+    setPasswordConfirm("");
+  };
+
   const handleLogin = async (provider: Provider) => {
     if (busy || emailBusy) return;
     setBusy(provider);
     try {
       if (provider === "google") await loginWithGoogle();
-      else if (provider === "apple") await loginWithApple();
       else await loginWithKakao();
       // 성공 경로: onAuthStateChanged → user set → useEffect가 router.replace 처리.
       // redirect 모드면 이미 페이지 unload — 아래 코드는 실행 안 됨.
@@ -88,8 +102,13 @@ export function LoginForm() {
         toast.error("이름을 입력해주세요.");
         return;
       }
-      if (password.length < 6) {
-        toast.error("비밀번호는 6자 이상이어야 해요.");
+      const issue = passwordIssue(password);
+      if (issue) {
+        toast.error(issue);
+        return;
+      }
+      if (password !== passwordConfirm) {
+        toast.error("비밀번호가 일치하지 않습니다.");
         return;
       }
     }
@@ -122,6 +141,18 @@ export function LoginForm() {
     }
   };
 
+  // 회원가입 비밀번호 실시간 검증 (signup 모드 + 입력이 있을 때만 노출).
+  const pwError =
+    mode === "signup" && password.length > 0 ? passwordIssue(password) : null;
+  const pwValid = mode === "signup" && password.length > 0 && pwError === null;
+  const confirmMismatch =
+    mode === "signup" && passwordConfirm.length > 0 && passwordConfirm !== password;
+  const confirmMatch =
+    mode === "signup" && passwordConfirm.length > 0 && passwordConfirm === password;
+  // 회원가입 제출 가능 여부: 비밀번호 정책 통과 + 확인란 일치(둘 다 충족해야 버튼 활성화).
+  const signupPasswordOk =
+    passwordIssue(password) === null && password === passwordConfirm;
+
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center p-4">
       <div className="w-full max-w-[420px] space-y-6 py-8">
@@ -139,7 +170,7 @@ export function LoginForm() {
           <div className="mb-4 grid grid-cols-2 gap-1 rounded-md bg-secondary p-1">
             <button
               type="button"
-              onClick={() => setMode("login")}
+              onClick={() => switchMode("login")}
               className={
                 "h-9 rounded-[8px] text-small font-medium transition-colors " +
                 (mode === "login"
@@ -151,7 +182,7 @@ export function LoginForm() {
             </button>
             <button
               type="button"
-              onClick={() => setMode("signup")}
+              onClick={() => switchMode("signup")}
               className={
                 "h-9 rounded-[8px] text-small font-medium transition-colors " +
                 (mode === "signup"
@@ -197,12 +228,71 @@ export function LoginForm() {
                 id="login-password"
                 type="password"
                 autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                placeholder={mode === "signup" ? "6자 이상" : "비밀번호"}
+                placeholder={mode === "signup" ? "8자 이상, 특수문자 포함" : "비밀번호"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={emailBusy}
+                aria-invalid={pwError ? true : undefined}
+                aria-describedby={pwError || pwValid ? "login-password-hint" : undefined}
               />
+              {(pwError || pwValid) && (
+                <p
+                  id="login-password-hint"
+                  aria-live="polite"
+                  className={
+                    pwError
+                      ? "text-caption text-destructive"
+                      : "inline-flex items-center gap-1 text-caption text-success"
+                  }
+                >
+                  {pwError ?? (
+                    <>
+                      <Check className="h-3 w-3" aria-hidden /> 사용 가능한 비밀번호예요
+                    </>
+                  )}
+                </p>
+              )}
             </div>
+
+            {mode === "signup" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="login-password-confirm">비밀번호 확인</Label>
+                <Input
+                  id="login-password-confirm"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="비밀번호를 한 번 더 입력해주세요"
+                  value={passwordConfirm}
+                  onChange={(e) => setPasswordConfirm(e.target.value)}
+                  disabled={emailBusy}
+                  aria-invalid={confirmMismatch ? true : undefined}
+                  aria-describedby={
+                    confirmMismatch || confirmMatch
+                      ? "login-password-confirm-hint"
+                      : undefined
+                  }
+                />
+                {(confirmMismatch || confirmMatch) && (
+                  <p
+                    id="login-password-confirm-hint"
+                    aria-live="polite"
+                    className={
+                      confirmMismatch
+                        ? "text-caption text-destructive"
+                        : "inline-flex items-center gap-1 text-caption text-success"
+                    }
+                  >
+                    {confirmMismatch ? (
+                      "비밀번호가 일치하지 않습니다"
+                    ) : (
+                      <>
+                        <Check className="h-3 w-3" aria-hidden /> 비밀번호가 일치합니다
+                      </>
+                    )}
+                  </p>
+                )}
+              </div>
+            )}
 
             <Button
               type="submit"
@@ -210,7 +300,9 @@ export function LoginForm() {
               size="lg"
               shape="rect"
               className="w-full justify-center"
-              disabled={emailBusy || busy !== null}
+              disabled={
+                emailBusy || busy !== null || (mode === "signup" && !signupPasswordOk)
+              }
               aria-busy={emailBusy || undefined}
             >
               {emailBusy ? (
@@ -251,13 +343,6 @@ export function LoginForm() {
             onClick={() => handleLogin("google")}
           />
           <SSOButton
-            provider="apple"
-            busy={busy}
-            label="Apple로 계속하기"
-            icon={<AppleIcon />}
-            onClick={() => handleLogin("apple")}
-          />
-          <SSOButton
             provider="kakao"
             busy={busy}
             label="카카오로 계속하기"
@@ -286,7 +371,7 @@ function authErrorMessage(err: unknown): string {
     case "auth/email-already-in-use":
       return "이미 가입된 이메일이에요. 로그인 탭에서 로그인해주세요.";
     case "auth/weak-password":
-      return "비밀번호는 6자 이상이어야 해요.";
+      return "비밀번호는 8자 이상이어야 해요.";
     case "auth/invalid-credential":
     case "auth/wrong-password":
     case "auth/user-not-found":
@@ -364,21 +449,6 @@ function GoogleIcon() {
         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
         fill="#EA4335"
       />
-    </svg>
-  );
-}
-
-function AppleIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
     </svg>
   );
 }

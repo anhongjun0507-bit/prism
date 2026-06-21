@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, OAuthProvider, EmailAuthProvider } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, EmailAuthProvider } from 'firebase/auth';
 import { getFirestore, initializeFirestore } from 'firebase/firestore';
 
 // env 누락 검출. 프로덕션에서는 로그인·DB가 동작할 수 없으므로 빌드/부팅 즉시 throw —
@@ -46,8 +46,4 @@ export const db = isNewApp
   : getFirestore(app);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
-export const appleProvider = new OAuthProvider('apple.com');
-appleProvider.addScope('email');
-appleProvider.addScope('name');
-appleProvider.setCustomParameters({ locale: 'ko' });
 export const emailProvider = new EmailAuthProvider();

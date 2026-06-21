@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * /login — SSO 3종 (Google · Apple · Kakao) + Hero.
+ * /login — SSO 2종 (Google · Kakao) + Hero.
  *
  * Server boundary: metadata export + Suspense (useSearchParams 정적 렌더링 요건).
  * 본격 폼은 LoginForm.tsx (Client) — useAuth · useRouter · useSearchParams · useState 사용.
