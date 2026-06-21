@@ -1,12 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <!-- PRISM favicon — 로고 그라데이션(green→indigo→amber) + 흰 프리즘. 16px에서도 읽히게 빔 생략. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- PRISM favicon — 그라데이션 + 흰 "P". -->
   <defs>
-    <linearGradient id="g" x1="3" y1="3" x2="29" y2="29" gradientUnits="userSpaceOnUse">
+    <linearGradient id="g" x1="48" y1="48" x2="464" y2="464" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#10B981"/>
       <stop offset="0.5" stop-color="#4F46E5"/>
       <stop offset="1" stop-color="#F59E0B"/>
     </linearGradient>
   </defs>
-  <rect width="32" height="32" rx="7" fill="url(#g)"/>
-  <path d="M16 7 L25 24 H7 Z" fill="#FFFFFF"/>
+  <rect width="512" height="512" rx="116" fill="url(#g)"/>
+  <path fill="#FFFFFF" fill-rule="evenodd"
+        d="M180 128 L256 128 A78 78 0 0 1 256 284 L256 384 L180 384 Z
+           M256 172 A34 34 0 0 1 256 240 L256 172 Z"/>
 </svg>

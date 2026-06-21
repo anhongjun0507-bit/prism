@@ -1,19 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- PRISM brand mark — 로고 그라데이션(green→indigo→amber) + 흰 프리즘 + 분광 빔. -->
+  <!-- PRISM 앱 아이콘 — 로고 그라데이션(green→indigo→amber) + 흰 "P". -->
   <defs>
-    <linearGradient id="prismGrad" x1="48" y1="48" x2="464" y2="464" gradientUnits="userSpaceOnUse">
+    <linearGradient id="g" x1="48" y1="48" x2="464" y2="464" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#10B981"/>
       <stop offset="0.5" stop-color="#4F46E5"/>
       <stop offset="1" stop-color="#F59E0B"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="116" fill="url(#prismGrad)"/>
-  <!-- 프리즘 삼각형 -->
-  <path d="M256 128 L400 396 H112 Z" fill="#FFFFFF"/>
-  <!-- 분광된 빛 -->
-  <g stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" stroke-opacity="0.9">
-    <line x1="190" y1="424" x2="160" y2="476"/>
-    <line x1="256" y1="424" x2="256" y2="482"/>
-    <line x1="322" y1="424" x2="352" y2="476"/>
-  </g>
+  <rect width="512" height="512" rx="116" fill="url(#g)"/>
+  <path fill="#FFFFFF" fill-rule="evenodd"
+        d="M180 128 L256 128 A78 78 0 0 1 256 284 L256 384 L180 384 Z
+           M256 172 A34 34 0 0 1 256 240 L256 172 Z"/>
 </svg>
