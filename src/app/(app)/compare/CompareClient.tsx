@@ -8,7 +8,6 @@ import { useAuth } from "@/lib/auth-context";
 import { fetchWithAuth } from "@/lib/api-client";
 import { getCachedMatch, setCachedMatch, type MatchResponse } from "@/lib/match-cache";
 import { useSchoolsIndex } from "@/lib/schools-index";
-import { schoolLogoUrl } from "@/lib/school-logo";
 import { logError } from "@/lib/log";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -132,7 +131,7 @@ export function CompareClient() {
             key={s.n}
             schoolName={s.n}
             location={s.loc}
-            logoUrl={schoolLogoUrl(s.n, s.d)}
+            logoDomain={s.d}
             myProbability={hasMyProb ? s.prob : undefined}
             category={hasMyProb ? toCompareCategory(s.cat) : undefined}
             onRemove={() => remove(s.n)}

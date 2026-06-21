@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 import { CategoryChip, type Category } from "./category-chip";
+import { SchoolLogo } from "./school-logo";
+import { logoSources } from "@/lib/school-logo";
 
 /**
  * PRISM SchoolCard — /analysis 메인 학교 카드.
@@ -21,7 +23,7 @@ interface SchoolCardProps {
   schoolName: string;
   location: string;
   imageUrl?: string;
-  logoUrl?: string;
+  logoDomain?: string;
   acceptanceRate: number;
   avgGPA: number;
   avgSAT: [number, number];
@@ -52,7 +54,7 @@ export function SchoolCard({
   schoolName,
   location,
   imageUrl,
-  logoUrl,
+  logoDomain,
   acceptanceRate,
   avgGPA,
   avgSAT,
@@ -63,8 +65,6 @@ export function SchoolCard({
   onClick,
   className,
 }: SchoolCardProps) {
-  const [logoFailed, setLogoFailed] = React.useState(false);
-  const showLogo = Boolean(logoUrl) && !logoFailed;
   return (
     <Card
       className={cn(
@@ -84,20 +84,14 @@ export function SchoolCard({
               alt={schoolName}
               className="w-full h-full object-cover"
             />
-          ) : showLogo ? (
-            <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-card p-2.5 shadow-prism-sm">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={logoUrl}
-                alt={schoolName}
-                className="h-full w-full object-contain"
-                onError={() => setLogoFailed(true)}
-              />
-            </div>
           ) : (
-            <span className="text-h1 font-display font-bold text-muted-foreground">
-              {schoolName.charAt(0)}
-            </span>
+            <SchoolLogo
+              name={schoolName}
+              sources={logoSources(schoolName, logoDomain)}
+              className="h-28 w-28 rounded-2xl bg-card p-3 shadow-prism-sm"
+              imgClassName="object-contain"
+              letterClassName="text-h1"
+            />
           )}
         </div>
 

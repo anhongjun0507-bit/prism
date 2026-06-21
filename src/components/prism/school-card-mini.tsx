@@ -1,11 +1,12 @@
 "use client";
 
-import * as React from "react";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 import { CategoryChip, type Category } from "./category-chip";
+import { SchoolLogo } from "./school-logo";
+import { logoSources } from "@/lib/school-logo";
 
 /**
  * PRISM SchoolCardMini — 작은 학교 카드.
@@ -17,7 +18,7 @@ import { CategoryChip, type Category } from "./category-chip";
 interface SchoolCardMiniProps {
   schoolName: string;
   location?: string;
-  logoUrl?: string;
+  logoDomain?: string;
   myProbability?: number;
   category?: Category;
   onClick?: () => void;
@@ -28,7 +29,7 @@ interface SchoolCardMiniProps {
 export function SchoolCardMini({
   schoolName,
   location,
-  logoUrl,
+  logoDomain,
   myProbability,
   category,
   onClick,
@@ -36,8 +37,6 @@ export function SchoolCardMini({
   className,
 }: SchoolCardMiniProps) {
   const isInteractive = Boolean(onClick);
-  const [logoFailed, setLogoFailed] = React.useState(false);
-  const showLogo = Boolean(logoUrl) && !logoFailed;
 
   return (
     <div
@@ -61,21 +60,13 @@ export function SchoolCardMini({
       }
     >
       {/* Logo */}
-      <div className="h-8 w-8 flex-shrink-0 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
-        {showLogo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={logoUrl}
-            alt={schoolName}
-            className="w-full h-full object-cover"
-            onError={() => setLogoFailed(true)}
-          />
-        ) : (
-          <span className="text-caption font-semibold text-muted-foreground">
-            {schoolName.charAt(0)}
-          </span>
-        )}
-      </div>
+      <SchoolLogo
+        name={schoolName}
+        sources={logoSources(schoolName, logoDomain)}
+        className="h-10 w-10 flex-shrink-0 rounded-full bg-secondary"
+        imgClassName="object-contain p-0.5"
+        letterClassName="text-small"
+      />
 
       {/* Name + location */}
       <div className="flex-1 min-w-0">

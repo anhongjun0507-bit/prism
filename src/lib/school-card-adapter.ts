@@ -11,12 +11,11 @@
  */
 import type { School } from "@/lib/matching";
 import type { Category } from "@/components/prism/category-chip";
-import { schoolLogoUrl } from "@/lib/school-logo";
 
 export interface SchoolCardData {
   schoolName: string;
   location: string;
-  logoUrl?: string;
+  logoDomain?: string;
   acceptanceRate: number;
   avgGPA: number;
   avgSAT: [number, number];
@@ -36,7 +35,7 @@ export function mapSchoolToCard(school: School): SchoolCardData {
   return {
     schoolName: school.n,
     location: school.loc || "",
-    logoUrl: schoolLogoUrl(school.n, school.d),
+    logoDomain: school.d || undefined,
     acceptanceRate: school.r ?? 0,
     avgGPA: school.gpa ?? 0,
     avgSAT: [sat0, sat1],
