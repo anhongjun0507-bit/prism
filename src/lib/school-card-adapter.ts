@@ -15,6 +15,7 @@ import type { Category } from "@/components/prism/category-chip";
 export interface SchoolCardData {
   schoolName: string;
   location: string;
+  logoUrl?: string;
   acceptanceRate: number;
   avgGPA: number;
   avgSAT: [number, number];
@@ -34,6 +35,7 @@ export function mapSchoolToCard(school: School): SchoolCardData {
   return {
     schoolName: school.n,
     location: school.loc || "",
+    logoUrl: school.d ? `https://icons.duckduckgo.com/ip3/${school.d}.ico` : undefined,
     acceptanceRate: school.r ?? 0,
     avgGPA: school.gpa ?? 0,
     avgSAT: [sat0, sat1],

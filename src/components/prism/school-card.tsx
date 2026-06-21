@@ -21,6 +21,7 @@ interface SchoolCardProps {
   schoolName: string;
   location: string;
   imageUrl?: string;
+  logoUrl?: string;
   acceptanceRate: number;
   avgGPA: number;
   avgSAT: [number, number];
@@ -51,6 +52,7 @@ export function SchoolCard({
   schoolName,
   location,
   imageUrl,
+  logoUrl,
   acceptanceRate,
   avgGPA,
   avgSAT,
@@ -61,6 +63,8 @@ export function SchoolCard({
   onClick,
   className,
 }: SchoolCardProps) {
+  const [logoFailed, setLogoFailed] = React.useState(false);
+  const showLogo = Boolean(logoUrl) && !logoFailed;
   return (
     <Card
       className={cn(
@@ -80,6 +84,16 @@ export function SchoolCard({
               alt={schoolName}
               className="w-full h-full object-cover"
             />
+          ) : showLogo ? (
+            <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-card p-2.5 shadow-prism-sm">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={logoUrl}
+                alt={schoolName}
+                className="h-full w-full object-contain"
+                onError={() => setLogoFailed(true)}
+              />
+            </div>
           ) : (
             <span className="text-h1 font-display font-bold text-muted-foreground">
               {schoolName.charAt(0)}
