@@ -48,7 +48,7 @@ export function SiteHeader() {
       <div
         className={cn(
           "mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 transition-[height] duration-300 motion-reduce:transition-none sm:px-6",
-          scrolled ? "h-14" : "h-16",
+          scrolled ? "h-12 md:h-14" : "h-14 md:h-16",
         )}
       >
         <Link href="/" aria-label="PRISM 홈">
@@ -80,13 +80,13 @@ export function SiteHeader() {
         <div className="flex items-center gap-2">
           <Link
             href="/login"
-            className="hidden rounded-full border border-border bg-transparent px-4 py-2 text-small font-medium text-foreground transition-colors hover:bg-secondary sm:inline-flex"
+            className="inline-flex rounded-full border border-border bg-transparent px-3 py-2 text-small font-medium text-foreground transition-colors hover:bg-secondary md:px-4"
           >
             로그인
           </Link>
           <Link
             href="/onboarding"
-            className="inline-flex rounded-full bg-cta px-4 py-2 text-small font-medium text-cta-foreground transition-colors hover:bg-cta-hover"
+            className="inline-flex rounded-full bg-cta px-3 py-2 text-small font-medium text-cta-foreground transition-colors hover:bg-cta-hover md:px-4"
           >
             무료로 시작
           </Link>

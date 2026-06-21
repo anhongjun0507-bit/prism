@@ -10,7 +10,7 @@ export function DemoPlaceholder() {
         {/* 1B에서 섹션 높이를 늘리고(예: 500vh) 이 stage를 pin 고정 예정. */}
         <div
           id="demo-stage"
-          className="grid min-h-dvh place-items-center py-20"
+          className="grid place-items-center py-20 md:min-h-dvh"
         >
           <div className="w-full max-w-3xl rounded-lg border border-dashed border-border bg-card px-6 py-16 text-center">
             <p className="text-caption font-medium uppercase text-muted-foreground">

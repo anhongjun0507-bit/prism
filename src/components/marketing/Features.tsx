@@ -85,7 +85,7 @@ export function Features() {
       };
 
   return (
-    <section id="features" className="scroll-mt-20 py-20 sm:py-28">
+    <section id="features" className="scroll-mt-20 py-16 md:py-28">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <Reveal className="max-w-2xl">
           <p className="text-small font-medium text-muted-foreground">기능</p>
@@ -103,24 +103,28 @@ export function Features() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, amount: 0.2 }}
-          className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          className="mt-8 grid grid-cols-2 gap-3 md:mt-12 md:gap-4 lg:grid-cols-3"
         >
           {FEATURES.map(({ Icon, title, desc, tint }) => (
             <motion.article
               key={title}
               variants={item}
-              className="rounded-lg border border-border bg-card p-6"
+              className="rounded-lg border border-border bg-card p-4 md:p-6"
             >
               <span
                 className={cn(
-                  "grid h-11 w-11 place-items-center rounded-md",
+                  "grid h-9 w-9 place-items-center rounded-md md:h-11 md:w-11",
                   tint,
                 )}
               >
                 <Icon className="h-5 w-5" aria-hidden />
               </span>
-              <h3 className="mt-4 text-h3 font-semibold">{title}</h3>
-              <p className="mt-2 text-small text-muted-foreground">{desc}</p>
+              <h3 className="mt-3 text-body font-semibold md:mt-4 md:text-h3">
+                {title}
+              </h3>
+              <p className="mt-2 text-small text-muted-foreground line-clamp-2 md:line-clamp-none">
+                {desc}
+              </p>
             </motion.article>
           ))}
         </motion.div>

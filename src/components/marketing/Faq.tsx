@@ -44,7 +44,7 @@ export function Faq() {
   const [open, setOpen] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="scroll-mt-20 py-20 sm:py-28">
+    <section id="faq" className="scroll-mt-20 py-16 md:py-28">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         <Reveal>
           <p className="text-small font-medium text-muted-foreground">FAQ</p>

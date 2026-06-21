@@ -9,7 +9,7 @@ import { Reveal } from "./Reveal";
 export function CtaBand() {
   return (
     <section className="bg-prism-gradient">
-      <div className="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 sm:py-24">
+      <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6 md:py-24">
         <Reveal>
           <h2 className="font-display text-display-sm font-bold tracking-tight text-white md:text-display">
             입시가 막막하신가요?

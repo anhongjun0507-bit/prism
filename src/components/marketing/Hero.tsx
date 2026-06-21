@@ -22,13 +22,13 @@ export function Hero() {
           <p className="text-small font-medium text-muted-foreground">
             AI 미국 대학 입시 매니저
           </p>
-          <h1 className="mt-4 font-display text-mega-xl-sm font-bold tracking-tight md:text-mega-xl">
+          <h1 className="mt-4 font-display text-display font-bold tracking-tight text-balance break-keep md:text-mega-xl">
             <span className="block">내 스펙으로 갈 수 있는 대학,</span>
             <span className="block">
               <span className="text-prism-gradient">데이터로 분석</span>합니다
             </span>
           </h1>
-          <p className="mt-6 max-w-2xl text-h3 text-muted-foreground">
+          <p className="mt-6 max-w-2xl text-body text-muted-foreground break-keep md:text-h3">
             AI가 약 1,000개 미국 대학을 분석해 합격 가능성을 추정하고, 에세이
             첨삭부터 맞춤 플랜까지 입시 전 과정을 함께합니다.
           </p>

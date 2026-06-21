@@ -9,13 +9,13 @@ import { Reveal } from "./Reveal";
 export function FinalCta() {
   return (
     <section className="dark bg-background text-foreground">
-      <div className="mx-auto max-w-6xl px-4 py-24 sm:px-6">
-        <div className="grid items-center gap-12 lg:grid-cols-2">
+      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
+        <div className="grid items-center gap-8 md:gap-12 lg:grid-cols-2">
           <Reveal>
             <h2 className="font-display text-display-sm font-bold tracking-tight md:text-display">
               지금, 무료로 시작하세요
             </h2>
-            <p className="mt-4 max-w-md text-h3 text-muted-foreground">
+            <p className="mt-4 max-w-md text-body text-muted-foreground md:text-h3">
               복잡한 미국 대학 입시, 내 데이터로 한눈에 정리해 드려요. 가입은
               1분이면 충분합니다.
             </p>

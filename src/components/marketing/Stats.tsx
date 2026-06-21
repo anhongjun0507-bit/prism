@@ -65,7 +65,7 @@ export function Stats() {
   }, []);
 
   return (
-    <section className="py-20 sm:py-28">
+    <section className="py-16 md:py-28">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <Reveal>
           <p className="text-small font-medium text-muted-foreground">
@@ -74,7 +74,7 @@ export function Stats() {
         </Reveal>
         <div
           ref={ref}
-          className="mt-6 grid grid-cols-2 gap-8 rounded-lg border border-border bg-card p-8 sm:p-10 md:grid-cols-4"
+          className="mt-6 grid grid-cols-2 gap-6 rounded-lg border border-border bg-card p-6 md:grid-cols-4 md:gap-8 md:p-10"
         >
           <CountStat
             active={active}
