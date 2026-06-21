@@ -36,6 +36,8 @@ export function SchoolCardMini({
   className,
 }: SchoolCardMiniProps) {
   const isInteractive = Boolean(onClick);
+  const [logoFailed, setLogoFailed] = React.useState(false);
+  const showLogo = Boolean(logoUrl) && !logoFailed;
 
   return (
     <div
@@ -60,12 +62,13 @@ export function SchoolCardMini({
     >
       {/* Logo */}
       <div className="h-8 w-8 flex-shrink-0 rounded-full bg-secondary flex items-center justify-center overflow-hidden">
-        {logoUrl ? (
+        {showLogo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={logoUrl}
             alt={schoolName}
             className="w-full h-full object-cover"
+            onError={() => setLogoFailed(true)}
           />
         ) : (
           <span className="text-caption font-semibold text-muted-foreground">

@@ -193,32 +193,34 @@ ${wrapUserData("student_profile", profileLines)}
 ${p.research ? "연구 경험이 있으므로 Research 매치 학교에 대한 분석도 포함해주세요." : ""}
 ${p.internship ? "실무 경험이 있으므로 이를 어떻게 강조할 수 있는지도 언급해주세요." : ""}`;
 
-    const response = await createMessageWithTimeout(
-      anthropic,
-      {
-        model: "claude-sonnet-4-6",
-        max_tokens: 2500,
-        system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
-        messages: [{ role: "user", content: userPrompt }],
-      },
-      { timeoutMs: 60_000, upstreamSignal: req.signal },
-    );
+    const requestAnalysis = async () => {
+      const response = await createMessageWithTimeout(
+        anthropic,
+        {
+          model: "claude-sonnet-4-6",
+          // 4항목 상세 피드백+nextSteps+hiddenStrengths+watchOuts(한국어 다필드)는 2500tok을
+          // 넘겨 JSON이 잘렸고 → extractJSON null → 502. 넉넉히 상향.
+          max_tokens: 4000,
+          system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
+          messages: [{ role: "user", content: userPrompt }],
+        },
+        { timeoutMs: 60_000, upstreamSignal: req.signal },
+      );
+      const textBlock = response.content.find((b) => b.type === "text");
+      const parsed = extractJSON(textBlock?.text || "");
+      return parsed ? normalizeSpecAnalysis(parsed) : null;
+    };
 
-    const textBlock = response.content.find((b) => b.type === "text");
-    const raw = textBlock?.text || "";
-
-    const parsed = extractJSON(raw);
-    const analysis = parsed ? normalizeSpecAnalysis(parsed) : null;
-    // items가 하나도 없으면 형태 붕괴로 간주 → 캐시하지 않고 502(재시도 유도).
-    // (검증 없이 반환하면 items/nextSteps 누락 시 클라가 .map/.filter에서 크래시하고,
-    //  잘못된 응답이 localStorage에 캐시돼 새로고침마다 재크래시했음.)
+    // items가 없으면(잘림/형식붕괴) 1회 재시도. 검증 없이 반환하면 클라가 .map/.filter에서
+    // 크래시 + 잘못된 응답이 캐시돼 새로고침마다 재크래시했어서, 통과한 것만 캐시한다.
+    let analysis = await requestAnalysis();
+    if (!analysis || analysis.items.length === 0) analysis = await requestAnalysis();
     if (analysis && analysis.items.length > 0) {
       setCachedResponse(cacheKey, analysis);
       return NextResponse.json({ analysis });
     }
 
-    // raw 응답은 로그로만. 클라이언트에 흘리면 시스템 프롬프트 누설 가능성.
-    console.error("Spec analysis JSON parse/shape failed. Raw length:", raw.length);
+    console.error("Spec analysis JSON parse/shape failed after retry.");
     return NextResponse.json(
       { error: "AI 응답을 해석하지 못했어요. 다시 시도해주세요." },
       { status: 502 }

@@ -131,7 +131,7 @@ export function CompareClient() {
             key={s.n}
             schoolName={s.n}
             location={s.loc}
-            logoUrl={s.d ? `https://logo.clearbit.com/${s.d}` : undefined}
+            logoUrl={s.d ? `https://icons.duckduckgo.com/ip3/${s.d}.ico` : undefined}
             myProbability={hasMyProb ? s.prob : undefined}
             category={hasMyProb ? toCompareCategory(s.cat) : undefined}
             onRemove={() => remove(s.n)}

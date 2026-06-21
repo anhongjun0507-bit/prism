@@ -115,27 +115,30 @@ ${wrapUserData("school_data", schoolBlock)}
 
 휴리스틱 예측(${school.prob}%)을 참고하되, 국제학생 상태/전공 경쟁률/스펙의 실제 위치를 반영해서 더 정밀한 분석을 해주세요.`;
 
-    const response = await createMessageWithTimeout(
-      anthropic,
-      {
-        model: "claude-sonnet-4-6",
-        max_tokens: 2000,
-        system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
-        messages: [{ role: "user", content: userPrompt }],
-      },
-      { timeoutMs: 45_000, upstreamSignal: req.signal },
-    );
+    const requestDetail = async () => {
+      const response = await createMessageWithTimeout(
+        anthropic,
+        {
+          model: "claude-sonnet-4-6",
+          // verdict/reasoning/matchPoints/challenges/improvementTips/essayAdvice 등 한국어 다필드 → 잘림 방지.
+          max_tokens: 3000,
+          system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
+          messages: [{ role: "user", content: userPrompt }],
+        },
+        { timeoutMs: 45_000, upstreamSignal: req.signal },
+      );
+      const textBlock = response.content.find((b) => b.type === "text");
+      return extractJSON(textBlock?.text || "");
+    };
 
-    const textBlock = response.content.find((b) => b.type === "text");
-    const raw = textBlock?.text || "";
-
-    const parsed = extractJSON(raw);
+    let parsed = await requestDetail();
+    if (!parsed) parsed = await requestDetail();
     if (parsed) {
       setCachedResponse(cacheKey, parsed);
       return NextResponse.json({ detail: parsed });
     }
 
-    console.error("Admission detail JSON parse failed. Raw length:", raw.length);
+    console.error("Admission detail JSON parse failed after retry.");
     return NextResponse.json(
       { error: "AI 응답을 해석하지 못했어요. 다시 시도해주세요." },
       { status: 502 }

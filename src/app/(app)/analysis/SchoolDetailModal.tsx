@@ -144,6 +144,28 @@ export function SchoolDetailModal({
           </div>
         )}
 
+        {/* 학교 핵심 지표 */}
+        {detail && (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg bg-secondary/40 p-4 sm:grid-cols-3">
+            <Stat
+              label="합격률"
+              value={typeof detail.r === "number" && detail.r > 0 ? `${detail.r.toFixed(1)}%` : "—"}
+            />
+            <Stat
+              label="SAT (25–75%)"
+              value={detail.sat?.[0] ? `${detail.sat[0]}–${detail.sat[1]}` : "—"}
+            />
+            <Stat label="평균 GPA" value={detail.gpa ? detail.gpa.toFixed(2) : "—"} />
+            {detail.rk > 0 && <Stat label="US News" value={`#${detail.rk}`} />}
+            {detail.qs?.rank_2025 && (
+              <Stat label="QS 세계" value={String(detail.qs.rank_2025)} />
+            )}
+            {detail.tuition ? (
+              <Stat label="등록금(연)" value={`$${detail.tuition.toLocaleString()}`} />
+            ) : null}
+          </div>
+        )}
+
         {/* AI 맞춤 합격 분석 */}
         {aiLoading && <Skeleton className="h-28 w-full" />}
         {ai && (
@@ -245,5 +267,14 @@ export function SchoolDetailModal({
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-caption text-muted-foreground">{label}</p>
+      <p className="text-small font-semibold tabular text-foreground">{value}</p>
+    </div>
   );
 }

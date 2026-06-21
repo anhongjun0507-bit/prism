@@ -63,7 +63,7 @@ export function FavoritesCard({ favoriteSchools }: FavoritesCardProps) {
               key={name}
               schoolName={name}
               location={meta?.loc}
-              logoUrl={meta?.d ? `https://logo.clearbit.com/${meta.d}` : undefined}
+              logoUrl={meta?.d ? `https://icons.duckduckgo.com/ip3/${meta.d}.ico` : undefined}
               onRemove={() => {
                 void toggleFavorite(name);
               }}
