@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { AlertTriangle, Sparkles } from "lucide-react";
+import { AlertTriangle, Award, PenLine, Sparkles, type LucideIcon } from "lucide-react";
 import type { EssayReview } from "@/types/essay";
+import { AIBlock } from "@/components/prism/ai-block";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScoreDonut } from "./ScoreDonut";
@@ -77,6 +79,22 @@ export function ReviewPanel({
           weaknesses={review.weaknesses}
           suggestions={review.suggestions}
         />
+
+        {review.revisedOpening && (
+          <RewriteBlock
+            title="도입부 다시 쓰기"
+            icon={PenLine}
+            text={review.revisedOpening}
+          />
+        )}
+        {review.perfectExample && (
+          <RewriteBlock
+            title="10점 모범 재작성"
+            icon={Award}
+            text={review.perfectExample}
+            collapsible
+          />
+        )}
 
         <Button
           variant="secondary"
@@ -159,5 +177,50 @@ export function ReviewPanel({
         </p>
       )}
     </Card>
+  );
+}
+
+/**
+ * 첨삭 재작성 블록 — revisedOpening(도입부)·perfectExample(전체 10점)을
+ * FeedbackCards와 동일한 카드 시각 언어(AIBlock variant="card")로 노출.
+ * collapsible이면 기본 접힘 + 펼치기 토글 (perfectExample처럼 긴 본문용).
+ * 새 색/사이즈 도입 없음 — 기존 토큰(text-prism / text-small / text-caption)만 사용.
+ */
+function RewriteBlock({
+  title,
+  icon: Icon,
+  text,
+  collapsible = false,
+}: {
+  title: string;
+  icon: LucideIcon;
+  text: string;
+  collapsible?: boolean;
+}) {
+  const [open, setOpen] = useState(!collapsible);
+  return (
+    <AIBlock variant="card" className="p-4">
+      <div className="flex items-center justify-between gap-2">
+        <p className="flex items-center gap-1.5 text-small font-semibold text-foreground">
+          <Icon className="h-4 w-4 text-prism" aria-hidden />
+          {title}
+        </p>
+        {collapsible && (
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            className="shrink-0 text-caption font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+          >
+            {open ? "접기" : "펼치기"}
+          </button>
+        )}
+      </div>
+      {open && (
+        <p className="mt-2 whitespace-pre-wrap text-small leading-relaxed text-foreground">
+          {text}
+        </p>
+      )}
+    </AIBlock>
   );
 }
