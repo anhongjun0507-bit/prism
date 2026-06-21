@@ -41,8 +41,8 @@ export function SchoolCardMini({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-md border border-border bg-card p-3 transition-colors",
-        isInteractive && "cursor-pointer hover:bg-secondary",
+        "flex items-center gap-3 rounded-md border border-border bg-card p-3 transition",
+        isInteractive && "cursor-pointer hover:bg-secondary active:scale-[0.99]",
         className,
       )}
       onClick={onClick}

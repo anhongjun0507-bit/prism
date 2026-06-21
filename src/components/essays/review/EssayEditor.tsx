@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Type } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,15 @@ export function EssayEditor({
   const over = wordLimit ? words > wordLimit : false;
   const pct = wordLimit ? Math.min(100, (words / wordLimit) * 100) : 0;
 
+  // textarea 자동 높이 — 내부 스크롤바를 없애고 페이지 스크롤 하나로 통일(브라우저/내부 겹침 제거).
+  const taRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = taRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [content, mono]);
+
   return (
     <Card className="relative">
       {/* 툴바 */}
@@ -51,13 +61,14 @@ export function EssayEditor({
 
       {/* 본문 입력 */}
       <textarea
+        ref={taRef}
         value={content}
         onChange={(e) => onChange(e.target.value)}
         placeholder="여기에 에세이를 작성하거나 붙여넣어 보세요…"
         spellCheck
         aria-label="에세이 본문"
         className={cn(
-          "block min-h-[58vh] w-full resize-y bg-transparent px-5 py-4 text-body leading-[1.8] text-foreground outline-none placeholder:text-muted-foreground",
+          "block min-h-[58vh] w-full resize-none overflow-hidden bg-transparent px-5 py-4 text-body leading-[1.8] text-foreground outline-none placeholder:text-muted-foreground",
           mono ? "font-mono" : "font-sans",
         )}
       />

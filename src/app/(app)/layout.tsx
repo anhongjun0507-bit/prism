@@ -81,7 +81,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     <TooltipProvider delayDuration={150}>
       <div className="min-h-dvh">
         <Sidebar />
-        <main className="pb-20 md:pb-0 md:pl-60">{children}</main>
+        <main className="pb-20 md:pb-0 md:pl-60">
+          {/* 데스크탑에서 콘텐츠를 가운데로 — 좁은 좌측 정렬 프레임/우측 빈 공간 제거 */}
+          <div className="mx-auto w-full max-w-6xl">{children}</div>
+        </main>
         <BottomNav />
         <Toaster />
       </div>

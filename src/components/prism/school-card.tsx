@@ -68,8 +68,8 @@ export function SchoolCard({
   return (
     <Card
       className={cn(
-        "overflow-hidden transition-colors",
-        onClick && "cursor-pointer hover:bg-secondary",
+        "overflow-hidden transition",
+        onClick && "cursor-pointer hover:bg-secondary active:scale-[0.99]",
         className,
       )}
       onClick={onClick}

@@ -252,7 +252,7 @@ export function PlannerClient() {
       <div
         role="tablist"
         aria-label="카테고리 필터"
-        className="mb-4 flex gap-1 overflow-x-auto border-b border-border"
+        className="no-scrollbar mb-4 flex gap-1 overflow-x-auto border-b border-border"
       >
         {(["all", ...TASK_CATEGORIES] as Filter[]).map((f) => (
           <button

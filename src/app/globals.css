@@ -197,4 +197,13 @@
       -webkit-text-fill-color: transparent;
     }
   }
+
+  /* 스크롤바 숨김(overlay 느낌) — 가로 탭바·내부 스크롤 영역용. 스크롤 동작은 그대로. */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }

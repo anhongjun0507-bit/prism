@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -167,7 +167,12 @@ export function SchoolDetailModal({
         )}
 
         {/* AI 맞춤 합격 분석 */}
-        {aiLoading && <Skeleton className="h-28 w-full" />}
+        {aiLoading && (
+          <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-5 text-small text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin text-prism" aria-hidden />
+            AI가 이 학교 합격 가능성을 분석하고 있어요…
+          </div>
+        )}
         {ai && (
           <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
             <div className="flex items-center gap-2">
