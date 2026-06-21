@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SchoolCardMini } from "@/components/prism/school-card-mini";
 import { loadSchoolsIndex, type SchoolIndex } from "@/lib/schools-index";
+import { schoolLogoUrl } from "@/lib/school-logo";
 import { useAuth } from "@/lib/auth-context";
 
 interface FavoritesCardProps {
@@ -63,7 +64,7 @@ export function FavoritesCard({ favoriteSchools }: FavoritesCardProps) {
               key={name}
               schoolName={name}
               location={meta?.loc}
-              logoUrl={meta?.d ? `https://icons.duckduckgo.com/ip3/${meta.d}.ico` : undefined}
+              logoUrl={schoolLogoUrl(name, meta?.d)}
               onRemove={() => {
                 void toggleFavorite(name);
               }}

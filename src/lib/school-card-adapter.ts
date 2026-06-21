@@ -11,6 +11,7 @@
  */
 import type { School } from "@/lib/matching";
 import type { Category } from "@/components/prism/category-chip";
+import { schoolLogoUrl } from "@/lib/school-logo";
 
 export interface SchoolCardData {
   schoolName: string;
@@ -35,7 +36,7 @@ export function mapSchoolToCard(school: School): SchoolCardData {
   return {
     schoolName: school.n,
     location: school.loc || "",
-    logoUrl: school.d ? `https://icons.duckduckgo.com/ip3/${school.d}.ico` : undefined,
+    logoUrl: schoolLogoUrl(school.n, school.d),
     acceptanceRate: school.r ?? 0,
     avgGPA: school.gpa ?? 0,
     avgSAT: [sat0, sat1],
