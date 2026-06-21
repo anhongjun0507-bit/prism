@@ -1,12 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- PRISM brand mark — solid terracotta orange (matches CSS --primary 19 79% 34%). -->
-  <rect width="512" height="512" rx="112" fill="#9a3c12"/>
-  <!-- Prism triangle -->
-  <path d="M256 112 L416 416 H96 L256 112 Z" fill="white"/>
-  <!-- 3 dispersed light beams below the prism. -->
-  <g stroke="white" stroke-width="22" stroke-linecap="round" opacity="0.7">
-    <line x1="176" y1="448" x2="144" y2="496"/>
-    <line x1="256" y1="448" x2="256" y2="496"/>
-    <line x1="336" y1="448" x2="368" y2="496"/>
+  <!-- PRISM brand mark — 로고 그라데이션(green→indigo→amber) + 흰 프리즘 + 분광 빔. -->
+  <defs>
+    <linearGradient id="prismGrad" x1="48" y1="48" x2="464" y2="464" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#10B981"/>
+      <stop offset="0.5" stop-color="#4F46E5"/>
+      <stop offset="1" stop-color="#F59E0B"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#prismGrad)"/>
+  <!-- 프리즘 삼각형 -->
+  <path d="M256 128 L400 396 H112 Z" fill="#FFFFFF"/>
+  <!-- 분광된 빛 -->
+  <g stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" stroke-opacity="0.9">
+    <line x1="190" y1="424" x2="160" y2="476"/>
+    <line x1="256" y1="424" x2="256" y2="482"/>
+    <line x1="322" y1="424" x2="352" y2="476"/>
   </g>
 </svg>
