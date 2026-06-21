@@ -26,8 +26,8 @@ export function DDayCard() {
         {formatDate(deadline)}까지 — 1월 1일 정시 마감 기준
       </p>
       <div className="mt-4">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/planner">플래너 열기 →</Link>
+        <Button asChild variant="secondary" size="sm">
+          <Link href="/planner">플래너에서 마감 준비하기 →</Link>
         </Button>
       </div>
     </Card>
