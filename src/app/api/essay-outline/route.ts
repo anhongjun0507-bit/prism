@@ -92,24 +92,28 @@ ${wrapUserData("student_profile", studentCtx || "정보 없음")}
 
 ${wrapUserData("essay_prompt", safePrompt)}`;
 
-    const response = await createMessageWithTimeout(
-      anthropic,
-      {
-        model: "claude-sonnet-4-6",
-        max_tokens: 800,
-        system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
-        messages: [{ role: "user", content: userPrompt }],
-      },
-      { timeoutMs: 40_000, upstreamSignal: req.signal },
-    );
+    const requestOutline = async () => {
+      const response = await createMessageWithTimeout(
+        anthropic,
+        {
+          model: "claude-sonnet-4-6",
+          // 4섹션 × (한국어 가이드 + 영문 starter)는 한국어 토큰 가중까지 더하면 800tok을
+          // 넘겨 JSON이 잘렸고(→ extractJSON이 완결 객체를 못 찾아 null) 502가 떴다. 넉넉히 상향.
+          max_tokens: 2000,
+          system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
+          messages: [{ role: "user", content: userPrompt }],
+        },
+        { timeoutMs: 40_000, upstreamSignal: req.signal },
+      );
+      const textBlock = response.content.find((b) => b.type === "text");
+      return extractJSON<Record<string, unknown>>(textBlock?.text || "");
+    };
 
-    const textBlock = response.content.find((b) => b.type === "text");
-    const raw = textBlock?.text || "";
-
-    const parsed = extractJSON<Record<string, unknown>>(raw);
+    // 간헐적 형식 흔들림(프롤로그·잘림) 대비 1회 재시도.
+    let parsed = await requestOutline();
+    if (!parsed) parsed = await requestOutline();
     if (!parsed) {
-      // raw 응답은 서버 로그에만 남긴다. 클라이언트에 반환하면 모델 내부 프롬프트 누설 위험.
-      console.error("Essay outline JSON parse failed. Raw length:", raw.length);
+      console.error("Essay outline JSON parse failed after retry.");
       return NextResponse.json(
         { error: "AI 응답을 해석하지 못했어요. 다시 시도해주세요." },
         { status: 502 }
