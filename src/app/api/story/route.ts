@@ -78,7 +78,7 @@ ${wrapUserData("school_data", schoolBlock)}`;
     const response = await createMessageWithTimeout(
       anthropic,
       {
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-6",
         max_tokens: 400,
         system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
         messages: [{ role: "user", content: userPrompt }],

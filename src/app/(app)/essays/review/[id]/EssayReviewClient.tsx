@@ -21,6 +21,7 @@ import {
 import {
   appendReview,
   pushEssayVersion,
+  saveEssayOutline,
   updateEssayContent,
 } from "@/lib/essay-firestore";
 import { normalizePlan } from "@/lib/plans";
@@ -32,6 +33,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EditorActionBar } from "@/components/essays/review/EditorActionBar";
 import { EssayEditor } from "@/components/essays/review/EssayEditor";
+import { OutlinePanel } from "@/components/essays/review/OutlinePanel";
 import { ReviewPanel } from "@/components/essays/review/ReviewPanel";
 import { VersionHistory } from "@/components/essays/review/VersionHistory";
 
@@ -61,6 +63,7 @@ export function EssayReviewClient({ id }: { id: string }) {
   const [reviewError, setReviewError] = useState<string | null>(null);
 
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [outlineLoading, setOutlineLoading] = useState(false);
 
   // 마지막으로 Firestore에 반영된 본문 — autosave 중복/초기 로드 시 불필요한 쓰기 가드.
   const savedContentRef = useRef("");
@@ -303,6 +306,64 @@ export function EssayReviewClient({ id }: { id: string }) {
     }
   };
 
+  /* ── AI 구조 생성 (개요) — /api/essay-outline (첨삭과 동일 인증·에러 패턴) ── */
+  const handleGenerateOutline = async () => {
+    if (!uid || !essay || outlineLoading) return;
+    if (!essay.prompt?.trim()) {
+      toast.error("에세이 프롬프트가 있어야 AI 구조를 생성할 수 있어요.");
+      return;
+    }
+    setOutlineLoading(true);
+    try {
+      const data = await fetchWithAuth<{ outline?: unknown }>(
+        "/api/essay-outline",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            prompt: essay.prompt,
+            university: essay.university,
+            profile: {
+              name: profile?.name,
+              grade: profile?.grade,
+              dreamSchool: profile?.dreamSchool,
+              major: profile?.major,
+              gpa: profile?.gpa,
+              sat: profile?.sat,
+            },
+          }),
+        },
+      );
+      const outline = normalizeOutline(data.outline);
+      if (!outline) {
+        toast.error("AI 구조를 받지 못했어요. 다시 시도해주세요.");
+        return;
+      }
+      setEssay((prev) => (prev ? { ...prev, outline } : prev));
+      try {
+        await saveEssayOutline(uid, id, outline);
+      } catch (e) {
+        logError("[review] save outline failed:", e);
+        toast.error("AI 구조 저장에 실패했어요. 화면에서 확인은 가능해요.");
+      }
+      toast.success("AI 구조를 생성했어요.");
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.status === 429 || err.code === "QUOTA_EXCEEDED") {
+          toast.error(
+            "AI 구조 생성 한도를 초과했어요. 플랜을 업그레이드하면 더 받을 수 있어요.",
+          );
+        } else {
+          toast.error(err.message);
+        }
+      } else {
+        logError("[review] outline generate failed:", err);
+        toast.error("AI 구조 생성에 실패했어요. 잠시 후 다시 시도해주세요.");
+      }
+    } finally {
+      setOutlineLoading(false);
+    }
+  };
+
   /* ── 렌더 ── */
   if (loadState === "loading") {
     return (
@@ -341,6 +402,8 @@ export function EssayReviewClient({ id }: { id: string }) {
         subtitle={essay.prompt}
         saveState={saveState}
         onSave={handleSave}
+        onGenerateOutline={handleGenerateOutline}
+        outlineLoading={outlineLoading}
       />
 
       <div className="mt-4 flex flex-col gap-6 lg:flex-row lg:items-start">
@@ -353,6 +416,7 @@ export function EssayReviewClient({ id }: { id: string }) {
             mono={mono}
             onToggleMono={() => setMono((m) => !m)}
           />
+          {essay.outline && <OutlinePanel outline={essay.outline} />}
           {(essay.versions?.length ?? 0) > 0 && (
             <VersionHistory
               versions={essay.versions ?? []}

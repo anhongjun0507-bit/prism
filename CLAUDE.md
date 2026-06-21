@@ -46,7 +46,7 @@
 - 새 패키지 승인 없이 설치
 
 ## Claude API 호출 규칙
-- 모델: 최신 Claude 모델 사용 (`claude-opus-4-7` 등)
+- 모델: 최신 Claude 모델 사용 (`claude-opus-4-8` 등)
 - `max_tokens` 명시적으로 설정
 - 에러 처리 필수 (rate limit, timeout)
 - 스트리밍 필요한 경우 Server-Sent Events

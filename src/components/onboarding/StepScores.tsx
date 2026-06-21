@@ -7,14 +7,16 @@ import { Label } from "@/components/ui/label";
 interface StepScoresProps {
   gpa: string;
   sat: string;
-  onChange: (gpa: string, sat: string) => void;
+  toefl: string;
+  onChange: (gpa: string, sat: string, toefl: string) => void;
   onEnter: () => void;
 }
 
-export function StepScores({ gpa, sat, onChange, onEnter }: StepScoresProps) {
+export function StepScores({ gpa, sat, toefl, onChange, onEnter }: StepScoresProps) {
   const headingId = useId();
   const gpaId = useId();
   const satId = useId();
+  const toeflId = useId();
 
   const handleKey = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -44,7 +46,7 @@ export function StepScores({ gpa, sat, onChange, onEnter }: StepScoresProps) {
             placeholder="3.8"
             maxLength={4}
             value={gpa}
-            onChange={(e) => onChange(e.target.value, sat)}
+            onChange={(e) => onChange(e.target.value, sat, toefl)}
             onKeyDown={handleKey}
             autoComplete="off"
           />
@@ -59,12 +61,30 @@ export function StepScores({ gpa, sat, onChange, onEnter }: StepScoresProps) {
             placeholder="1480"
             maxLength={4}
             value={sat}
-            onChange={(e) => onChange(gpa, e.target.value)}
+            onChange={(e) => onChange(gpa, e.target.value, toefl)}
             onKeyDown={handleKey}
             autoComplete="off"
           />
           <p className="text-caption text-muted-foreground">1600 만점</p>
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor={toeflId}>
+          TOEFL <span className="font-normal text-muted-foreground">(선택)</span>
+        </Label>
+        <Input
+          id={toeflId}
+          type="text"
+          inputMode="numeric"
+          placeholder="100"
+          maxLength={3}
+          value={toefl}
+          onChange={(e) => onChange(gpa, sat, e.target.value)}
+          onKeyDown={handleKey}
+          autoComplete="off"
+        />
+        <p className="text-caption text-muted-foreground">120 만점 · 없으면 비워두세요</p>
       </div>
     </div>
   );

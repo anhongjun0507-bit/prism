@@ -6,27 +6,43 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { logError } from "@/lib/log";
 
 type Provider = "google" | "apple" | "kakao";
+type Mode = "login" | "signup";
 
 /**
- * /login Client form — SSO 3종 (Google · Apple · Kakao) + Hero.
+ * /login Client form — 이메일/비밀번호(로그인·회원가입) + SSO 3종(Google·Apple·Kakao).
  *
  * 인증 흐름:
- *   - useAuth().loginWith*() 호출 → popup/redirect 분기는 auth-context가 자동 처리
- *     (auth-helpers.shouldUseRedirectAuth())
+ *   - 이메일: useAuth().loginWithEmail / signUpWithEmail / resetPassword
+ *   - SSO: useAuth().loginWith*() — popup/redirect 분기는 auth-context가 처리
  *   - 성공 시 onAuthStateChanged → user 갱신 → useEffect가 from으로 router.replace
- *   - busy 상태는 unmount까지 유지 — 페이지 전환 중 다른 버튼 클릭 방지
  *
- * 보안:
- *   - from 파라미터는 내부 절대경로만 허용 (외부 URL · self-loop 차단)
+ * 보안: from 파라미터는 내부 절대경로만 허용 (외부 URL · self-loop 차단)
  */
 export function LoginForm() {
-  const { user, loginWithGoogle, loginWithApple, loginWithKakao } = useAuth();
+  const {
+    user,
+    loginWithGoogle,
+    loginWithApple,
+    loginWithKakao,
+    loginWithEmail,
+    signUpWithEmail,
+    resetPassword,
+  } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [busy, setBusy] = useState<Provider | null>(null);
+
+  const [mode, setMode] = useState<Mode>("login");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
 
   const from = (() => {
     const raw = searchParams.get("from") || "/dashboard";
@@ -44,7 +60,7 @@ export function LoginForm() {
   }, [user, router, from]);
 
   const handleLogin = async (provider: Provider) => {
-    if (busy) return;
+    if (busy || emailBusy) return;
     setBusy(provider);
     try {
       if (provider === "google") await loginWithGoogle();
@@ -60,21 +76,172 @@ export function LoginForm() {
     }
   };
 
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (busy || emailBusy) return;
+    if (!email.trim() || !password) {
+      toast.error("이메일과 비밀번호를 입력해주세요.");
+      return;
+    }
+    if (mode === "signup") {
+      if (!name.trim()) {
+        toast.error("이름을 입력해주세요.");
+        return;
+      }
+      if (password.length < 6) {
+        toast.error("비밀번호는 6자 이상이어야 해요.");
+        return;
+      }
+    }
+    setEmailBusy(true);
+    try {
+      if (mode === "signup") {
+        await signUpWithEmail(email.trim(), password, name.trim());
+      } else {
+        await loginWithEmail(email.trim(), password);
+      }
+      // 성공: onAuthStateChanged → user set → useEffect가 router.replace.
+    } catch (err) {
+      toast.error(authErrorMessage(err));
+      logError("[login:email]", err);
+      setEmailBusy(false);
+    }
+  };
+
+  const handleReset = async () => {
+    if (!email.trim()) {
+      toast.error("비밀번호를 재설정할 이메일을 먼저 입력해주세요.");
+      return;
+    }
+    try {
+      await resetPassword(email.trim());
+      toast.success("비밀번호 재설정 메일을 보냈어요. 메일함을 확인해주세요.");
+    } catch (err) {
+      toast.error(authErrorMessage(err));
+      logError("[login:reset]", err);
+    }
+  };
+
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center p-4">
-      <div className="w-full max-w-[420px] space-y-8">
-        <div className="space-y-4 text-center">
+      <div className="w-full max-w-[420px] space-y-6 py-8">
+        <div className="space-y-3 text-center">
           <h1 className="text-display font-display font-bold leading-none text-prism-gradient">
             PRISM
           </h1>
-          <p className="text-h2 font-semibold leading-tight text-foreground">
+          <p className="text-h3 font-semibold leading-tight text-foreground">
             AI가 분석하는 약 1,000개 미국 대학 합격 확률
-          </p>
-          <p className="text-small text-muted-foreground">
-            한국 국제학교 학생을 위한 AI 입시 매니저
           </p>
         </div>
 
+        {/* 이메일 로그인 / 회원가입 */}
+        <Card className="p-5">
+          <div className="mb-4 grid grid-cols-2 gap-1 rounded-md bg-secondary p-1">
+            <button
+              type="button"
+              onClick={() => setMode("login")}
+              className={
+                "h-9 rounded-[8px] text-small font-medium transition-colors " +
+                (mode === "login"
+                  ? "bg-background text-foreground shadow-prism-sm"
+                  : "text-muted-foreground hover:text-foreground")
+              }
+            >
+              로그인
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("signup")}
+              className={
+                "h-9 rounded-[8px] text-small font-medium transition-colors " +
+                (mode === "signup"
+                  ? "bg-background text-foreground shadow-prism-sm"
+                  : "text-muted-foreground hover:text-foreground")
+              }
+            >
+              회원가입
+            </button>
+          </div>
+
+          <form onSubmit={handleEmailSubmit} className="space-y-3">
+            {mode === "signup" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="login-name">이름</Label>
+                <Input
+                  id="login-name"
+                  type="text"
+                  autoComplete="name"
+                  placeholder="홍길동"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  maxLength={40}
+                  disabled={emailBusy}
+                />
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="login-email">이메일</Label>
+              <Input
+                id="login-email"
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={emailBusy}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="login-password">비밀번호</Label>
+              <Input
+                id="login-password"
+                type="password"
+                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                placeholder={mode === "signup" ? "6자 이상" : "비밀번호"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={emailBusy}
+              />
+            </div>
+
+            <Button
+              type="submit"
+              variant="cta"
+              size="lg"
+              shape="rect"
+              className="w-full justify-center"
+              disabled={emailBusy || busy !== null}
+              aria-busy={emailBusy || undefined}
+            >
+              {emailBusy ? (
+                <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+              ) : mode === "signup" ? (
+                "회원가입"
+              ) : (
+                "로그인"
+              )}
+            </Button>
+          </form>
+
+          {mode === "login" && (
+            <button
+              type="button"
+              onClick={handleReset}
+              className="mt-3 w-full text-center text-caption text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            >
+              비밀번호를 잊으셨나요?
+            </button>
+          )}
+        </Card>
+
+        {/* 구분선 */}
+        <div className="flex items-center gap-3">
+          <span className="h-px flex-1 bg-border" />
+          <span className="text-caption text-muted-foreground">또는</span>
+          <span className="h-px flex-1 bg-border" />
+        </div>
+
+        {/* SSO */}
         <div className="space-y-3">
           <SSOButton
             provider="google"
@@ -107,6 +274,32 @@ export function LoginForm() {
   );
 }
 
+/** Firebase auth 에러 코드를 사용자 친화 한국어로 변환. */
+function authErrorMessage(err: unknown): string {
+  const code =
+    err && typeof err === "object" && "code" in err
+      ? String((err as { code: unknown }).code)
+      : "";
+  switch (code) {
+    case "auth/invalid-email":
+      return "이메일 형식이 올바르지 않아요.";
+    case "auth/email-already-in-use":
+      return "이미 가입된 이메일이에요. 로그인 탭에서 로그인해주세요.";
+    case "auth/weak-password":
+      return "비밀번호는 6자 이상이어야 해요.";
+    case "auth/invalid-credential":
+    case "auth/wrong-password":
+    case "auth/user-not-found":
+      return "이메일 또는 비밀번호가 올바르지 않아요.";
+    case "auth/too-many-requests":
+      return "시도가 너무 많아요. 잠시 후 다시 시도해주세요.";
+    case "auth/operation-not-allowed":
+      return "이메일 로그인이 비활성화돼 있어요. (Firebase 콘솔에서 이메일/비밀번호 사용 설정 필요)";
+    default:
+      return err instanceof Error ? err.message : "인증에 실패했어요.";
+  }
+}
+
 interface SSOButtonProps {
   provider: Provider;
   busy: Provider | null;
@@ -121,7 +314,7 @@ function SSOButton({ provider, busy, label, icon, onClick }: SSOButtonProps) {
   return (
     <Button
       type="button"
-      variant="cta"
+      variant="outline"
       size="lg"
       shape="rect"
       className="w-full justify-center gap-3"
@@ -144,7 +337,7 @@ function SSOButton({ provider, busy, label, icon, onClick }: SSOButtonProps) {
 
 // ─── Brand SVG (인라인, 외부 패키지 0) ───
 // 24x24 viewBox · 20px 렌더. Google은 공식 멀티컬러,
-// Apple·Kakao는 currentColor (CTA 텍스트 컬러 = 라이트 흰색 / 다크 검정 자동 반전).
+// Apple·Kakao는 currentColor.
 
 function GoogleIcon() {
   return (

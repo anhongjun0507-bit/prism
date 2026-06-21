@@ -15,8 +15,8 @@ import {
 
 // 기본 첨삭은 Sonnet, 대학별 rubric(Elite 전용)은 Opus 4.7로 품질 차별화.
 // Opus는 비용·레이턴시가 높지만 Elite는 universityRubricEnabled = true 경로만 사용.
-const MODEL_BASE = "claude-sonnet-4-20250514";
-const MODEL_ELITE_RUBRIC = "claude-opus-4-7";
+const MODEL_BASE = "claude-sonnet-4-6";
+const MODEL_ELITE_RUBRIC = "claude-opus-4-8";
 
 export async function POST(req: NextRequest) {
   try {

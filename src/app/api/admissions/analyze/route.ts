@@ -24,7 +24,7 @@ import {
   buildAdmissionAnalysisUserPrompt,
 } from "@/lib/prompts/admission-analysis";
 
-const MODEL = "claude-opus-4-7";
+const MODEL = "claude-opus-4-8";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 export async function POST(req: NextRequest) {

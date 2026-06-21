@@ -94,7 +94,9 @@ function loadSnapshots(): ProfileSnapshot[] {
   if (typeof window === "undefined") return [];
   try {
     const saved = localStorage.getItem(SNAPSHOT_KEY);
-    return saved ? JSON.parse(saved) : [];
+    const parsed = saved ? JSON.parse(saved) : [];
+    // 손상/구버전 캐시가 비배열이면 이후 saveSnapshot의 .filter가 throw → 빈 배열로 보정.
+    return Array.isArray(parsed) ? parsed : [];
   } catch { return []; }
 }
 
@@ -489,7 +491,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // signOut 실패해도 redirect는 수행 — localStorage가 이미 비워졌으므로
       // 세션이 남아 있어도 재접근 시 데이터 노출 위험은 제거됨.
     }
-    window.location.href = "/";
+    // "/"는 /dashboard로 리다이렉트되므로 로그아웃 직후 대시보드가 깜빡임 → 로그인으로 직행.
+    window.location.href = "/login";
   };
 
   const saveProfile = useCallback(async (data: Partial<UserProfile>) => {

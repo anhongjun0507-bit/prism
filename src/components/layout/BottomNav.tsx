@@ -10,7 +10,7 @@ interface BottomNavProps {
 }
 
 /**
- * 모바일 하단 5탭 네비. 데스크톱에서는 Sidebar가 대체하므로 숨김.
+ * 모바일 하단 4탭 네비. 데스크톱에서는 Sidebar가 대체하므로 숨김.
  *
  * - fixed bottom + safe-area-inset-bottom → iOS 노치 기기에서도 잘림 없음.
  * - bg-background/95 + backdrop-blur → 스크롤 콘텐츠 위에 반투명 부유.
@@ -22,7 +22,7 @@ export function BottomNav({ className }: BottomNavProps) {
   return (
     <nav
       className={cn(
-        "fixed inset-x-0 bottom-0 z-40 grid h-14 grid-cols-5 border-t border-border bg-background/95 backdrop-blur md:hidden",
+        "fixed inset-x-0 bottom-0 z-40 grid h-14 grid-cols-4 border-t border-border bg-background/95 backdrop-blur md:hidden",
         "pb-[env(safe-area-inset-bottom)]",
         className,
       )}

@@ -85,8 +85,10 @@ function profileComplete(p: {
   favoriteSchools?: string[];
 } | null): boolean {
   if (!p) return false;
-  const hasSchools = (p.favoriteSchools && p.favoriteSchools.length > 0) || !!p.dreamSchool;
-  return Boolean(p.grade && p.major && p.gpa) && hasSchools;
+  // 학년·전공·GPA만 있으면 생성 가능. 과거엔 즐겨찾기/지망대학(dreamSchool)을 추가로
+  // 요구했는데, 온보딩이 dreamSchool을 안 써서 즐겨찾기 없는 유저는 무조건 실패했다.
+  // 학교 정보가 있으면 프롬프트가 더 맞춤화되지만, 없어도 일반 플랜은 생성 가능해야 한다.
+  return Boolean(p.grade && p.major && p.gpa);
 }
 
 function newId(): string {
@@ -155,7 +157,7 @@ export async function POST(req: NextRequest) {
     const msg = await createMessageWithTimeout(
       client,
       {
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-6",
         max_tokens: 2000,
         messages: [{ role: "user", content: prompt }],
       },

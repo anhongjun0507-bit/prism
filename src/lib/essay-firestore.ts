@@ -15,7 +15,7 @@
 import { collection, deleteDoc, doc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import { countWords } from "./essay-utils";
-import type { Essay, EssayVersion, EssayReview } from "@/types/essay";
+import type { Essay, EssayVersion, EssayReview, EssayOutline } from "@/types/essay";
 
 export interface CreateEssayParams {
   university: string;
@@ -146,4 +146,21 @@ export async function appendReview(
     updatedAt: new Date().toISOString(),
   });
   return reviews;
+}
+
+/**
+ * AI 구조(아웃라인) 저장 — 단일 객체로 덮어씀(리뷰처럼 누적하지 않음).
+ * createdAt(ISO)을 기록해 목록·카드의 "AI tip" 폴백이 최신 outline을 참조하게 한다.
+ * client Firestore는 ignoreUndefinedProperties로 초기화돼 connection 미존재도 안전.
+ */
+export async function saveEssayOutline(
+  uid: string,
+  id: string,
+  outline: EssayOutline,
+): Promise<void> {
+  const now = new Date().toISOString();
+  await updateDoc(doc(db, "users", uid, "essays", id), {
+    outline: { ...outline, createdAt: now },
+    updatedAt: now,
+  });
 }

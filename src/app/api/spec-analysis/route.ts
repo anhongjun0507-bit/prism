@@ -6,6 +6,37 @@ import { extractJSON, sanitizeUserText, wrapUserData } from "@/lib/api-helpers";
 import { getAnthropicClient, createMessageWithTimeout, ClaudeTimeoutError } from "@/lib/anthropic";
 import { SpecAnalysisInputSchema, zodErrorResponse } from "@/lib/schemas";
 
+/** AI JSON을 AnalysisResult 형태로 강제 정규화 — 누락/비배열 필드로 인한 클라 크래시 차단. */
+function normalizeSpecAnalysis(raw: unknown) {
+  const a = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const str = (v: unknown) => (typeof v === "string" ? v : "");
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  const items = Array.isArray(a.items)
+    ? a.items
+        .filter((it): it is Record<string, unknown> => !!it && typeof it === "object")
+        .map((o) => ({
+          category: str(o.category),
+          score: num(o.score),
+          status: o.status === "강점" || o.status === "약점" ? o.status : "보통",
+          feedback: str(o.feedback),
+          recommendation: str(o.recommendation),
+        }))
+        .filter((it) => it.category)
+    : [];
+  const nextSteps = Array.isArray(a.nextSteps)
+    ? a.nextSteps.filter((s): s is string => typeof s === "string")
+    : [];
+  return {
+    overallScore: num(a.overallScore),
+    summary: str(a.summary),
+    competitiveness: str(a.competitiveness),
+    items,
+    nextSteps,
+    hiddenStrengths: str(a.hiddenStrengths),
+    watchOuts: str(a.watchOuts),
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth(req);
@@ -165,7 +196,7 @@ ${p.internship ? "실무 경험이 있으므로 이를 어떻게 강조할 수 �
     const response = await createMessageWithTimeout(
       anthropic,
       {
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-6",
         max_tokens: 2500,
         system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
         messages: [{ role: "user", content: userPrompt }],
@@ -177,13 +208,17 @@ ${p.internship ? "실무 경험이 있으므로 이를 어떻게 강조할 수 �
     const raw = textBlock?.text || "";
 
     const parsed = extractJSON(raw);
-    if (parsed) {
-      setCachedResponse(cacheKey, parsed);
-      return NextResponse.json({ analysis: parsed });
+    const analysis = parsed ? normalizeSpecAnalysis(parsed) : null;
+    // items가 하나도 없으면 형태 붕괴로 간주 → 캐시하지 않고 502(재시도 유도).
+    // (검증 없이 반환하면 items/nextSteps 누락 시 클라가 .map/.filter에서 크래시하고,
+    //  잘못된 응답이 localStorage에 캐시돼 새로고침마다 재크래시했음.)
+    if (analysis && analysis.items.length > 0) {
+      setCachedResponse(cacheKey, analysis);
+      return NextResponse.json({ analysis });
     }
 
     // raw 응답은 로그로만. 클라이언트에 흘리면 시스템 프롬프트 누설 가능성.
-    console.error("Spec analysis JSON parse failed. Raw length:", raw.length);
+    console.error("Spec analysis JSON parse/shape failed. Raw length:", raw.length);
     return NextResponse.json(
       { error: "AI 응답을 해석하지 못했어요. 다시 시도해주세요." },
       { status: 502 }

@@ -83,7 +83,7 @@ async function generateRubric(schoolName, schoolData) {
   // const { default: Anthropic } = await import("@anthropic-ai/sdk");
   // const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   // const res = await client.messages.create({
-  //   model: "claude-opus-4-7",
+  //   model: "claude-opus-4-8",
   //   max_tokens: 2000,
   //   system: SYSTEM_PROMPT,
   //   messages: [{ role: "user", content: userPrompt }],

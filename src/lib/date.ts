@@ -4,10 +4,11 @@
 
 /** ISO date 문자열 → "MM월 DD일" 한국어 표시 */
 export function formatDate(dateStr: string): string {
-  try {
-    const d = new Date(dateStr.includes("T") ? dateStr : dateStr + "T00:00:00");
-    return d.toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
-  } catch { return dateStr; }
+  const d = new Date(dateStr.includes("T") ? dateStr : dateStr + "T00:00:00");
+  // toLocaleDateString은 잘못된 날짜에 throw가 아니라 "Invalid Date"를 반환하므로
+  // (기존 try/catch는 무력) 명시적으로 isNaN 가드 후 원본 문자열로 폴백.
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
 }
 
 /** 오늘 기준 D-day 계산. 음수 = 지난 일자, 0 = 오늘, 양수 = 남은 일수 */

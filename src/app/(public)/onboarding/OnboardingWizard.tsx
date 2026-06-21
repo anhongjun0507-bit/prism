@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, ChevronLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import type { Specs } from "@/lib/matching";
 import { Button } from "@/components/ui/button";
 import { logError } from "@/lib/log";
 import { StepIndicator } from "@/components/onboarding/StepIndicator";
@@ -22,6 +23,7 @@ interface OnboardingState {
   majors: string[];
   gpa: string;
   sat: string;
+  toefl: string;
   ec: string;
 }
 
@@ -31,6 +33,7 @@ const INITIAL: OnboardingState = {
   majors: [],
   gpa: "",
   sat: "",
+  toefl: "",
   ec: "",
 };
 
@@ -52,7 +55,7 @@ const INITIAL: OnboardingState = {
  * 스텝 변경은 단순 state — 라우트 변경 안 함. 브라우저 뒤로가기는 /login 방향.
  */
 export function OnboardingWizard() {
-  const { user, profile, loading, saveProfile } = useAuth();
+  const { user, loading, saveProfile } = useAuth();
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [data, setData] = useState<OnboardingState>(INITIAL);
@@ -62,12 +65,10 @@ export function OnboardingWizard() {
     if (loading) return;
     if (!user) {
       router.replace("/login?from=%2Fonboarding");
-      return;
     }
-    if (profile?.onboarded) {
-      router.replace("/dashboard");
-    }
-  }, [loading, user, profile, router]);
+    // 이미 온보딩한 사용자도 재진입 허용 — 점수(스펙)를 다시 입력·수정할 수 있어야 함.
+    // (과거엔 onboarded면 /dashboard로 튕겨, "스펙 입력" 버튼이 무한 루프였다.)
+  }, [loading, user, router]);
 
   const isValid = (() => {
     switch (step) {
@@ -94,14 +95,46 @@ export function OnboardingWizard() {
     }
     setSubmitting(true);
     try {
+      // 매칭 엔진(/api/match → 분석·대시보드·What-If·비교)이 읽는 profile.specs를 구성.
+      // 과거 위저드는 gpa/sat을 top-level로만 저장하고 specs를 만들지 않아, 모든 분석 화면이
+      // 영구히 "스펙 입력" 빈 상태였다 (→ 온보딩↔대시보드 무한 루프의 근본 원인).
+      const specs: Specs = {
+        gpaUW: data.gpa.trim(),
+        gpaW: "",
+        sat: data.sat.trim(),
+        act: "",
+        toefl: data.toefl.trim(),
+        ielts: "",
+        apCount: "",
+        apAvg: "",
+        satSubj: "",
+        classRank: "",
+        ecTier: 3,
+        awardTier: 0,
+        essayQ: 3,
+        recQ: 3,
+        interviewQ: 3,
+        legacy: false,
+        firstGen: false,
+        earlyApp: "",
+        needAid: false,
+        gender: "",
+        intl: true, // 한국 국제학교 학생 → 미국 대학 기준 국제학생
+        major: data.majors[0] || "",
+        // 활동 자유서술을 specs.clubs로 연결 — 스펙분석·AI가 실제로 읽는 필드.
+        // (과거엔 extracurriculars에만 저장돼 어떤 코드도 안 읽고 버려졌음.)
+        clubs: data.ec.trim() || undefined,
+      };
       await saveProfile({
         name: data.name.trim(),
         grade: String(data.grade),
         major: data.majors[0] || "",
         gpa: data.gpa.trim(),
         sat: data.sat.trim(),
+        toefl: data.toefl.trim(),
         extracurriculars: data.ec.trim() || undefined,
         dreamSchool: "",
+        specs,
       });
       toast.success(`환영합니다, ${data.name.trim()}님!`);
       router.replace("/dashboard");
@@ -115,7 +148,7 @@ export function OnboardingWizard() {
 
   const handlePrev = () => setStep((s) => Math.max(1, s - 1));
 
-  if (loading || !user || profile?.onboarded) {
+  if (loading || !user) {
     return <div className="min-h-dvh" />;
   }
 
@@ -150,7 +183,10 @@ export function OnboardingWizard() {
             <StepScores
               gpa={data.gpa}
               sat={data.sat}
-              onChange={(g, s) => setData((d) => ({ ...d, gpa: g, sat: s }))}
+              toefl={data.toefl}
+              onChange={(g, s, t) =>
+                setData((d) => ({ ...d, gpa: g, sat: s, toefl: t }))
+              }
               onEnter={handleNext}
             />
           )}

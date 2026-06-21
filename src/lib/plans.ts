@@ -39,7 +39,7 @@ export const PLANS: Record<Plan, PlanDef> = {
       schoolAnalysisLimit: 5,
       aiChatDailyLimit: 5,
       essayStorageLimit: 1,
-      essayReviewLimit: 0,
+      essayReviewLimit: 1, // 무료 1회 체험 (기존 0 → "한 번도 안 했는데 한도 초과" 혼란 해결)
       whatIfEnabled: false,
       specAnalysisEnabled: false,
       autoPlannerEnabled: false,

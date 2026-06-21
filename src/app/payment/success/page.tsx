@@ -176,7 +176,8 @@ function PaymentSuccessContent() {
   const planDef = plan ? PLANS[plan] : null;
   const orderId = searchParams.get("orderId");
   const amountParam = searchParams.get("amount");
-  const amountKrw = amountParam ? Number(amountParam) : null;
+  const amountNum = amountParam ? Number(amountParam) : NaN;
+  const amountKrw = Number.isFinite(amountNum) ? amountNum : null; // ?amount=abc 변조 시 ₩NaN 방지
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background p-6">

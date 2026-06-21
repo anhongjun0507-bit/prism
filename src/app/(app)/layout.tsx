@@ -27,16 +27,22 @@ import { BottomNav } from "@/components/layout/BottomNav";
  * 로그아웃은 Sidebar 하단 버튼 + auth-context의 logout() (signOut → "/" 하드 리다이렉트).
  */
 export default function AppLayout({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, profile, isMaster, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (loading) return;
+    if (!user) {
       const redirect = encodeURIComponent(pathname);
       router.replace(`/login?from=${redirect}`);
+      return;
     }
-  }, [loading, user, router, pathname]);
+    // 온보딩 미완료(신규 가입 포함) 사용자는 온보딩으로 유도. 마스터는 제외.
+    if (profile && !profile.onboarded && !isMaster) {
+      router.replace("/onboarding");
+    }
+  }, [loading, user, profile, isMaster, router, pathname]);
 
   // 로딩 중 — 셸 스켈레톤. 사용자에게 "곧 보입니다" 신호.
   if (loading) {
@@ -62,6 +68,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   // 미인증 — useEffect가 /login으로 replace 진행 중. 빈 화면.
   if (!user) {
+    return null;
+  }
+
+  // 온보딩 미완료 — /onboarding으로 replace 진행 중. 대시보드 깜빡임 방지.
+  if (profile && !profile.onboarded && !isMaster) {
     return null;
   }
 

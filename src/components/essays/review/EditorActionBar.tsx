@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface EditorActionBarProps {
@@ -9,17 +9,22 @@ interface EditorActionBarProps {
   subtitle?: string;
   saveState: "idle" | "saving" | "saved";
   onSave: () => void;
+  /** AI 구조 생성 핸들러 — 미주입 시 버튼 숨김. */
+  onGenerateOutline?: () => void;
+  outlineLoading?: boolean;
 }
 
 /**
- * 편집기 상단 액션바 (가이드 §10): 뒤로 / 제목·프롬프트 / AI 구조 생성(준비 중) / 저장.
- * outline(AI 구조 생성)은 다음 세션 범위라 disabled + "준비 중".
+ * 편집기 상단 액션바 (가이드 §10): 뒤로 / 제목·프롬프트 / AI 구조 생성 / 저장.
+ * AI 구조 생성은 /api/essay-outline을 호출 — 핸들러·로딩 상태는 EssayReviewClient가 주입.
  */
 export function EditorActionBar({
   title,
   subtitle,
   saveState,
   onSave,
+  onGenerateOutline,
+  outlineLoading,
 }: EditorActionBarProps) {
   return (
     <div className="flex items-center gap-2 sm:gap-3">
@@ -52,19 +57,26 @@ export function EditorActionBar({
         )}
       </span>
 
-      {/* outline 생성 — 다음 세션(Part 2) */}
-      <Button
-        variant="secondary"
-        size="sm"
-        disabled
-        title="다음 업데이트에서 제공돼요"
-        className="hidden sm:inline-flex"
-      >
-        AI 구조 생성
-        <span className="ml-1 rounded bg-secondary px-1.5 py-0.5 text-caption text-muted-foreground">
-          준비 중
-        </span>
-      </Button>
+      {/* outline 생성 — /api/essay-outline 호출 (핸들러는 EssayReviewClient 주입) */}
+      {onGenerateOutline && (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onGenerateOutline}
+          disabled={outlineLoading}
+          className="hidden sm:inline-flex"
+        >
+          {outlineLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> 생성 중
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-4 w-4" aria-hidden /> AI 구조 생성
+            </>
+          )}
+        </Button>
+      )}
 
       <Button size="sm" onClick={onSave} disabled={saveState === "saving"}>
         저장

@@ -1,16 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Pencil, FileDown } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
  * 하단 sticky 액션 바 (가이드 §7).
  *
- *  - 좌: "스펙 수정 후 재분석" outline → /onboarding 링크
- *  - 우: "PDF로 저장" cta — disabled + "준비 중" 라벨 (PDF-2 결정)
+ *  - "스펙 수정 후 재분석" outline → /onboarding 링크
  *
- * v2에서 react-pdf 기반 components/reports/* 도입 시 PDF 버튼 활성화 예정.
+ * 데모 정리: 백엔드 없는 "PDF로 저장"(준비 중) 버튼은 숨김.
+ * v2에서 react-pdf 기반 components/reports/* 도입 시 복원 예정.
  */
 export function ActionBar() {
   return (
@@ -22,20 +22,6 @@ export function ActionBar() {
             스펙 수정 후 재분석
           </Link>
         </Button>
-
-        <div className="flex flex-col items-center gap-0.5 flex-1 sm:flex-none">
-          <Button
-            variant="cta"
-            size="md"
-            disabled
-            aria-disabled
-            className="w-full sm:w-auto"
-          >
-            <FileDown className="h-4 w-4" aria-hidden />
-            PDF로 저장
-          </Button>
-          <span className="text-caption text-muted-foreground">준비 중</span>
-        </div>
       </div>
     </div>
   );

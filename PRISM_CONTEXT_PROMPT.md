@@ -37,7 +37,7 @@
 | 스타일링 | Tailwind CSS 3.4.1 + shadcn/ui (Radix UI 20+ 컴포넌트) |
 | 인증 | Firebase Auth (Google / Email / Kakao OAuth / Apple) |
 | DB | Firebase Firestore (클라이언트 SDK + Admin SDK 11.10.0 / 13.7.0) |
-| AI | `@anthropic-ai/sdk` 0.82.0 — **claude-sonnet-4-6** (기본), **claude-opus-4-7** (Elite 에세이 첨삭) |
+| AI | `@anthropic-ai/sdk` 0.82.0 — **claude-sonnet-4-6** (기본), **claude-opus-4-8** (Elite 에세이 첨삭) |
 | 결제 | `@tosspayments/tosspayments-sdk` 2.6.0 |
 | 모니터링 | Sentry 10.49.0 |
 | 검증 | zod 3.24.2 |
