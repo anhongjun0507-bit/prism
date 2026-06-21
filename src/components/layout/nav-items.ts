@@ -9,16 +9,17 @@ import {
   Calendar,
   GitCompare,
   Users,
+  MoreHorizontal,
 } from "lucide-react";
 
 /**
  * 공유 네비게이션 모델.
  *
- * - BottomNav(모바일)는 `primary` 4개 노출.
- * - Sidebar(데스크톱)는 `primary` 4개 + `tool` 4개 노출.
+ * - BottomNav(모바일)는 `primary` 5개 노출 (마지막 `/more` = 모바일 메뉴).
+ * - Sidebar(데스크톱)는 `primary` 중 `/more` 제외 4개 + `tool` 5개 노출
+ *   (데스크톱은 사이드바에 도구·설정·테마·로그아웃이 전부 있어 더보기 불필요).
  *
- * 데모 정리: 콘텐츠 미정인 `/more` 스텁 탭을 진입점(BottomNav)에서 제거.
- * 페이지 파일(`src/app/(app)/more/page.tsx`)은 삭제하지 않고 보존.
+ * `/more`는 모바일에서 도구·설정·테마·로그아웃에 접근하는 메뉴 페이지.
  *
  * 데이터+아이콘 참조만 export하므로 Server Component에서도 import 가능 — 'use client' 불필요.
  */
@@ -30,13 +31,14 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: readonly NavItem[] = [
-  // Primary 4 — BottomNav + Sidebar 상단
+  // Primary 5 — BottomNav (Sidebar는 /more 제외 4개)
   { href: "/dashboard", label: "홈", icon: Home, group: "primary" },
   { href: "/analysis", label: "분석", icon: Compass, group: "primary" },
   { href: "/essays", label: "에세이", icon: FileText, group: "primary" },
   { href: "/chat", label: "채팅", icon: MessageCircle, group: "primary" },
+  { href: "/more", label: "더보기", icon: MoreHorizontal, group: "primary" },
 
-  // Tool — Sidebar 전용
+  // Tool — Sidebar + 모바일 /more 메뉴
   { href: "/what-if", label: "What-If", icon: SlidersHorizontal, group: "tool" },
   { href: "/spec-analysis", label: "스펙 분석", icon: Sparkles, group: "tool" },
   { href: "/planner", label: "플래너", icon: Calendar, group: "tool" },

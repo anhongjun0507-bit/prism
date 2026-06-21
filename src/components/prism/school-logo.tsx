@@ -30,7 +30,15 @@ export function SchoolLogo({
   const src = idx < sources.length ? sources[idx] : null;
 
   return (
-    <div className={cn("flex items-center justify-center overflow-hidden", className)}>
+    <div
+      className={cn(
+        "flex items-center justify-center overflow-hidden",
+        // 로고는 흰 타일 위에 — seal/파비콘이 검은색이라 다크모드 배경과 겹쳐 안 보이던 문제 해결.
+        // 이니셜 폴백일 때만 테마 배경.
+        src ? "bg-white ring-1 ring-black/5" : "bg-secondary",
+        className,
+      )}
+    >
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img

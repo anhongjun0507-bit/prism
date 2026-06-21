@@ -88,7 +88,7 @@ export function SchoolCard({
             <SchoolLogo
               name={schoolName}
               sources={logoSources(schoolName, logoDomain)}
-              className="h-28 w-28 rounded-2xl bg-card p-3 shadow-prism-sm"
+              className="h-28 w-28 rounded-2xl p-3 shadow-prism-sm"
               imgClassName="object-contain"
               letterClassName="text-h1"
             />

@@ -63,7 +63,7 @@ export function SchoolCardMini({
       <SchoolLogo
         name={schoolName}
         sources={logoSources(schoolName, logoDomain)}
-        className="h-10 w-10 flex-shrink-0 rounded-full bg-secondary"
+        className="h-10 w-10 flex-shrink-0 rounded-full"
         imgClassName="object-contain p-0.5"
         letterClassName="text-small"
       />
