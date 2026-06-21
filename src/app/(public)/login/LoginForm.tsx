@@ -314,10 +314,10 @@ function SSOButton({ provider, busy, label, icon, onClick }: SSOButtonProps) {
   return (
     <Button
       type="button"
-      variant="outline"
+      variant="secondary"
       size="lg"
       shape="rect"
-      className="w-full justify-center gap-3"
+      className="w-full justify-center gap-3 border border-input"
       onClick={onClick}
       disabled={isOther || isMe}
       aria-busy={isMe || undefined}
