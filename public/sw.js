@@ -1,106 +1,44 @@
 /**
- * PRISM Service Worker — minimal offline 지원.
+ * PRISM Service Worker — 비활성화(self-unregister).
  *
- * 전략:
- *  - Static (_next/static, 폰트, 아이콘): cache-first, 버전 bump로 무효화
- *  - API (/api/*): network-only, 캐시하지 않음 (민감 데이터 + 캐시 일관성)
- *  - Firebase/외부 origin: SW 우회 (통과)
- *  - HTML 페이지: network-first → 실패 시 cache → 그래도 실패면 /offline
- *
- * Workbox 미사용 (번들 사이즈 + 학습비용). 변경 시 CACHE_VERSION bump 필수.
+ * 문제: 이전 버전이 등록한 SW가 정적 자산(CSS/JS)을 cache-first로 무한 서빙해,
+ *       새 배포가 사용자 브라우저에 반영되지 않았음(흰 버튼·구 스타일 고착).
+ * 조치: SW를 완전히 제거 — 모든 캐시 삭제 + 등록 해제 + 열린 탭 새로고침.
+ *       fetch 핸들러를 두지 않아 더 이상 어떤 요청도 가로채지 않는다.
+ *       (오프라인 지원이 다시 필요하면 후속 단계에서 재도입.)
  */
 
-const CACHE_VERSION = "prism-v1";
-const STATIC_CACHE = `${CACHE_VERSION}-static`;
-const PAGE_CACHE = `${CACHE_VERSION}-pages`;
-
-const OFFLINE_URL = "/offline";
-const CORE_ASSETS = [
-  "/",
-  OFFLINE_URL,
-  "/manifest.json",
-  "/icon.svg",
-];
-
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) =>
-      cache.addAll(CORE_ASSETS).catch(() => {
-        /* 개별 리소스 404여도 설치 실패하지 않도록 */
-      })
-    )
-  );
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
-      const keys = await caches.keys();
-      await Promise.all(
-        keys
-          .filter((k) => !k.startsWith(CACHE_VERSION))
-          .map((k) => caches.delete(k))
-      );
-      await self.clients.claim();
+      // 1) 모든 캐시 삭제 (구 CSS/JS/HTML 포함)
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      } catch {
+        /* no-op */
+      }
+      // 2) 이 SW 등록 해제
+      try {
+        await self.registration.unregister();
+      } catch {
+        /* no-op */
+      }
+      // 3) 열린 탭을 새로고침해 네트워크에서 신선한 자산을 받게 함
+      try {
+        const clients = await self.clients.matchAll({ type: "window" });
+        for (const client of clients) {
+          client.navigate(client.url);
+        }
+      } catch {
+        /* no-op */
+      }
     })()
   );
 });
 
-function isStaticAsset(url) {
-  return (
-    url.pathname.startsWith("/_next/static/") ||
-    url.pathname.startsWith("/fonts/") ||
-    /\.(?:png|jpg|jpeg|svg|webp|ico|woff2?|ttf|css)$/.test(url.pathname)
-  );
-}
-
-self.addEventListener("fetch", (event) => {
-  const req = event.request;
-  if (req.method !== "GET") return;
-
-  const url = new URL(req.url);
-
-  // 외부 origin(Firebase/Toss/jsDelivr 등)은 SW 우회
-  if (url.origin !== self.location.origin) return;
-
-  // API 경로는 캐시하지 않음
-  if (url.pathname.startsWith("/api/")) return;
-
-  // Static: cache-first
-  if (isStaticAsset(url)) {
-    event.respondWith(
-      caches.match(req).then((cached) => {
-        if (cached) return cached;
-        return fetch(req).then((res) => {
-          if (res.ok) {
-            const clone = res.clone();
-            caches.open(STATIC_CACHE).then((c) => c.put(req, clone));
-          }
-          return res;
-        });
-      })
-    );
-    return;
-  }
-
-  // HTML 페이지: network-first → cache → /offline
-  if (req.mode === "navigate" || req.headers.get("accept")?.includes("text/html")) {
-    event.respondWith(
-      fetch(req)
-        .then((res) => {
-          if (res.ok) {
-            const clone = res.clone();
-            caches.open(PAGE_CACHE).then((c) => c.put(req, clone));
-          }
-          return res;
-        })
-        .catch(async () => {
-          const cached = await caches.match(req);
-          if (cached) return cached;
-          const offline = await caches.match(OFFLINE_URL);
-          return offline || new Response("Offline", { status: 503 });
-        })
-    );
-  }
-});
+// fetch 핸들러 없음 → 모든 요청은 브라우저 기본(네트워크)으로 처리.

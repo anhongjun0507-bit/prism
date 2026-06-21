@@ -217,7 +217,7 @@ export function OnboardingWizard() {
           )}
           <Button
             type="button"
-            variant="cta"
+            variant="primary"
             size="lg"
             shape="rect"
             onClick={handleNext}
