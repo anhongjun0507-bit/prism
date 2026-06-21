@@ -89,6 +89,15 @@
     --border: 60 4% 91%;                /* #E9E9E7 */
     --input: 60 4% 80%;                 /* 입력칸 테두리 — 기존 91%는 흰 배경과 거의 동일해 안 보였음 */
     --ring: 244 76% 59%;
+
+    /* --- motion tokens (ADD; 기존 토큰 아래에 append) --- */
+    --dur-fast: 150ms;
+    --dur-base: 300ms;
+    --dur-slow: 600ms;
+    --dur-scene: 900ms;            /* 시연 씬 1개 전환 길이감 */
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);     /* 진입(감속) 기본 */
+    --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);   /* 양방향 */
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);/* 살짝 튕김(아이콘/뱃지 한정) */
   }
 
   .dark {
