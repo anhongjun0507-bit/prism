@@ -143,7 +143,7 @@ export function LoginForm() {
               className={
                 "h-9 rounded-[8px] text-small font-medium transition-colors " +
                 (mode === "login"
-                  ? "bg-background text-foreground shadow-prism-sm"
+                  ? "bg-foreground text-background shadow-prism-sm"
                   : "text-muted-foreground hover:text-foreground")
               }
             >
@@ -155,7 +155,7 @@ export function LoginForm() {
               className={
                 "h-9 rounded-[8px] text-small font-medium transition-colors " +
                 (mode === "signup"
-                  ? "bg-background text-foreground shadow-prism-sm"
+                  ? "bg-foreground text-background shadow-prism-sm"
                   : "text-muted-foreground hover:text-foreground")
               }
             >
@@ -206,7 +206,7 @@ export function LoginForm() {
 
             <Button
               type="submit"
-              variant="cta"
+              variant="primary"
               size="lg"
               shape="rect"
               className="w-full justify-center"

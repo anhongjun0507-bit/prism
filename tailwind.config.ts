@@ -82,7 +82,9 @@ export default {
 
         // PRISM 브랜드 — primary indigo 변형
         prism: {
-          DEFAULT: "var(--color-primary)",
+          // color-mix로 정의 — bg-prism/15·border-prism/20 같은 opacity modifier가 동작하도록.
+          // (bare hex var에 /NN을 붙이면 invalid CSS가 되어 속성이 통째로 드롭됨. cat-*와 동일 패턴.)
+          DEFAULT: "color-mix(in srgb, var(--color-primary) calc(<alpha-value> * 100%), transparent)",
           hover: "var(--color-primary-hover)",
           soft: "var(--color-primary-soft)",
         },
@@ -122,13 +124,13 @@ export default {
           "reach-fg": "var(--color-danger)",
         },
         // 프리미엄 액센트 (Elite 등급) — primary 인디고와 구분되는 바이올렛.
-        "brand-accent": "var(--color-brand-accent)",
+        "brand-accent": "color-mix(in srgb, var(--color-brand-accent) calc(<alpha-value> * 100%), transparent)",
         "brand-accent-soft": "var(--color-brand-accent-soft)",
         // Semantic — soft 배경은 별도 키 (root에 hyphenated로 둠)
-        success: "var(--color-success)",
-        warning: "var(--color-warning)",
-        danger: "var(--color-danger)",
-        info: "var(--color-info)",
+        success: "color-mix(in srgb, var(--color-success) calc(<alpha-value> * 100%), transparent)",
+        warning: "color-mix(in srgb, var(--color-warning) calc(<alpha-value> * 100%), transparent)",
+        danger: "color-mix(in srgb, var(--color-danger) calc(<alpha-value> * 100%), transparent)",
+        info: "color-mix(in srgb, var(--color-info) calc(<alpha-value> * 100%), transparent)",
         "success-soft": "var(--color-success-soft)",
         "warning-soft": "var(--color-warning-soft)",
         "danger-soft": "var(--color-danger-soft)",

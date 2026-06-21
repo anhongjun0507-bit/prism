@@ -186,9 +186,15 @@
     background: linear-gradient(90deg, #10B981 0%, #4F46E5 50%, #F59E0B 100%);
   }
   .text-prism-gradient {
-    background: linear-gradient(90deg, #10B981 0%, #4F46E5 50%, #F59E0B 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    /* 솔리드 폴백 — background-clip:text 미지원/미페인트 시 글자가 사라지지 않도록. */
+    color: #4F46E5;
+  }
+  @supports ((-webkit-background-clip: text) or (background-clip: text)) {
+    .text-prism-gradient {
+      background: linear-gradient(90deg, #10B981 0%, #4F46E5 50%, #F59E0B 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
   }
 }
